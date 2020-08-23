@@ -1595,7 +1595,7 @@ namespace Jakaria
                                 continue;
                             }
 
-                            fishes[i].life++;
+                            fishes[i].life--;
                             fishes[i].position += fishes[i].velocity;
                         }
                 }
