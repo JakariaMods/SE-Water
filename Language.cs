@@ -55,5 +55,7 @@
         public string ToggleFish = "Toggled fish at your closest planet.";
 
         public string ToggleFog = "Toggled fog";
+
+        public string GenericNoParse = "Could not parse '{0}'.";
     }
 }

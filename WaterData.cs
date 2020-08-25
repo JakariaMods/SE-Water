@@ -11,7 +11,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "1.0.36EA";
+        public const string Version = "1.0.37EA";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
@@ -70,6 +70,7 @@ namespace Jakaria
         };
 
         public static readonly Vector4 BubbleColor = new Vector4(0.05f, 0.0625f, 0.075f, 0.5f);
+        public static readonly Vector4 WhiteColor = new Vector4(1, 1, 1, 1);
 
         public enum WaterIntersectionEnum : int
         {

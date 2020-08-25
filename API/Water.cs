@@ -76,12 +76,12 @@ namespace Jakaria
         }
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
-        public Water(MyPlanet planet)
+        public Water(MyPlanet planet, float radiusMultiplier = 1.02f)
         {
             planetID = planet.EntityId;
 
             position = planet.PositionComp.GetPosition();
-            radius = planet.MinimumRadius * 1.02f;
+            radius = planet.MinimumRadius * radiusMultiplier;
             currentRadius = radius;
 
             enableFish = (planet?.Generator?.Atmosphere?.Breathable == true) && (planet?.Generator?.DefaultSurfaceTemperature == VRage.Game.MyTemperatureLevel.Cozy);
@@ -98,6 +98,13 @@ namespace Jakaria
 
         /// <summary>Returns true if the given position is underwater</summary>
         public bool IsUnderwater(Vector3D position, float altitudeOffset = 0)
+        {
+            return Vector3D.Distance(this.position, position) - (this.currentRadius + altitudeOffset) <= 0;
+        }
+
+        /// <summary>Returns true if the given position is underwater</summary>
+        /// /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
+        public bool IsUnderwaterSquared(Vector3D position, float altitudeOffset = 0)
         {
             return Vector3D.Distance(this.position, position) - (this.currentRadius + altitudeOffset) <= 0;
         }
@@ -144,6 +151,12 @@ namespace Jakaria
         public float GetDepth(Vector3 position)
         {
             return Vector3.Distance(this.position, position) - this.currentRadius;
+        }
+
+        /// <summary>Returns the depth of water a position is at using sea level, negative numbers are underwater</summary>
+        public float GetDepthSimple(Vector3 position)
+        {
+            return Vector3.Distance(this.position, position) - this.radius;
         }
 
         /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
