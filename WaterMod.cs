@@ -1230,7 +1230,6 @@ namespace Jakaria
                     }, 10);
                     simulateGridThreads.ClearImmediate();
 
-                    MyAPIGateway.Utilities.ShowNotification("" + water.underWaterEntities.Count, 1);
                     //Character Drag
                     if (players != null)
                         foreach (var player in players)
@@ -1378,7 +1377,7 @@ namespace Jakaria
                 grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce / 2, null, null, null, false, false);
             }
             //End Drag
-            ListReader<MyCubeBlock> fatBlocks;
+            //ListReader<MyCubeBlock> fatBlocks;
 
             //if (fatBlockStorage.TryGetValue(grid.EntityId, out fatBlocks))
             //{
