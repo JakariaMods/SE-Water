@@ -102,11 +102,10 @@ namespace Jakaria
             return Vector3D.Distance(this.position, position) - (this.currentRadius + altitudeOffset) <= 0;
         }
 
-        /// <summary>Returns true if the given position is underwater</summary>
-        /// /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
+        ///<summary>Returns true if the given position is underwater without a square root function</summary>
         public bool IsUnderwaterSquared(Vector3D position, float altitudeOffset = 0)
         {
-            return Vector3D.Distance(this.position, position) - (this.currentRadius + altitudeOffset) <= 0;
+            return Vector3D.DistanceSquared(this.position, position) - (this.currentRadius + altitudeOffset) <= 0;
         }
 
         /// <summary>Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3</summary>

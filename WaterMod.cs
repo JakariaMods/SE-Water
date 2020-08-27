@@ -27,6 +27,8 @@ using System.Text;
 using SpaceEngineers.Game.Weapons.Guns;
 using Sandbox.Game.Weapons;
 using Sandbox.Game.Entities.Blocks;
+using SpaceEngineers.Game.ModAPI;
+using VRage.Collections;
 
 namespace Jakaria
 {
@@ -34,6 +36,10 @@ namespace Jakaria
     class WaterMod : MySessionComponentBase
     {
         List<IMyPlayer> players = new List<IMyPlayer>();
+
+        //Threading Stuff
+        ConcurrentCachingList<SimulateGridThread> simulateGridThreads = new ConcurrentCachingList<SimulateGridThread>();
+        //ConcurrentDictionary<long, ListReader<MyCubeBlock>> fatBlockStorage = new ConcurrentDictionary<long, ListReader<MyCubeBlock>>();
 
         //Water Effects
         public List<Water> waters = new List<Water>();
@@ -413,7 +419,7 @@ namespace Jakaria
                                 {
                                     if (water.planetID == closestPlanet.EntityId)
                                     {
-                                        water.buoyancy = buoyancy;
+                                        water.buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
                                         MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetBuoyancy.Replace("{0}", water.buoyancy.ToString()));
                                         return;
@@ -942,10 +948,17 @@ namespace Jakaria
 
                     if (TextAPI.Heartbeat && DepthMeter.Visible)
                     {
+                        string message;
                         if (depth < -closestWater.waveHeight * 2)
-                            DepthMeter.Message = new StringBuilder("\n\n\n" + WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(cameraPosition)).ToString()));
+                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(cameraPosition)).ToString());
                         else
-                            DepthMeter.Message = new StringBuilder("\n\n\n" + WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-depth).ToString()));
+                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-depth).ToString());
+
+                        if (depth < -500)
+                            message = "- " + message + " -";
+
+                        DepthMeter.Message = new StringBuilder("\n\n\n" + message);
+                        DepthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, MathHelper.Clamp(-depth / 500, 0f, 1f)), Color.Red, -(depth + 400) / 100);
                         DepthMeter.Offset = new Vector2D(-DepthMeter.GetTextLength().X / 2, 0);
                     }
 
@@ -981,6 +994,10 @@ namespace Jakaria
 
                                 if (entity is MyCubeGrid)
                                 {
+                                    //ListReader<MyCubeBlock> fatBlocks;
+
+                                    //if(fatBlockStorage.TryGetValue(entity.EntityId, out fatBlocks))
+                                    //{
                                     foreach (var block in (entity as MyCubeGrid).GetFatBlocks())
                                     {
                                         if (block == null)
@@ -1028,11 +1045,19 @@ namespace Jakaria
                                             }
 
                                             if ((block as IMyShipDrill)?.IsWorking == true)
+                                            {
                                                 if (MyUtils.GetRandomInt(0, 100) < 10)
                                                     lock (effectLock)
                                                         bubbles.Add(new Bubble(block.PositionComp.GetPosition(), block.CubeGrid.GridSizeHalf));
+                                                continue;
+                                            }
                                         }
                                     }
+                                    /*}
+                                    else
+                                    {
+                                        fatBlockStorage.TryAdd(entity.EntityId, (entity as MyCubeGrid).GetFatBlocks());
+                                    }*/
 
                                     Vector3D centerOfBuoyancy;
 
@@ -1105,32 +1130,53 @@ namespace Jakaria
         /// </summary>
         private void UpdateAfterSecond()
         {
-            players.Clear();
-            MyAPIGateway.Players.GetPlayers(players);
+            try
+            {
+                players.Clear();
+                MyAPIGateway.Players.GetPlayers(players);
 
-            //Player Damage
-            if (players != null)
-                foreach (var water in waters)
-                {
-                    foreach (var player in players)
+                //Player Damage
+                if (players != null)
+                    foreach (var water in waters)
                     {
-                        if (player?.Character == null)
-                            continue;
-
-                        float depth = water.GetDepth(player.Character.GetHeadMatrix(false).Translation);
-
-                        if (depth < 0 && !IsPositionAirtight(player.Character.GetHeadMatrix(false).Translation))
+                        foreach (var player in players)
                         {
-                            if (player.Character.EnabledHelmet == false)
-                                player.Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+                            if (player?.Character == null || ((player.Controller?.ControlledEntity?.Entity as MyCockpit) != null && (player.Controller.ControlledEntity.Entity as MyCockpit).OxygenFillLevel > 0f) || !(player.Controller.ControlledEntity is IMyCharacter))
+                                continue;
 
-                            if (depth <= -500)
+                            float depth = water.GetDepth(player.Character.GetHeadMatrix(false).Translation);
+
+                            if (MyAPIGateway.Session.OxygenProviderSystem == null)
+                                continue;
+
+                            if (depth < 0 && !IsPositionAirtight(player.Character.GetHeadMatrix(false).Translation))
                             {
-                                player.Character.DoDamage(1f + 1f * (-(depth + 500) / 300), MyDamageType.Temperature, true);
+                                if (player?.Character?.EnabledHelmet == false)
+                                    player.Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+
+                                if (depth <= -500)
+                                {
+                                    player.Character.DoDamage(1f + 1f * (-(depth + 500) / 300), MyDamageType.Temperature, true);
+                                }
                             }
                         }
                     }
-                }
+
+                /*fatBlockStorage.Clear();
+                foreach (var water in waters)
+                {
+                    foreach (var entity in water.underWaterEntities)
+                    {
+                        if (entity is MyCubeGrid)
+                            fatBlockStorage.TryAdd(entity.EntityId, (entity as MyCubeGrid).GetFatBlocks());
+                    }
+                }*/
+            }
+            catch (Exception e)
+            {
+                MyLog.Default.WriteLine(e);
+                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
+            }
         }
 
         /// <summary>
@@ -1174,19 +1220,27 @@ namespace Jakaria
                         if (entity == null || entity.Physics == null || entity.Physics.IsStatic || entity.MarkedForClose || entity.IsPreview || !(entity is MyCubeGrid))
                             continue;
 
-                        SimulateGrid(water, entity as MyCubeGrid);
+                        simulateGridThreads.Add(new SimulateGridThread(water, entity as MyCubeGrid));
+                        //SimulateGrid(water, entity as MyCubeGrid);
                     }
+                    simulateGridThreads.ApplyAdditions();
+                    MyAPIGateway.Parallel.For(0, simulateGridThreads.Count, i =>
+                    {
+                        SimulateGrid(simulateGridThreads[i].Water, simulateGridThreads[i].Grid);
+                    }, 10);
+                    simulateGridThreads.ClearImmediate();
 
+                    MyAPIGateway.Utilities.ShowNotification("" + water.underWaterEntities.Count, 1);
                     //Character Drag
                     if (players != null)
                         foreach (var player in players)
                         {
-                            if (water.IsUnderwaterSquared(player.GetPosition()))
+                            if (player?.Character?.Physics == null)
+                                continue;
+
+                            if (water.IsUnderwaterSquared(player.GetPosition()) && !IsPositionAirtight((player.Character.GetHeadMatrix(false).Translation)))
                             {
-                                if (player?.Character?.Physics != null)
-                                {
-                                    player.Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -player.Character.Physics.LinearVelocity * water.viscosity * player.Character.Physics.Mass * 12, null, null);
-                                }
+                                player.Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -player.Character.Physics.LinearVelocity * water.viscosity * player.Character.Physics.Mass * 12, null, null);
                             }
                         }
                 }
@@ -1208,6 +1262,19 @@ namespace Jakaria
                 }
             }
         }
+
+        struct SimulateGridThread
+        {
+            public MyCubeGrid Grid { get; }
+            public Water Water { get; }
+
+            public SimulateGridThread(Water water, MyCubeGrid grid)
+            {
+                this.Grid = grid;
+                this.Water = water;
+            }
+        }
+
 
         /// <summary>
         /// Creates transparent version of the water mesh
@@ -1253,7 +1320,7 @@ namespace Jakaria
             Vector3D center = Vector3.Zero;
             double litres = 0;
             float capacity = 0;
-            float depth = Vector3.Distance(water.position, grid.PositionComp.GetPosition());
+            float depth = Vector3.Distance(water.position, grid.PositionComp.WorldVolume.Center);
             float tankHealth = 0;
             float totalTanks = 0;
 
@@ -1301,18 +1368,22 @@ namespace Jakaria
             else if (dragForce.IsValid())
             {
                 //Jak stop applying drag when drag mod is active reeeee :D
+                //No PauseChamp
+
                 if (grid.Physics.AngularVelocity.IsValid())
                 {
                     grid.Physics.AngularVelocity *= 1f - (percentGridUnderWater * water.viscosity * (grid.Physics.Speed / 20f));
                 }
-                if (dragForce.IsValid())
-                    grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce / 2, null, null, null, false, false);
+
+                grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce / 2, null, null, null, false, false);
             }
             //End Drag
+            ListReader<MyCubeBlock> fatBlocks;
 
+            //if (fatBlockStorage.TryGetValue(grid.EntityId, out fatBlocks))
+            //{
             foreach (var block in grid.GetFatBlocks())
             {
-
                 if (block is IMyGasTank)
                 {
                     totalTanks++;
@@ -1321,12 +1392,34 @@ namespace Jakaria
                     if (!block.IsFunctional)
                         continue;
 
-                    float depth2 = MathHelper.Min((water.currentRadius + 0.5f) - Vector3.Distance(water.position, block.PositionComp.GetPosition()), 1);
+                    float depth2 = MathHelper.Min((water.currentRadius + 0.5f) - Vector3.Distance(water.position, block.PositionComp.WorldVolume.Center), 1);
 
                     if (depth2 > 0f)
                     {
                         IMyGasTank gasTank = block as IMyGasTank;
                         capacity = (float)gasTank.FilledRatio * gasTank.Capacity * depth2;
+                        litres += capacity;
+                        center += block.Position * capacity;
+                    }
+                    continue;
+                }
+
+                if (block is IMyWheel)
+                {
+                    totalTanks++;
+                    tankHealth++;
+
+                    if (!block.IsFunctional)
+                        continue;
+
+                    float depth2 = MathHelper.Min((water.currentRadius + 0.5f) - Vector3.Distance(water.position, block.PositionComp.WorldVolume.Center), 1);
+
+                    if (depth2 > 0f)
+                    {
+                        if (grid.GridSizeEnum == MyCubeSize.Large)
+                            capacity = block.BlockDefinition.Mass * 20;
+                        else
+                            capacity = block.BlockDefinition.Mass * 5;
                         litres += capacity;
                         center += block.Position * capacity;
                     }
@@ -1345,12 +1438,13 @@ namespace Jakaria
                     force = litres * (1 + ((water.currentRadius - depth) / 5000f)) / 20f * (Math.Pow(tankHealth / totalTanks, 2) * water.buoyancy);
 
                 //force -= Math.Abs(Vector3.Dot(grid.Physics.LinearVelocity, Vector3D.Normalize(grid.Physics.Gravity))) * (grid.Physics.Speed * grid.Physics.Mass) * 0.01;
-                force -= Math.Abs(Vector3.Dot(Vector3D.Normalize(grid.Physics.LinearVelocity), Vector3D.Normalize(grid.Physics.Gravity))) * (grid.Physics.Speed * grid.Physics.Mass) * 0.01;
+                force += Vector3.Dot(grid.Physics.LinearVelocity, Vector3D.Normalize(grid.Physics.Gravity)) * (grid.Physics.Speed * grid.Physics.Mass) * 0.04;
                 Vector3 newForce = -Vector3D.Normalize(grid.Physics.Gravity) * force * 60;
 
-                if(newForce.IsValid())
-                grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, newForce, centerOfBuoyancy, null, null, true, false);
+                if (newForce.IsValid())
+                    grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, newForce, centerOfBuoyancy, null, null, true, false);
             }
+            //}
         }
 
         /// <summary>
@@ -1451,7 +1545,7 @@ namespace Jakaria
                 {
                     //MyAPIGateway.Session.WeatherEffects.FogColorOverride = Vector3D.Lerp(new Vector3D(0.1, 0.125, 0.176), Vector3D.Zero, -depth / 1000.0);
                     MyAPIGateway.Session.WeatherEffects.SunIntensityOverride = 0.1f;
-                    MyAPIGateway.Session.WeatherEffects.ParticleVelocityOverride = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+                    MyAPIGateway.Session.WeatherEffects.ParticleVelocityOverride = new Vector3(float.NaN, float.NaN, float.NaN);
                 }
                 else
                 {
@@ -1526,7 +1620,7 @@ namespace Jakaria
                         MyTransparentGeometry.AddBillboardOriented(WaterData.WakeMaterial, wakeColor * (float)Math.Abs(1f - lifeRatio), wake.position, wake.leftVector, wake.upVector, (wake.minimumRadius / 2) + wake.maximumRadius * lifeRatio);
                     }
 
-                    if (closestWeather == null && closestWater?.enableSeagulls == true)
+                    if (closestWeather == null && closestWater?.enableSeagulls == true && nightValue > 0.75f && closestWeather == null)
                         foreach (var seagull in seagulls)
                         {
                             if (seagull == null)
@@ -1646,7 +1740,7 @@ namespace Jakaria
                         if (!EnvironmentBeachSoundEmitter.IsPlaying)
                             EnvironmentBeachSoundEmitter.PlaySound(WaterData.EnvironmentBeachSound, force2D: true);
 
-                        if (closestWeather == null && seagulls != null && closestWater.enableSeagulls)
+                        if (closestWeather == null && seagulls != null && closestWater.enableSeagulls && nightValue > 0.75f && closestWeather == null)
                             foreach (var seagull in seagulls)
                             {
                                 if (seagull == null)
@@ -1664,8 +1758,8 @@ namespace Jakaria
 
                     float volumeMultiplier = (25f - Math.Max(insideGrid - 5, 0)) / 25f;
                     EnvironmentUnderwaterSoundEmitter.VolumeMultiplier = volumeMultiplier;
-                    EnvironmentOceanSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((200f - depth) / 200f, 0, 1f);
-                    EnvironmentBeachSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((100f - depth) / 100f, 0, 1f);
+                    EnvironmentOceanSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((100f - depth) / 100f, 0, 1f);
+                    EnvironmentBeachSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((50f - depth) / 50f, 0, 1f);
                 }
             }
             else
