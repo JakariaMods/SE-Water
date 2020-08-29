@@ -142,19 +142,27 @@ namespace Jakaria
 
         private void PrefabSpawnedDetailed(long entityId, string prefabName)
         {
+            if (prefabName == null)
+                return;
+
             if (WaterData.DropContainerNames.Contains(prefabName))
             {
                 MyEntity entity = MyEntities.GetEntityById(entityId);
                 MyPlanet planet = MyGamePruningStructure.GetClosestPlanet(entity.PositionComp.GetPosition());
-                foreach (var water in waters)
-                {
-                    if (water.IsUnderwaterSquared(planet.GetClosestSurfacePointGlobal(entity.PositionComp.GetPosition())))
+
+                if (planet == null || entity == null)
+                    return;
+
+                if (waters != null)
+                    foreach (var water in waters)
                     {
-                        MyVisualScriptLogicProvider.SpawnPrefabInGravity("Floating Container_Mk-12", water.GetClosestSurfacePoint(entity.PositionComp.GetPosition(), 250), water.GetUpDirection(entity.PositionComp.GetPosition()));
-                        MyEntities.RaiseEntityRemove(entity);
-                        return;
+                        if (water.IsUnderwaterSquared(planet.GetClosestSurfacePointGlobal(entity.PositionComp.GetPosition())))
+                        {
+                            MyVisualScriptLogicProvider.SpawnPrefabInGravity("Floating Container_Mk-12", water.GetClosestSurfacePoint(entity.PositionComp.GetPosition(), 250), water.GetUpDirection(entity.PositionComp.GetPosition()));
+                            MyEntities.RaiseEntityRemove(entity);
+                            return;
+                        }
                     }
-                }
             }
         }
 
@@ -1103,6 +1111,10 @@ namespace Jakaria
                     SimulateSounds();
 
                     insideGrid = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Grids : 0;
+
+                    if (IsPositionAirtight(MyAPIGateway.Session.Camera.Position))
+                        insideGrid = 25;
+
                     if (MyAPIGateway.Input.IsNewGameControlPressed(MyControlsSpace.TOGGLE_HUD))
                         showHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
 
@@ -1174,8 +1186,9 @@ namespace Jakaria
             }
             catch (Exception e)
             {
-                MyLog.Default.WriteLine(e);
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
+                //Keen crash REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+                /*MyLog.Default.WriteLine(e);
+                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());*/
             }
         }
 
@@ -1184,7 +1197,7 @@ namespace Jakaria
         /// </summary>
         private bool IsPositionAirtight(Vector3 position)
         {
-            BoundingSphereD sphere = new BoundingSphereD(position, 1);
+            BoundingSphereD sphere = new BoundingSphereD(position, 10);
             List<MyEntity> entities = new List<MyEntity>();
             MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
 
@@ -1437,7 +1450,7 @@ namespace Jakaria
                     force = litres * (1 + ((water.currentRadius - depth) / 5000f)) / 20f * (Math.Pow(tankHealth / totalTanks, 2) * water.buoyancy);
 
                 //force -= Math.Abs(Vector3.Dot(grid.Physics.LinearVelocity, Vector3D.Normalize(grid.Physics.Gravity))) * (grid.Physics.Speed * grid.Physics.Mass) * 0.01;
-                force += Vector3.Dot(grid.Physics.LinearVelocity, Vector3D.Normalize(grid.Physics.Gravity)) * (grid.Physics.Speed * grid.Physics.Mass) * 0.04;
+                force += Vector3.Dot(Vector3D.Normalize(grid.Physics.LinearVelocity), Vector3D.Normalize(grid.Physics.Gravity)) * (grid.Physics.Speed * grid.Physics.Mass) * 0.05;
                 Vector3 newForce = -Vector3D.Normalize(grid.Physics.Gravity) * force * 60;
 
                 if (newForce.IsValid())
