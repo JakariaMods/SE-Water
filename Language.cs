@@ -54,8 +54,14 @@
         public string ToggleBirds = "Toggled birds at your closest planet.";
         public string ToggleFish = "Toggled fish at your closest planet.";
 
-        public string ToggleFog = "Toggled fog";
+        public string ToggleFog = "Toggled fog.";
 
         public string GenericNoParse = "Could not parse '{0}'.";
+
+        public string ToggleDebug = "Toggled debug mode.";
+
+        public string GetVolume = "Your water volume '{0}'.";
+        public string SetVolume = "Set water volume to '{0}'.";
+        public string SetVolumeNoParse = "Couldn't parse water volume '{0}'.";
     }
 }

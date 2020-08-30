@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
@@ -11,7 +12,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "1.0.39EA";
+        public const string Version = "1.0.40EA";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
@@ -34,6 +35,9 @@ namespace Jakaria
             MyStringId.GetOrCompute("JFish_4"),
             MyStringId.GetOrCompute("JFish_5"),
             MyStringId.GetOrCompute("JFish_6"),
+            MyStringId.GetOrCompute("JFish_7"),
+            MyStringId.GetOrCompute("JFish_8"),
+            MyStringId.GetOrCompute("JFish_9"),
         };
 
         //Sounds
@@ -41,7 +45,7 @@ namespace Jakaria
         public static readonly MySoundPair EnvironmentBeachSound = new MySoundPair("JBeach");
         public static readonly MySoundPair EnvironmentOceanSound = new MySoundPair("JOcean");
         public static readonly MySoundPair AmbientSound = new MySoundPair("JAmbient");
-        public static readonly MySoundPair AmbientBoatSound = new MySoundPair("JAmbientBoat");
+        public static readonly MySoundPair GroanSound = new MySoundPair("JGroan");
         public static readonly MySoundPair SplashSound = new MySoundPair("JSplash");
         public static readonly MySoundPair SeagullSound = new MySoundPair("JSeagull");
         public static readonly MySoundPair SizzleSound = new MySoundPair("JSizzle");
@@ -80,5 +84,6 @@ namespace Jakaria
             Underwater = 3,
         }
 
+        public static readonly MyObjectBuilder_Ore IceItem = new MyObjectBuilder_Ore() { SubtypeName = "Ice" };
     }
 }

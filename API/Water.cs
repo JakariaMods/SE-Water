@@ -152,17 +152,25 @@ namespace Jakaria
             return Vector3.Distance(this.position, position) - this.currentRadius;
         }
 
+        /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
+        public float GetDepthSquared(Vector3 position)
+        {
+            return Vector3.DistanceSquared(this.position, position) - this.currentRadius;
+        }
+
         /// <summary>Returns the depth of water a position is at using sea level, negative numbers are underwater</summary>
         public float GetDepthSimple(Vector3 position)
         {
             return Vector3.Distance(this.position, position) - this.radius;
         }
 
-        /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
-        public float GetDepthSquared(Vector3 position)
+        /// <summary>Returns the depth of water a position is at using sea level without a square root function, negative numbers are underwater</summary>
+        public float GetDepthSimpleSquared(Vector3 position)
         {
-            return Vector3.DistanceSquared(this.position, position) - this.currentRadius;
+            return Vector3.DistanceSquared(this.position, position) - this.radius;
         }
+
+        
 
         /// <summary>Returns the up direction at a position</summary>
         public Vector3 GetUpDirection(Vector3 position)

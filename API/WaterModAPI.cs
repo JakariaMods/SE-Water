@@ -116,6 +116,7 @@ namespace Jakaria
         {
             foreach (var water in Waters)
             {
+                water.waveTimer++;
                 water.currentRadius = (float)Math.Max(water.radius + (Math.Sin((water.waveTimer) * water.waveSpeed) * water.waveHeight), 0);
             }
         }

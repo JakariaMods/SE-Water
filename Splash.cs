@@ -30,7 +30,7 @@ namespace Jakaria
                 splashSound = new MyEntity3DSoundEmitter(null);
                 splashSound.SetPosition(position);
                 splashSound.PlaySound(WaterData.SplashSound);
-                splashSound.CustomVolume = Volume;
+                splashSound.CustomVolume = Volume * WaterMod.volumeMultiplier;
             }
         }
     }

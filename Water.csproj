@@ -54,7 +54,9 @@
     <Compile Include="WaterMod.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="WaterSettings.cs" />
+    <Compile Include="WaterCollectorComponent.cs" />
     <Compile Include="WaterTurretComponent.cs" />
+    <Compile Include="WaterUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="HavokWrapper">

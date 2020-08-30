@@ -46,6 +46,7 @@ namespace Jakaria
 
             cawSound.SetPosition(position);
             cawSound.PlaySound(WaterData.SeagullSound);
+            cawSound.VolumeMultiplier = WaterMod.volumeMultiplier;
         }
     }
 }
