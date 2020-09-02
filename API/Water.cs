@@ -76,7 +76,7 @@ namespace Jakaria
         }
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
-        public Water(MyPlanet planet, float radiusMultiplier = 1.02f)
+        public Water(MyPlanet planet, float radiusMultiplier = 1.03f)
         {
             planetID = planet.EntityId;
 

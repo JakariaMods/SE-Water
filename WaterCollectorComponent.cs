@@ -23,52 +23,37 @@ using VRageMath;
 
 namespace Jakaria
 {
-    /*[MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false, "Collector", "CollectorSmall")]
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false, "Collector", "CollectorSmall")]
     public class WaterCollectorComponent : MyGameLogicComponent
     {
         IMyCollector collector;
+        Water water;
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             if (MyAPIGateway.Session.IsServer)
             {
                 collector = Entity as IMyCollector;
-                NeedsUpdate = MyEntityUpdateEnum.BEFORE_NEXT_FRAME;
+                NeedsUpdate = MyEntityUpdateEnum.EACH_10TH_FRAME;
             }
         }
 
-        public override void UpdateOnceBeforeFrame()
-        {
-            if (!MyAPIGateway.Session.IsServer)
-                return;
-
-            NeedsUpdate = MyEntityUpdateEnum.EACH_100TH_FRAME;
-        }
 
         public override void UpdateAfterSimulation10()
         {
-            if (!MyAPIGateway.Session.IsServer)
-                return;
+            if (collector.CubeGrid?.Physics?.Gravity != null)
+                water = WaterMod.Static.GetClosestWater(collector.PositionComp.GetPosition());
 
-            try
+            if (collector.IsWorking && water != null)
             {
-
-                MyAPIGateway.Utilities.ShowNotification("ye", 1);
-                Water water = WaterMod.Static.GetClosestWater(collector.PositionComp.GetPosition());
-
-                if (water != null)
+                if (water.IsUnderwater(collector.PositionComp.GetPosition()))
                 {
-                    if(water.IsUnderwater(collector.PositionComp.GetPosition()))
-                    {
-                        collector.GetInventory().AddItems((MyFixedPoint)10, new MyObjectBuilder_Ore() { SubtypeName = "Ice" });
-                    }
+                    if (collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
+                        collector.GetInventory().AddItems(50, WaterData.IceItem);
+                    else
+                        collector.GetInventory().AddItems(10, WaterData.IceItem);
                 }
             }
-            catch (Exception e)
-            {
-                MyLog.Default.WriteLine(e);
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
-            }
         }
-    }*/
+    }
 }

@@ -12,7 +12,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "1.0.40EA";
+        public const string Version = "1.0.41";
         public const ushort ClientHandlerID = 50270;
 
         //Materials

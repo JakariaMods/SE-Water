@@ -1,8 +1,10 @@
-﻿using Sandbox.ModAPI;
+﻿using Sandbox.Game.Entities;
+using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Utils;
 
 namespace Jakaria
@@ -10,7 +12,7 @@ namespace Jakaria
     public class WaterModAPI
     {
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 7;
+        public const int ModAPIVersion = 8;
 
         /// <summary>
         /// List of all water objects in the world, null if not registered
@@ -74,7 +76,6 @@ namespace Jakaria
         /// <summary>
         /// Do not use, for interfacing with Water Mod
         /// </summary>
-        /// <param name="data"></param>
         private void ModHandler(object data)
         {
             if (data == null)
@@ -91,7 +92,7 @@ namespace Jakaria
                 Waters = MyAPIGateway.Utilities.SerializeFromBinary<List<Water>>((byte[])data);
 
                 if (Waters == null)
-                    return;
+                    Waters = new List<Water>();
 
                 int count = Waters.Count;
                 RecievedData?.Invoke();
@@ -100,6 +101,14 @@ namespace Jakaria
                     WaterCreatedEvent?.Invoke();
                 if (count < Waters.Count)
                     WaterRemovedEvent?.Invoke();
+
+                foreach (var water in Waters)
+                {
+                    MyEntity entity = MyEntities.GetEntityById(water.planetID);
+
+                    if (entity != null)
+                        water.planet = MyEntities.GetEntityById(water.planetID) as MyPlanet;
+                }
             }
 
             if (data is int && (int)data != ModAPIVersion)

@@ -59,18 +59,23 @@ namespace Jakaria
         //Water Drawing
         static int waterLayerAmount = 50;
         static float waterLayerSeperation = 0.5f;
-        static float waterQuality = 0.5f;
+
         MyEntity[] waterLayers = new MyEntity[1];
 
         Object effectLock = new Object();
 
+        public static class Settings
+        {
+            public static float Quality = 0.5f;
+            public static bool ShowHud = true;
+            public static bool ShowCenterOfBuoyancy = false;
+            public static bool ShowDepth = true;
+            public static bool ShowFog = true;
+            public static bool ShowDebug = false;
+            public static float Volume = 1f;
+        }
+
         //Client variables
-        public static bool showHud { get; private set; } = true;
-        public static bool showCenterOfBuoyancy { get; private set; } = false;
-        public static bool showDepth { get; private set; } = true;
-        public static bool showFog { get; private set; } = true;
-        public static bool showDebug { get; private set; } = false;
-        public static float volumeMultiplier { get; private set; } = 1f;
         MyPlanet closestPlanet = null;
         Water closestWater = null;
         MyObjectBuilder_WeatherEffect closestWeather = null;
@@ -83,7 +88,7 @@ namespace Jakaria
         bool initialized = false;
         float nightValue = 0;
         Vector3D cameraPosition = Vector3.Zero;
-
+        
         //Text Hud API
         HudAPIv2 TextAPI;
         HudAPIv2.HUDMessage DepthMeter;
@@ -111,7 +116,7 @@ namespace Jakaria
 
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
-            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
+            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
 
             MyAPIGateway.Multiplayer.RegisterMessageHandler(WaterData.ClientHandlerID, ClientHandler);
             MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
@@ -268,7 +273,7 @@ namespace Jakaria
                 case "wversion":
                     sendToOthers = false;
 
-                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
+                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
                     break;
 
                 case "wlanguage":
@@ -283,11 +288,11 @@ namespace Jakaria
                         {
                             WaterLocalization.CurrentLanguage = language;
 
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetLanguage.Replace("{0}", args[1]).Replace("{1}", WaterLocalization.CurrentLanguage.TranslationAuthor));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetLanguage.Replace("{0}", args[1]).Replace("{1}", WaterLocalization.CurrentLanguage.TranslationAuthor));
                             SaveSettings();
                         }
                         else
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetLanguageNoParse.Replace("{0}", args[1]));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetLanguageNoParse.Replace("{0}", args[1]));
                     }
                     break;
 
@@ -297,7 +302,7 @@ namespace Jakaria
                     //Get Quality
                     if (args.Length == 1)
                     {
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetQuality.Replace("{0}", waterQuality.ToString()));
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetQuality.Replace("{0}", WaterMod.Settings.Quality.ToString()));
                     }
 
                     //Set Quality
@@ -307,14 +312,14 @@ namespace Jakaria
                         if (float.TryParse(args[1], out quality))
                         {
                             quality = MathHelper.Clamp(quality, 0.2f, 10f);
-                            waterQuality = quality;
+                            WaterMod.Settings.Quality = quality;
 
                             RecreateWater();
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetQuality.Replace("{0}", waterQuality.ToString()));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetQuality.Replace("{0}", WaterMod.Settings.Quality.ToString()));
                             SaveSettings();
                         }
                         else
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetQualityNoParse.Replace("{0}", args[1]));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetQualityNoParse.Replace("{0}", args[1]));
                     }
                     break;
 
@@ -324,7 +329,7 @@ namespace Jakaria
                     //Get Volume
                     if (args.Length == 1)
                     {
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetVolume.Replace("{0}", volumeMultiplier.ToString()));
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetVolume.Replace("{0}", WaterMod.Settings.Volume.ToString()));
                     }
 
                     //Set Volume
@@ -334,14 +339,14 @@ namespace Jakaria
                         if (float.TryParse(args[1], out volume))
                         {
                             volume = MathHelper.Clamp(volume, 0f, 1f);
-                            volumeMultiplier = volume;
+                            WaterMod.Settings.Volume = volume;
 
                             RecreateWater();
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetVolume.Replace("{0}", volumeMultiplier.ToString()));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetVolume.Replace("{0}", WaterMod.Settings.Volume.ToString()));
                             SaveSettings();
                         }
                         else
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetVolumeNoParse.Replace("{0}", args[1]));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetVolumeNoParse.Replace("{0}", args[1]));
                     }
                     break;
 
@@ -351,8 +356,8 @@ namespace Jakaria
                     //Toggle Center of Buoyancy Debug
                     if (args.Length == 1)
                     {
-                        showCenterOfBuoyancy = !showCenterOfBuoyancy;
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleRenderCOB);
+                        WaterMod.Settings.ShowCenterOfBuoyancy = !WaterMod.Settings.ShowCenterOfBuoyancy;
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleRenderCOB);
                     }
                     break;
 
@@ -362,8 +367,8 @@ namespace Jakaria
                     //Toggle Debug Mode
                     if (args.Length == 1)
                     {
-                        showDebug = !showDebug;
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleDebug);
+                        WaterMod.Settings.ShowDebug = !WaterMod.Settings.ShowDebug;
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleDebug);
                     }
                     break;
 
@@ -373,8 +378,8 @@ namespace Jakaria
                     //Toggle Show Depth
                     if (args.Length == 1)
                     {
-                        showDepth = !showDepth;
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleShowDepth);
+                        WaterMod.Settings.ShowDepth = !WaterMod.Settings.ShowDepth;
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleShowDepth);
                         SaveSettings();
                     }
                     break;
@@ -389,8 +394,8 @@ namespace Jakaria
                     case "wfog":
                         sendToOthers = false;
 
-                        showFog = !showFog;
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleFog);
+                        WaterMod.Settings.ShowFog = !WaterMod.Settings.ShowFog;
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFog);
                         break;
 
                     //Toggle birds on a planet
@@ -403,12 +408,12 @@ namespace Jakaria
                             {
                                 water.enableSeagulls = !water.enableSeagulls;
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleBirds);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleBirds);
                                 return;
                             }
                         }
 
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         break;
 
                     //Toggle fish on a planet
@@ -421,12 +426,12 @@ namespace Jakaria
                             {
                                 water.enableFish = !water.enableFish;
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ToggleFish);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFish);
                                 return;
                             }
                         }
 
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         break;
 
                     case "wbuoyancy":
@@ -437,18 +442,18 @@ namespace Jakaria
                         {
                             if (closestPlanet == null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                 return;
                             }
 
                             if (closestWater != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetBuoyancy.Replace("{0}", closestWater.buoyancy.ToString()));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetBuoyancy.Replace("{0}", closestWater.buoyancy.ToString()));
                                 return;
                             }
 
                             //If foreach loop doesn't find the planet, assume it doesn't exist
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         }
 
                         //Set Buoyancy
@@ -460,7 +465,7 @@ namespace Jakaria
                             {
                                 if (closestPlanet == null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                     return;
                                 }
 
@@ -470,16 +475,16 @@ namespace Jakaria
                                     {
                                         water.buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetBuoyancy.Replace("{0}", water.buoyancy.ToString()));
+                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetBuoyancy.Replace("{0}", water.buoyancy.ToString()));
                                         return;
                                     }
                                 }
 
                                 //If foreach loop doesn't find the planet, assume it doesn't exist
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                             }
                             else
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetBuoyancyNoParse.Replace("{0}", args[1]));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetBuoyancyNoParse.Replace("{0}", args[1]));
                         }
                         break;
 
@@ -491,18 +496,18 @@ namespace Jakaria
                         {
                             if (closestPlanet == null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                 return;
                             }
 
                             if (closestWater != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetViscosity.Replace("{0}", closestWater.viscosity.ToString()));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetViscosity.Replace("{0}", closestWater.viscosity.ToString()));
                                 return;
                             }
 
                             //If foreach loop doesn't find the planet, assume it doesn't exist
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         }
 
                         //Set Viscosity
@@ -514,7 +519,7 @@ namespace Jakaria
                                 viscosity = MathHelper.Clamp(viscosity, 0f, 1f);
                                 if (closestPlanet == null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                     return;
                                 }
 
@@ -524,16 +529,16 @@ namespace Jakaria
                                     {
                                         water.viscosity = viscosity;
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetViscosity.Replace("{0}", water.viscosity.ToString()));
+                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetViscosity.Replace("{0}", water.viscosity.ToString()));
                                         return;
                                     }
                                 }
 
                                 //If foreach loop doesn't find the planet, assume it doesn't exist
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                             }
                             else
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetViscosityNoParse.Replace("{0}", args[1]));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetViscosityNoParse.Replace("{0}", args[1]));
                         }
                         break;
 
@@ -545,18 +550,18 @@ namespace Jakaria
                         {
                             if (closestPlanet == null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                 return;
                             }
 
                             if (closestWater != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetRadius.Replace("{0}", (closestWater.radius / closestPlanet.MinimumRadius).ToString()));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetRadius.Replace("{0}", (closestWater.radius / closestPlanet.MinimumRadius).ToString()));
                                 return;
                             }
 
                             //If foreach loop doesn't find the planet, assume it doesn't exist
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         }
 
                         //Set Radius
@@ -569,7 +574,7 @@ namespace Jakaria
 
                                 if (closestPlanet == null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                     return;
                                 }
 
@@ -580,16 +585,16 @@ namespace Jakaria
 
                                         water.radius = radius * closestPlanet.MinimumRadius;
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetRadius.Replace("{0}", (water.radius / closestPlanet.MinimumRadius).ToString()));
+                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetRadius.Replace("{0}", (water.radius / closestPlanet.MinimumRadius).ToString()));
                                         return;
                                     }
                                 }
 
                                 //If foreach loop doesn't find the planet, assume it doesn't exist
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                             }
                             else
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetRadiusNoParse.Replace("{0}", args[1]));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetRadiusNoParse.Replace("{0}", args[1]));
                         }
                         break;
 
@@ -601,19 +606,19 @@ namespace Jakaria
                         {
                             if (closestPlanet == null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                 return;
                             }
 
                             if (closestWater != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetWaveHeight.Replace("{0}", closestWater.waveHeight.ToString()));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveHeight.Replace("{0}", closestWater.waveHeight.ToString()));
                                 return;
 
                             }
 
                             //If foreach loop doesn't find the planet, assume it doesn't exist
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         }
 
                         //Set Oscillation
@@ -625,7 +630,7 @@ namespace Jakaria
                             {
                                 if (closestPlanet == null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                     return;
                                 }
 
@@ -635,16 +640,16 @@ namespace Jakaria
                                     {
                                         water.waveHeight = waveHeight;
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetWaveHeight.Replace("{0}", water.waveHeight.ToString()));
+                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveHeight.Replace("{0}", water.waveHeight.ToString()));
                                         return;
                                     }
                                 }
 
                                 //If foreach loop doesn't find the planet, assume it doesn't exist
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                             }
                             else
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetWaveHeightNoParse.Replace("{0}", args[1]));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveHeightNoParse.Replace("{0}", args[1]));
                         }
                         break;
 
@@ -653,7 +658,7 @@ namespace Jakaria
 
                         if (closestPlanet == null)
                         {
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                             return;
                         }
 
@@ -667,13 +672,13 @@ namespace Jakaria
                                 waters[i].radius = radius;
 
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.Reset);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.Reset);
                                 return;
                             }
                         }
 
                         //If foreach loop doesn't find the planet, assume it doesn't exist
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         break;
 
                     case "wspeed":
@@ -684,18 +689,18 @@ namespace Jakaria
                         {
                             if (closestPlanet == null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                 return;
                             }
 
                             if (closestWater != null)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GetWaveSpeed.Replace("{0}", closestWater.waveSpeed.ToString()));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveSpeed.Replace("{0}", closestWater.waveSpeed.ToString()));
                                 return;
                             }
 
                             //If foreach loop doesn't find the planet, assume it doesn't exist
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         }
 
                         //Set Swing
@@ -706,7 +711,7 @@ namespace Jakaria
                             {
                                 if (closestPlanet == null)
                                 {
-                                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                                     return;
                                 }
 
@@ -716,16 +721,16 @@ namespace Jakaria
                                     {
                                         water.waveSpeed = MathHelper.Clamp(waveSpeed, 0f, 1f);
                                         MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetWaveSpeed.Replace("{0}", water.waveSpeed.ToString()));
+                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveSpeed.Replace("{0}", water.waveSpeed.ToString()));
                                         return;
                                     }
                                 }
 
                                 //If foreach loop doesn't find the planet, assume it doesn't exist
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                             }
                             else
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.SetWaveSpeedNoParse.Replace("{0}", args[1]));
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveSpeedNoParse.Replace("{0}", args[1]));
                         }
                         break;
 
@@ -734,7 +739,7 @@ namespace Jakaria
 
                         if (closestPlanet == null)
                         {
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                             return;
                         }
 
@@ -742,7 +747,7 @@ namespace Jakaria
                         {
                             if (water.planetID == closestPlanet.EntityId)
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.HasWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.HasWater);
                                 return;
                             }
                         }
@@ -755,12 +760,12 @@ namespace Jakaria
                             {
                                 waters.Add(new Water(closestPlanet, MathHelper.Clamp(radius, 0.01f, 10f)));
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.CreateWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
                                 break;
                             }
                             else
                             {
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.GenericNoParse);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoParse);
                                 break;
                             }
                         }
@@ -769,7 +774,7 @@ namespace Jakaria
                         {
                             waters.Add(new Water(closestPlanet));
                             MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.CreateWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
                             break;
                         }
 
@@ -780,7 +785,7 @@ namespace Jakaria
 
                         if (closestPlanet == null)
                         {
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                             return;
                         }
                         for (int i = waters.Count - 1; i >= 0; i--)
@@ -789,7 +794,7 @@ namespace Jakaria
                             {
                                 waters.RemoveAtFast(i);
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.RemoveWater);
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.RemoveWater);
 
                                 for (int j = 0; j < waterLayers.Length; j++)
                                 {
@@ -804,7 +809,7 @@ namespace Jakaria
                         }
 
                         //If foreach loop doesn't find the planet, assume it doesn't exist
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         break;
 
                     case "wexport":
@@ -812,7 +817,7 @@ namespace Jakaria
 
                         if (closestPlanet == null)
                         {
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanet);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
                             return;
                         }
 
@@ -820,10 +825,10 @@ namespace Jakaria
                         {
                             WaterSettings temp = new WaterSettings(closestWater);
                             MyClipboardHelper.SetClipboard(WaterUtils.ValidateXMLData(MyAPIGateway.Utilities.SerializeToXML(temp)));
-                            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.ExportWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ExportWater);
                             return;
                         }
-                        MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
                         break;
                 }
             }
@@ -859,7 +864,7 @@ namespace Jakaria
                     TextReader file = MyAPIGateway.Utilities.ReadFileInGlobalStorage("JakariaWaterSettings.cfg");
                     string line;
 
-                    waterQuality = float.Parse(file.ReadLine());
+                    WaterMod.Settings.Quality = float.Parse(file.ReadLine());
 
                     Language language;
                     line = file.ReadLine();
@@ -871,13 +876,13 @@ namespace Jakaria
                     bool showDepthSetting;
                     if (bool.TryParse(file.ReadLine(), out showDepthSetting))
                     {
-                        showDepth = showDepthSetting;
+                        WaterMod.Settings.ShowDepth = showDepthSetting;
                     }
 
                     float volumeMultiplierSetting;
                     if (float.TryParse(file.ReadLine(), out volumeMultiplierSetting))
                     {
-                        volumeMultiplier = volumeMultiplierSetting;
+                        WaterMod.Settings.Volume = volumeMultiplierSetting;
                     }
 
                     file.Close();
@@ -891,10 +896,10 @@ namespace Jakaria
             if (!MyAPIGateway.Utilities.IsDedicated)
             {
                 System.IO.TextWriter writer = MyAPIGateway.Utilities.WriteFileInGlobalStorage("JakariaWaterSettings.cfg");
-                writer.WriteLine(waterQuality);
+                writer.WriteLine(WaterMod.Settings.Quality);
                 writer.WriteLine(WaterLocalization.CurrentLanguage.EnglishName);
-                writer.WriteLine(showDepth);
-                writer.WriteLine(volumeMultiplier);
+                writer.WriteLine(WaterMod.Settings.ShowDepth);
+                writer.WriteLine(WaterMod.Settings.Volume);
                 writer.Close();
             }
         }
@@ -998,26 +1003,27 @@ namespace Jakaria
                 //Client
                 if (!MyAPIGateway.Utilities.IsDedicated)
                 {
-                    nightValue = 1 - (Math.Max(-WaterUtils.GetNightValue(closestPlanet, cameraPosition), 0) / 1.25f);
-
-                    if (TextAPI.Heartbeat && DepthMeter.Visible)
-                    {
-                        string message;
-                        if (depth < -closestWater.waveHeight * 2)
-                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(cameraPosition)).ToString());
-                        else
-                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-depth).ToString());
-
-                        if (depth < -500)
-                            message = "- " + message + " -";
-
-                        DepthMeter.Message = new StringBuilder("\n\n\n" + message);
-                        DepthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, MathHelper.Clamp(-depth / 500, 0f, 1f)), Color.Red, -(depth + 400) / 100);
-                        DepthMeter.Offset = new Vector2D(-DepthMeter.GetTextLength().X / 2, 0);
-                    }
+                    if(closestPlanet != null)
+                        nightValue = 1 - (Math.Max(-WaterUtils.GetNightValue(closestPlanet, cameraPosition), 0) / 1.25f);
 
                     if (closestWater != null && closestPlanet != null)
                     {
+                        if (TextAPI.Heartbeat && DepthMeter.Visible)
+                        {
+                            string message;
+                            if (depth < -closestWater.waveHeight * 2)
+                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(cameraPosition)).ToString());
+                            else
+                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-depth).ToString());
+
+                            if (depth < -500)
+                                message = "- " + message + " -";
+
+                            DepthMeter.Message = new StringBuilder("\n\n\n" + message);
+                            DepthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, MathHelper.Clamp(-depth / 500, 0f, 1f)), Color.Red, -(depth + 400) / 100);
+                            DepthMeter.Offset = new Vector2D(-DepthMeter.GetTextLength().X / 2, 0);
+                        }
+
                         MyAPIGateway.Session.WeatherEffects.GetWeather(cameraPosition, out closestWeather);
 
                         BoundingSphereD sphere = new BoundingSphereD(cameraPosition, 1000);
@@ -1106,7 +1112,7 @@ namespace Jakaria
 
                                     Vector3D centerOfBuoyancy = (entity as MyCubeGrid).GridIntegerToWorld(center / litres);
 
-                                    if (showCenterOfBuoyancy && centerOfBuoyancy.IsValid())
+                                    if (WaterMod.Settings.ShowCenterOfBuoyancy && centerOfBuoyancy.IsValid())
                                         indicators.Add(new COBIndicator(centerOfBuoyancy, (entity as MyCubeGrid).GridSizeEnum));
 
                                     float depth = Vector3.Distance(closestWater.position, centerOfBuoyancy) - closestWater.currentRadius;
@@ -1140,7 +1146,7 @@ namespace Jakaria
             {
                 if (!MyAPIGateway.Utilities.IsDedicated && initialized && MyAPIGateway.Session != null && MyAPIGateway.Session.Player != null && MyAPIGateway.Session.Camera != null)
                 {
-                    if (WaterMod.volumeMultiplier != 0)
+                    if (WaterMod.Settings.Volume != 0)
                         SimulateSounds();
 
                     insideGrid = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Grids : 0;
@@ -1149,7 +1155,7 @@ namespace Jakaria
                         insideGrid = 25;
 
                     if (MyAPIGateway.Input.IsNewGameControlPressed(MyControlsSpace.TOGGLE_HUD))
-                        showHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
+                        WaterMod.Settings.ShowHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
 
                     closestPlanet = MyGamePruningStructure.GetClosestPlanet(cameraPosition);
                     closestWater = GetClosestWater(cameraPosition);
@@ -1166,7 +1172,7 @@ namespace Jakaria
             catch (Exception e)
             {
                 MyLog.Default.WriteLine(e);
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
+                WaterUtils.ShowMessage(e.ToString());
             }
         }
 
@@ -1224,7 +1230,7 @@ namespace Jakaria
             {
                 //Keen crash REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
                 /*MyLog.Default.WriteLine(e);
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());*/
+                WaterUtils.SendChatMessage(e.ToString());*/
             }
         }
 
@@ -1236,7 +1242,7 @@ namespace Jakaria
             if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
                 return false;
 
-            BoundingSphereD sphere = new BoundingSphereD(position, 10);
+            BoundingSphereD sphere = new BoundingSphereD(position, 5);
             List<MyEntity> entities = new List<MyEntity>();
             MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
 
@@ -1269,11 +1275,24 @@ namespace Jakaria
 
                     foreach (var entity in water.underWaterEntities)
                     {
-                        if (entity == null || entity.Physics == null || entity.Physics.IsStatic || entity.MarkedForClose || entity.IsPreview || !(entity is MyCubeGrid))
+                        if (entity == null || entity.Physics == null || entity.Physics.IsStatic || entity.MarkedForClose || entity.IsPreview)
                             continue;
 
-                        simulateGridThreads.Add(new SimulateGridThread(water, entity as MyCubeGrid));
-                        //SimulateGrid(water, entity as MyCubeGrid);
+                        if (entity is MyCubeGrid)
+                        {
+                            simulateGridThreads.Add(new SimulateGridThread(water, entity as MyCubeGrid));
+                            continue;
+                        }
+
+                        if (entity is MyFloatingObject)
+                        {
+                            entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -entity.Physics.LinearVelocity * water.viscosity * entity.Physics.Mass * 12, null, null);
+
+                            if ((entity as MyFloatingObject).Item.Content.SubtypeName == WaterData.IceItem.SubtypeName && !IsPositionAirtight(entity.PositionComp.GetPosition()))
+                                entity.Close();
+
+                            continue;
+                        }
                     }
                     simulateGridThreads.ApplyAdditions();
                     MyAPIGateway.Parallel.For(0, simulateGridThreads.Count, i =>
@@ -1381,8 +1400,6 @@ namespace Jakaria
             float WaterDist = -(depth - water.currentRadius) + gridRadius / 2f;
             float percentGridUnderWater = MathHelper.Clamp(WaterDist / gridRadius, 0f, 1f);
 
-            bool delayPhysicsUpdate = water.waveTimer % 10 == 0;
-
             Vector3 dragForce = -(grid.Physics.LinearVelocity * grid.Physics.Mass * water.viscosity * (1 + (Math.Min(-water.GetDepth(gridCenter), 0) / 2000f))) * grid.Physics.Speed * percentGridUnderWater;
 
             //Drag (Section written by Draygo)
@@ -1470,18 +1487,6 @@ namespace Jakaria
                     }
                     continue;
                 }
-
-                //Update a block every 10 ticks
-                if(delayPhysicsUpdate)
-                {
-                    if (block is IMyCollector && block.IsWorking)
-                    {
-                        if (water.IsUnderwater(blockCenter) && !IsPositionAirtight(blockCenter))
-                            block.GetInventory().AddItems(10, WaterData.IceItem);
-
-                        continue;
-                    }
-                }
             }
 
             if (litres != 0)
@@ -1523,7 +1528,7 @@ namespace Jakaria
             //Text Hud API Update
             if (TextAPI.Heartbeat)
             {
-                DepthMeter.Visible = showDepth && depth < 0;
+                DepthMeter.Visible = WaterMod.Settings.ShowDepth && depth < 0;
             }
 
             foreach (var water in waters)
@@ -1561,7 +1566,7 @@ namespace Jakaria
                 underwater = false;
             }
 
-            double seperation = ((double)waterLayerSeperation / waterQuality) + (depth / 100);
+            double seperation = ((double)waterLayerSeperation / WaterMod.Settings.Quality) + (depth / 100);
 
             for (int i = 0; i < waterLayers.Length; i++)
             {
@@ -1584,7 +1589,7 @@ namespace Jakaria
 
             if (underwater)
             {
-                if (showFog)
+                if (WaterMod.Settings.ShowFog)
                     MyAPIGateway.Session.WeatherEffects.FogDensityOverride = 0.015f * (1f + (-depth / 100f)) * ((25f - Math.Max(insideGrid - 10, 0)) / 25f);
                 else
                     MyAPIGateway.Session.WeatherEffects.FogDensityOverride = 0.001f;
@@ -1626,7 +1631,7 @@ namespace Jakaria
                     MyTransparentGeometry.AddPointBillboard(WaterData.BubblesMaterial, WaterData.BubbleColor * (1f - ((float)bubble.life / (float)bubble.maxLife)), bubble.position, bubble.radius, bubble.angle);
                 }
 
-                if (showHud)
+                if (WaterMod.Settings.ShowHud)
                     foreach (var indicator in indicators)
                     {
                         if (indicator == null)
@@ -1697,7 +1702,7 @@ namespace Jakaria
         /// </summary>
         public void RecreateWater()
         {
-            if (waterLayers.Length != waterLayerAmount * waterQuality)
+            if (waterLayers.Length != waterLayerAmount * WaterMod.Settings.Quality)
             {
                 for (int i = 0; i < waterLayers.Length; i++)
                 {
@@ -1707,9 +1712,9 @@ namespace Jakaria
                     waterLayers[i].Close();
                 }
 
-                waterLayers = new MyEntity[(int)(waterLayerAmount * waterQuality)];
+                waterLayers = new MyEntity[(int)(waterLayerAmount * WaterMod.Settings.Quality)];
 
-                smallBubbles = new SmallBubble[(int)Math.Min(128 * waterQuality, 128)];
+                smallBubbles = new SmallBubble[(int)Math.Min(128 * WaterMod.Settings.Quality, 128)];
 
                 foreach (var seagull in seagulls)
                 {
@@ -1717,27 +1722,19 @@ namespace Jakaria
                         seagull.cawSound.StopSound(true, true);
                 }
 
-                seagulls = new Seagull[(int)Math.Min(256 * waterQuality, 128)];
-                fishes = new Fish[(int)Math.Min(128 * waterQuality, 64)];
+                seagulls = new Seagull[(int)Math.Min(256 * WaterMod.Settings.Quality, 128)];
+                fishes = new Fish[(int)Math.Min(128 * WaterMod.Settings.Quality, 64)];
                 //fishes = new Fish[8192];
             }
 
             MyAPIGateway.Parallel.For(0, waterLayers.Length, i =>
             {
-                try
+                if (waterLayers[i] == null)
                 {
-                    if (waterLayers[i] == null)
-                    {
-                        if (i < (int)(waterLayerAmount * waterQuality) - 1)
-                            waterLayers[i] = CreateWaterMesh();
-                        else
-                            waterLayers[i] = CreateWater2Mesh();
-                    }
-                }
-                catch (Exception e)
-                {
-                    MyLog.Default.WriteLine(e);
-                    MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
+                    if (i < (int)(waterLayerAmount * WaterMod.Settings.Quality) - 1)
+                        waterLayers[i] = CreateWaterMesh();
+                    else
+                        waterLayers[i] = CreateWater2Mesh();
                 }
             });
         }
@@ -1765,7 +1762,7 @@ namespace Jakaria
                             {
                                 AmbientSoundEmitter.PlaySound(WaterData.AmbientSound);
                                 AmbientSoundEmitter.SetPosition(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
-                                AmbientSoundEmitter.VolumeMultiplier = WaterMod.volumeMultiplier;
+                                AmbientSoundEmitter.VolumeMultiplier = WaterMod.Settings.Volume;
                             }
                         }
 
@@ -1779,7 +1776,7 @@ namespace Jakaria
                             EnvironmentOceanSoundEmitter.StopSound(true, false);
 
                         ambientBoatTimer--;
-                        
+
                         if (ambientBoatTimer <= 0)
                         {
                             ambientBoatTimer = MyUtils.GetRandomInt(1000, 1500); //Divide by 60 to get in seconds
@@ -1787,7 +1784,7 @@ namespace Jakaria
                             if (underwater && !AmbientBoatSoundEmitter.IsPlaying && insideGrid > 10 && depth < -500f)
                             {
                                 AmbientBoatSoundEmitter.PlaySound(WaterData.GroanSound);
-                                AmbientBoatSoundEmitter.VolumeMultiplier = WaterMod.volumeMultiplier;
+                                AmbientBoatSoundEmitter.VolumeMultiplier = WaterMod.Settings.Volume;
                                 AmbientBoatSoundEmitter.SetPosition(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
                             }
                         }
@@ -1819,7 +1816,7 @@ namespace Jakaria
                             EnvironmentUnderwaterSoundEmitter.StopSound(true, false);
                     }
 
-                    float volumeMultiplier = (25f - Math.Max(insideGrid - 5, 0)) / 25f * WaterMod.volumeMultiplier;
+                    float volumeMultiplier = (25f - Math.Max(insideGrid - 5, 0)) / 25f * WaterMod.Settings.Volume;
                     EnvironmentUnderwaterSoundEmitter.VolumeMultiplier = volumeMultiplier;
                     EnvironmentOceanSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((100f - depth) / 100f, 0, 1f);
                     EnvironmentBeachSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((50f - depth) / 50f, 0, 1f);
@@ -1843,103 +1840,95 @@ namespace Jakaria
         /// </summary>
         public void SimulateEffects()
         {
-            try
+            lock (effectLock)
             {
-                lock (effectLock)
-                {
-                    if (bubbles != null && bubbles.Count > 0)
-                        for (int i = bubbles.Count - 1; i >= 0; i--)
+                if (bubbles != null && bubbles.Count > 0)
+                    for (int i = bubbles.Count - 1; i >= 0; i--)
+                    {
+                        if (bubbles[i] == null || bubbles[i].life > bubbles[i].maxLife || closestPlanet == null)
                         {
-                            if (bubbles[i] == null || bubbles[i].life > bubbles[i].maxLife || closestPlanet == null)
-                            {
-                                bubbles.RemoveAtFast(i);
-                                continue;
-                            }
-                            bubbles[i].position += -gravityDirection * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 2;
-                            bubbles[i].life++;
+                            bubbles.RemoveAtFast(i);
+                            continue;
                         }
-                    if (splashes != null && splashes.Count > 0)
-                        for (int i = splashes.Count - 1; i >= 0; i--)
+                        bubbles[i].position += -gravityDirection * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 2;
+                        bubbles[i].life++;
+                    }
+                if (splashes != null && splashes.Count > 0)
+                    for (int i = splashes.Count - 1; i >= 0; i--)
+                    {
+                        if (splashes[i] == null || splashes[i].life > splashes[i].maxLife || closestPlanet == null)
                         {
-                            if (splashes[i] == null || splashes[i].life > splashes[i].maxLife || closestPlanet == null)
-                            {
-                                splashes.RemoveAtFast(i);
-                                continue;
-                            }
-                            splashes[i].life++;
+                            splashes.RemoveAtFast(i);
+                            continue;
                         }
+                        splashes[i].life++;
+                    }
 
 
-                    if (wakes != null && wakes.Count > 0)
-                        for (int i = wakes.Count - 1; i >= 0; i--)
+                if (wakes != null && wakes.Count > 0)
+                    for (int i = wakes.Count - 1; i >= 0; i--)
+                    {
+                        if (wakes[i] == null || wakes[i].life > wakes[i].maxLife || closestPlanet == null)
                         {
-                            if (wakes[i] == null || wakes[i].life > wakes[i].maxLife || closestPlanet == null)
-                            {
-                                wakes.RemoveAtFast(i);
-                                continue;
-                            }
-                            wakes[i].position += wakes[i].velocity;
-                            wakes[i].life++;
-                            wakes[i].velocity *= 0.99f;
+                            wakes.RemoveAtFast(i);
+                            continue;
                         }
+                        wakes[i].position += wakes[i].velocity;
+                        wakes[i].life++;
+                        wakes[i].velocity *= 0.99f;
+                    }
 
-                    if (indicators != null && indicators.Count > 0)
-                        for (int i = indicators.Count - 1; i >= 0; i--)
+                if (indicators != null && indicators.Count > 0)
+                    for (int i = indicators.Count - 1; i >= 0; i--)
+                    {
+                        if (indicators[i] == null || indicators[i].life > tickTimerMax + 1 || closestPlanet == null)
                         {
-                            if (indicators[i] == null || indicators[i].life > tickTimerMax + 1 || closestPlanet == null)
-                            {
-                                indicators.RemoveAtFast(i);
-                                continue;
-                            }
-                            indicators[i].life++;
+                            indicators.RemoveAtFast(i);
+                            continue;
                         }
+                        indicators[i].life++;
+                    }
 
-                    if (smallBubbles != null && underwater)
-                        for (int i = smallBubbles.Length - 1; i >= 0; i--)
+                if (smallBubbles != null && underwater)
+                    for (int i = smallBubbles.Length - 1; i >= 0; i--)
+                    {
+                        if (smallBubbles[i] == null || smallBubbles[i].life > smallBubbles[i].maxLife)
                         {
-                            if (smallBubbles[i] == null || smallBubbles[i].life > smallBubbles[i].maxLife)
-                            {
-                                smallBubbles[i] = new SmallBubble(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
-                                continue;
-                            }
-                            smallBubbles[i].position += -gravityDirection * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 2;
-                            smallBubbles[i].life++;
+                            smallBubbles[i] = new SmallBubble(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
+                            continue;
                         }
+                        smallBubbles[i].position += -gravityDirection * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 2;
+                        smallBubbles[i].life++;
+                    }
 
-                    if (seagulls != null && closestWater?.enableSeagulls == true)
-                        for (int i = 0; i < seagulls.Length; i++)
+                if (seagulls != null && closestWater?.enableSeagulls == true)
+                    for (int i = 0; i < seagulls.Length; i++)
+                    {
+                        if (seagulls[i] == null || seagulls[i].life > seagulls[i].maxLife || closestPlanet == null)
                         {
-                            if (seagulls[i] == null || seagulls[i].life > seagulls[i].maxLife || closestPlanet == null)
-                            {
-                                if (seagulls[i]?.cawSound?.IsPlaying == true)
-                                    continue;
-
-                                seagulls[i] = new Seagull(closestWater.GetClosestSurfacePoint(cameraPosition) + (-gravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -gravityDirection);
+                            if (seagulls[i]?.cawSound?.IsPlaying == true)
                                 continue;
-                            }
 
-                            seagulls[i].life++;
-                            seagulls[i].position += seagulls[i].velocity;
+                            seagulls[i] = new Seagull(closestWater.GetClosestSurfacePoint(cameraPosition) + (-gravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -gravityDirection);
+                            continue;
                         }
 
-                    if (fishes != null && closestWater?.enableFish == true && depth > -1000)
-                        for (int i = 0; i < fishes.Length; i++)
-                        {
-                            if (fishes[i] == null || fishes[i].life > fishes[i].maxLife || closestPlanet == null)
-                            {
-                                fishes[i] = new Fish(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(50, 250)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.11f), gravityDirection);
-                                continue;
-                            }
+                        seagulls[i].life++;
+                        seagulls[i].position += seagulls[i].velocity;
+                    }
 
-                            fishes[i].life++;
-                            fishes[i].position += fishes[i].velocity;
+                if (fishes != null && closestWater?.enableFish == true && depth > -1000)
+                    for (int i = 0; i < fishes.Length; i++)
+                    {
+                        if (fishes[i] == null || fishes[i].life > fishes[i].maxLife || closestPlanet == null)
+                        {
+                            fishes[i] = new Fish(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(50, 250)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.11f), gravityDirection);
+                            continue;
                         }
-                }
-            }
-            catch (Exception e)
-            {
-                MyLog.Default.WriteLine(e);
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, e.ToString());
+
+                        fishes[i].life++;
+                        fishes[i].position += fishes[i].velocity;
+                    }
             }
         }
 
@@ -1973,7 +1962,6 @@ namespace Jakaria
             {
                 MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
                 MyAPIGateway.Utilities.SendModMessage(WaterModAPI.ModHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-
             }
         }
 

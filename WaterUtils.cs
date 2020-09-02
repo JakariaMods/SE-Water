@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using VRageMath;
 using Sandbox.Game.Entities;
 using Sandbox.Game;
+using Sandbox.ModAPI;
 
 namespace Jakaria
 {
@@ -40,6 +41,14 @@ namespace Jakaria
                 return 0;
 
             return Vector3.Dot(MyVisualScriptLogicProvider.GetSunDirection(), Vector3.Normalize(position - planet.PositionComp.GetPosition()));
+        }
+
+        /// <summary>
+        /// Sends a chat message using WaterMod as the sender, not synced
+        /// </summary>
+        public static void ShowMessage(string message)
+        {
+            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
         }
     }
 }

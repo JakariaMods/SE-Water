@@ -5,7 +5,7 @@ namespace Jakaria
 {
     public static class WaterLocalization
     {
-        public static readonly string ModChatName = "WaterMod";
+        public const string ModChatName = "WaterMod";
 
         public static readonly Dictionary<string, Language> Languages = new Dictionary<string, Language>()
         {
@@ -200,7 +200,73 @@ namespace Jakaria
                 RemoveWater = "Cap'n oceans got dry how will we sail?!.",
 
                 Depth = "Ye Depth: {0}m",
+            } },
+
+            {"russian", new Language()
+            {
+                EnglishName = "russian",
+
+                WaterModVersion = "Water Mod V{0} по Jakaria.",
+                TranslationAuthor = "Google Translate",
+
+                NoPlanetWater = "На этой планете нет воды.",
+                NoPlanet = "Планеты нет.",
+
+                SetLanguage = "Установите язык на '{0}'. переведено {1}",
+                SetLanguageNoParse = "Не могу читать '{0}', Этот язык не существует.",
+
+                GetQuality = "Качество графики '{0}'.",
+                SetQuality = "Yстановить качество графики на '{0}'.",
+                SetQualityNoParse = "Не могу читать '{0}'.",
+
+                ToggleRenderCOB = "Переключатель плавучести центра.",
+
+                GetBuoyancy = "Mножитель силы плавучести '{0}'.",
+                SetBuoyancy = "Hовый множитель плавучести '{0}'.",
+                SetBuoyancyNoParse = "Не могу читать '{0}'.",
+
+                GetViscosity = "Tолщина воды '{0}'.",
+                SetViscosity = "Новая толщина воды '{0}'.",
+                SetViscosityNoParse = "Не могу читать '{0}'.",
+
+                GetRadius = "Размер воды '{0}'.",
+                SetRadius = "Новый размер воды '{0}'.",
+                SetRadiusNoParse = "Не могу читать '{0}'.",
+
+                GetWaveHeight = "pазмер водной волны '{0}m'.",
+                SetWaveHeight = "Новый размер водной волны '{0}m'.",
+                SetWaveHeightNoParse = "Не могу читать '{0}'.",
+
+                Reset = "Cбросить настройки.",
+
+                GetWaveSpeed = "Cкорость волны '{0}'.",
+                SetWaveSpeed = "Новая скорость волны '{0}'.",
+                SetWaveSpeedNoParse = "Не могу читать '{0}'.",
+
+                HasWater = "Yже есть вода.",
+                CreateWater = "Созданная вода.",
+                RemoveWater = "Удалена вода.",
+
+                ExportWater = "Экспортировано в буфер обмена.",
+                ImportWater = "Imported water settings.",
+
+                Depth = "Bысота: {0}m",
+                ToggleShowDepth = "Переключатель bысота.",
+
+                ToggleBirds = "Переключатель птицы.",
+                ToggleFish = "Переключатель рыбы.",
+
+                ToggleFog = "Переключатель туман.",
+
+                GenericNoParse = "Не могу читать '{0}'.",
+
+                ToggleDebug = "Toggled debug mode.",
+
+                GetVolume = "Объем '{0}'.",
+                SetVolume = "Новый том '{0}'.",
+                SetVolumeNoParse = "Не могу читать '{0}'."
             } }
+
         };
 
         public static Language CurrentLanguage = Languages.GetValueOrDefault("english");
