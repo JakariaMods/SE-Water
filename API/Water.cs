@@ -76,16 +76,13 @@ namespace Jakaria
         }
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
-        public Water(MyPlanet planet, float radiusMultiplier = 1.03f)
+        public Water(MyPlanet planet, float radiusMultiplier = 1.032f)
         {
             planetID = planet.EntityId;
 
             position = planet.PositionComp.GetPosition();
             radius = planet.MinimumRadius * radiusMultiplier;
             currentRadius = radius;
-
-            enableFish = (planet?.Generator?.Atmosphere?.Breathable == true) && (planet?.Generator?.DefaultSurfaceTemperature == VRage.Game.MyTemperatureLevel.Cozy);
-            enableSeagulls = enableFish;
 
             this.planet = planet;
         }
@@ -169,8 +166,6 @@ namespace Jakaria
         {
             return Vector3.DistanceSquared(this.position, position) - this.radius;
         }
-
-        
 
         /// <summary>Returns the up direction at a position</summary>
         public Vector3 GetUpDirection(Vector3 position)

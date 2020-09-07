@@ -50,5 +50,15 @@ namespace Jakaria
         {
             MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
         }
+
+        /// <summary>
+        /// Removes brackets to help players parse their commands if for some reason they put them
+        /// </summary>
+        public static string ValidateCommandData(string input)
+        {
+            input = input.Replace("[", "");
+            input = input.Replace("]", "");
+            return input;
+        }
     }
 }

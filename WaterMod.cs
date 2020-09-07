@@ -30,6 +30,7 @@ using Sandbox.Game.Entities.Blocks;
 using SpaceEngineers.Game.ModAPI;
 using VRage.Collections;
 using VRage;
+using Sandbox.Game.Entities.Character.Components;
 
 namespace Jakaria
 {
@@ -75,20 +76,26 @@ namespace Jakaria
             public static float Volume = 1f;
         }
 
+        public static class Session
+        {
+            public static float CameraDepth = 0;
+            public static bool CameraAirtight = false;
+            public static bool CameraUnderwater = false;
+            public static int InsideGrid = 0;
+            public static Vector3 CameraPosition = Vector3.Zero;
+            public static Vector3 CameraRotation = Vector3.Zero;
+        }
+
         //Client variables
         MyPlanet closestPlanet = null;
         Water closestWater = null;
         MyObjectBuilder_WeatherEffect closestWeather = null;
         Vector3D gravityDirection = Vector3D.Zero;
-        float depth = 0;
-        int insideGrid = 0;
-        bool underwater = false;
         bool previousUnderwaterState = true;
         List<MyEntity> nearbyEntities = new List<MyEntity>();
         bool initialized = false;
         float nightValue = 0;
-        Vector3D cameraPosition = Vector3.Zero;
-        
+        IMyWeatherEffects weatherEffects;
         //Text Hud API
         HudAPIv2 TextAPI;
         HudAPIv2.HUDMessage DepthMeter;
@@ -122,6 +129,8 @@ namespace Jakaria
             MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
 
             MyLog.Default.WriteLine(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
+
+            weatherEffects = MyAPIGateway.Session.WeatherEffects;
 
             if (!MyAPIGateway.Utilities.IsDedicated)
             {
@@ -284,7 +293,7 @@ namespace Jakaria
                     {
                         Language language;
 
-                        if (WaterLocalization.Languages.TryGetValue(args[1], out language))
+                        if (WaterLocalization.Languages.TryGetValue(WaterUtils.ValidateCommandData(args[1]), out language))
                         {
                             WaterLocalization.CurrentLanguage = language;
 
@@ -309,7 +318,7 @@ namespace Jakaria
                     if (args.Length == 2)
                     {
                         float quality = -1;
-                        if (float.TryParse(args[1], out quality))
+                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out quality))
                         {
                             quality = MathHelper.Clamp(quality, 0.2f, 10f);
                             WaterMod.Settings.Quality = quality;
@@ -336,7 +345,7 @@ namespace Jakaria
                     if (args.Length == 2)
                     {
                         float volume = -1;
-                        if (float.TryParse(args[1], out volume))
+                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out volume))
                         {
                             volume = MathHelper.Clamp(volume, 0f, 1f);
                             WaterMod.Settings.Volume = volume;
@@ -402,36 +411,48 @@ namespace Jakaria
                     case "wbird":
                         sendToOthers = false;
 
-                        foreach (var water in waters)
+                        if (closestPlanet != null)
                         {
-                            if (water.planetID == closestPlanet.EntityId)
+                            foreach (var water in waters)
                             {
-                                water.enableSeagulls = !water.enableSeagulls;
-                                MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleBirds);
-                                return;
+                                if (water.planetID == closestPlanet.EntityId)
+                                {
+                                    water.enableSeagulls = !water.enableSeagulls;
+                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleBirds);
+                                    return;
+                                }
                             }
-                        }
 
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        }
+                        else
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+
                         break;
 
                     //Toggle fish on a planet
                     case "wfish":
                         sendToOthers = false;
 
-                        foreach (var water in waters)
+                        if (closestPlanet != null)
                         {
-                            if (water.planetID == closestPlanet.EntityId)
+                            foreach (var water in waters)
                             {
-                                water.enableFish = !water.enableFish;
-                                MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFish);
-                                return;
+                                if (water.planetID == closestPlanet.EntityId)
+                                {
+                                    water.enableFish = !water.enableFish;
+                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFish);
+                                    return;
+                                }
                             }
-                        }
 
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        }
+                        else
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+
                         break;
 
                     case "wbuoyancy":
@@ -459,9 +480,8 @@ namespace Jakaria
                         //Set Buoyancy
                         if (args.Length == 2)
                         {
-
                             float buoyancy = -1;
-                            if (float.TryParse(args[1], out buoyancy))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out buoyancy))
                             {
                                 if (closestPlanet == null)
                                 {
@@ -514,7 +534,7 @@ namespace Jakaria
                         if (args.Length == 2)
                         {
                             float viscosity;
-                            if (float.TryParse(args[1], out viscosity))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out viscosity))
                             {
                                 viscosity = MathHelper.Clamp(viscosity, 0f, 1f);
                                 if (closestPlanet == null)
@@ -568,7 +588,7 @@ namespace Jakaria
                         if (args.Length == 2)
                         {
                             float radius = -1;
-                            if (float.TryParse(args[1], out radius))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
                             {
                                 radius = MathHelper.Clamp(radius, 0.01f, 10f);
 
@@ -626,7 +646,7 @@ namespace Jakaria
                         {
                             float waveHeight = -1;
 
-                            if (float.TryParse(args[1], out waveHeight))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveHeight))
                             {
                                 if (closestPlanet == null)
                                 {
@@ -707,7 +727,7 @@ namespace Jakaria
                         if (args.Length == 2)
                         {
                             float waveSpeed = -1;
-                            if (float.TryParse(args[1], out waveSpeed))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveSpeed))
                             {
                                 if (closestPlanet == null)
                                 {
@@ -756,7 +776,7 @@ namespace Jakaria
                         {
                             float radius = 1f;
 
-                            if (float.TryParse(args[1], out radius))
+                            if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
                             {
                                 waters.Add(new Water(closestPlanet, MathHelper.Clamp(radius, 0.01f, 10f)));
                                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(waters));
@@ -976,7 +996,7 @@ namespace Jakaria
                 //Server
                 if (MyAPIGateway.Session.IsServer)
                 {
-                    List<MyObjectBuilder_WeatherPlanetData> weatherPlanets = MyAPIGateway.Session.WeatherEffects.GetWeatherPlanetData();
+                    List<MyObjectBuilder_WeatherPlanetData> weatherPlanets = weatherEffects.GetWeatherPlanetData();
 
                     foreach (var water in waters)
                     {
@@ -986,56 +1006,62 @@ namespace Jakaria
                         MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, water.underWaterEntities, MyEntityQueryType.Dynamic);
 
                         //Remove Underwater Weathers
-                        for (int i = weatherPlanets.Count - 1; i >= 0; i--)
-                        {
-                            if (water.planetID == weatherPlanets[i].PlanetId)
+                        if (weatherPlanets?.Count != 0)
+                            for (int i = weatherPlanets.Count - 1; i >= 0; i--)
                             {
-                                for (int j = weatherPlanets[i].Weathers.Count - 1; j >= 0; j--)
+                                if (water.planetID == weatherPlanets[i].PlanetId)
                                 {
-                                    if (water.IsUnderwaterSquared(weatherPlanets[i].Weathers[j].Position))
-                                        MyAPIGateway.Session.WeatherEffects.RemoveWeather(weatherPlanets[i].Weathers[j]);
+                                    for (int j = weatherPlanets[i].Weathers.Count - 1; j >= 0; j--)
+                                    {
+                                        if (water.IsUnderwaterSquared(weatherPlanets[i].Weathers[j].Position))
+                                            weatherEffects.RemoveWeather(weatherPlanets[i].Weathers[j]);
+                                    }
                                 }
                             }
-                        }
                     }
                 }
 
                 //Client
                 if (!MyAPIGateway.Utilities.IsDedicated)
                 {
-                    if(closestPlanet != null)
-                        nightValue = 1 - (Math.Max(-WaterUtils.GetNightValue(closestPlanet, cameraPosition), 0) / 1.25f);
+                    if (closestPlanet != null)
+                        nightValue = 1 - (Math.Max(-WaterUtils.GetNightValue(closestPlanet, WaterMod.Session.CameraPosition), 0) / 1.25f);
 
                     if (closestWater != null && closestPlanet != null)
                     {
                         if (TextAPI.Heartbeat && DepthMeter.Visible)
                         {
                             string message;
-                            if (depth < -closestWater.waveHeight * 2)
-                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(cameraPosition)).ToString());
+                            if (WaterMod.Session.CameraDepth < -closestWater.waveHeight * 2)
+                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-closestWater.GetDepthSimple(WaterMod.Session.CameraPosition)).ToString());
                             else
-                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-depth).ToString());
+                                message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-WaterMod.Session.CameraDepth).ToString());
 
-                            if (depth < -500)
+                            if (WaterMod.Session.CameraDepth < -500)
                                 message = "- " + message + " -";
 
                             DepthMeter.Message = new StringBuilder("\n\n\n" + message);
-                            DepthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, MathHelper.Clamp(-depth / 500, 0f, 1f)), Color.Red, -(depth + 400) / 100);
+
+                            if (!WaterMod.Session.CameraAirtight)
+                                DepthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, MathHelper.Clamp(-WaterMod.Session.CameraDepth / 500, 0f, 1f)), Color.Red, -(WaterMod.Session.CameraDepth + 400) / 100);
+                            else
+                                DepthMeter.InitialColor = Color.White;
+
                             DepthMeter.Offset = new Vector2D(-DepthMeter.GetTextLength().X / 2, 0);
                         }
 
-                        MyAPIGateway.Session.WeatherEffects.GetWeather(cameraPosition, out closestWeather);
+                        weatherEffects.GetWeather(WaterMod.Session.CameraPosition, out closestWeather);
 
-                        BoundingSphereD sphere = new BoundingSphereD(cameraPosition, 1000);
+                        BoundingSphereD sphere = new BoundingSphereD(WaterMod.Session.CameraPosition, 1000);
                         nearbyEntities.Clear();
                         MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, nearbyEntities);
 
-                        if (closestWeather != null && (closestWeather.Weather.StartsWith("Rain") || closestWeather.Weather.StartsWith("Thunderstorm")))
+                        if (closestWeather != null && (closestWeather.Weather.StartsWith("Rain") || closestWeather.Weather.StartsWith("ThunderStorm")))
                         {
-                            splashes.Add(new Splash(closestWater.GetClosestSurfacePoint(cameraPosition + (MyUtils.GetRandomVector3Normalized() * 50)), 0.5f, false));
-                            splashes.Add(new Splash(closestWater.GetClosestSurfacePoint(cameraPosition + (MyUtils.GetRandomVector3Normalized() * 50)), 0.5f, false));
-                            splashes.Add(new Splash(closestWater.GetClosestSurfacePoint(cameraPosition + (MyUtils.GetRandomVector3Normalized() * 50)), 0.5f, false));
-                            splashes.Add(new Splash(closestWater.GetClosestSurfacePoint(cameraPosition + (MyUtils.GetRandomVector3Normalized() * 50)), 0.5f, false));
+                            for (int i = 0; i < (int)(WaterMod.Settings.Quality * 10); i++)
+                            {
+                                splashes.Add(new Splash(closestWater.GetClosestSurfacePoint(WaterMod.Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * 50)), 0.5f, false));
+                            }
                         }
 
                         if (nearbyEntities != null)
@@ -1065,11 +1091,9 @@ namespace Jakaria
                                             if (block.IsBuilt && belowWater)
                                             {
                                                 block.StopDamageEffect(true);
-
-                                                if (block.HasInventory)
-                                                    if (MyUtils.GetRandomInt(0, 100) < 15)
-                                                        lock (effectLock)
-                                                            bubbles.Add(new Bubble(block.PositionComp.GetPosition(), block.CubeGrid.GridSizeHalf));
+                                                if (MyUtils.GetRandomInt(0, 100) < 15)
+                                                    lock (effectLock)
+                                                        bubbles.Add(new Bubble(block.PositionComp.GetPosition(), block.CubeGrid.GridSizeHalf));
                                             }
                                             continue;
                                         }
@@ -1100,9 +1124,9 @@ namespace Jakaria
                                                 continue;
                                             }
 
-                                            if ((block as IMyShipDrill)?.IsWorking == true)
+                                            if (block is IMyShipDrill)
                                             {
-                                                if (MyUtils.GetRandomInt(0, 100) < 10)
+                                                if (block.IsWorking && MyUtils.GetRandomInt(0, 100) < 10)
                                                     lock (effectLock)
                                                         bubbles.Add(new Bubble(block.PositionComp.GetPosition(), block.CubeGrid.GridSizeHalf));
                                                 continue;
@@ -1142,37 +1166,30 @@ namespace Jakaria
             SimulatePhysics();
 
             //Clients
-            try
+            if (!MyAPIGateway.Utilities.IsDedicated && initialized && MyAPIGateway.Session != null && MyAPIGateway.Session.Player != null && MyAPIGateway.Session.Camera != null)
             {
-                if (!MyAPIGateway.Utilities.IsDedicated && initialized && MyAPIGateway.Session != null && MyAPIGateway.Session.Player != null && MyAPIGateway.Session.Camera != null)
+                if (WaterMod.Settings.Volume != 0)
+                    SimulateSounds();
+
+                WaterMod.Session.InsideGrid = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Grids : 0;
+
+                WaterMod.Session.CameraAirtight = IsPositionAirtight(MyAPIGateway.Session.Camera.Position);
+                if (WaterMod.Session.CameraAirtight || ((MyAPIGateway.Session.Player.Controller?.ControlledEntity?.Entity as MyCockpit) != null && (MyAPIGateway.Session.Player.Controller.ControlledEntity.Entity as MyCockpit).OxygenFillLevel > 0f))
+                    WaterMod.Session.InsideGrid = 25;
+
+                if (MyAPIGateway.Input.IsNewGameControlPressed(MyControlsSpace.TOGGLE_HUD))
+                    WaterMod.Settings.ShowHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
+
+                closestPlanet = MyGamePruningStructure.GetClosestPlanet(WaterMod.Session.CameraPosition);
+                closestWater = GetClosestWater(WaterMod.Session.CameraPosition);
+
+                if (closestPlanet != null)
                 {
-                    if (WaterMod.Settings.Volume != 0)
-                        SimulateSounds();
-
-                    insideGrid = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Grids : 0;
-
-                    if (IsPositionAirtight(MyAPIGateway.Session.Camera.Position) || ((MyAPIGateway.Session.Player.Controller?.ControlledEntity?.Entity as MyCockpit) != null && (MyAPIGateway.Session.Player.Controller.ControlledEntity.Entity as MyCockpit).OxygenFillLevel > 0f))
-                        insideGrid = 25;
-
-                    if (MyAPIGateway.Input.IsNewGameControlPressed(MyControlsSpace.TOGGLE_HUD))
-                        WaterMod.Settings.ShowHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
-
-                    closestPlanet = MyGamePruningStructure.GetClosestPlanet(cameraPosition);
-                    closestWater = GetClosestWater(cameraPosition);
-
-                    if (closestPlanet != null)
-                    {
-                        gravityDirection = Vector3D.Normalize(closestPlanet.PositionComp.GetPosition() - cameraPosition);
-                    }
-
-                    if (closestWater != null)
-                        MyAPIGateway.Parallel.StartBackground(SimulateEffects);
+                    gravityDirection = Vector3D.Normalize(closestPlanet.PositionComp.GetPosition() - WaterMod.Session.CameraPosition);
                 }
-            }
-            catch (Exception e)
-            {
-                MyLog.Default.WriteLine(e);
-                WaterUtils.ShowMessage(e.ToString());
+
+                if (closestWater != null)
+                    MyAPIGateway.Parallel.StartBackground(SimulateEffects);
             }
         }
 
@@ -1202,14 +1219,25 @@ namespace Jakaria
                                 if (!MyAPIGateway.Session.SessionSettings.EnableOxygen || !MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
                                     continue;
 
-                                if (depth < 0 && !IsPositionAirtight(player.Character.GetHeadMatrix(false).Translation))
-                                {
-                                    if (player?.Character?.EnabledHelmet == false)
-                                        player.Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+                                MyCharacterOxygenComponent oxygenComponent = player.Character.Components.Get<MyCharacterOxygenComponent>();
 
+                                if (oxygenComponent != null && depth < 0 && !IsPositionAirtight(player.Character.GetHeadMatrix(false).Translation))
+                                {
+                                    if (oxygenComponent.HelmetEnabled)
+                                    {
+                                        //Increase oxygen usage to prevent infinite oxygen
+                                        //oxygenComponent.SuitOxygenAmount -= 5f;
+                                    }
+                                    else
+                                    {
+                                        //Suffocate
+                                        player.Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+                                    }
+
+                                    //Pressure Crushing
                                     if (depth <= -500)
                                     {
-                                        player.Character.DoDamage(1f + 1f * (-(depth + 500) / 300), MyDamageType.Temperature, true);
+                                        player.Character.DoDamage(1f + 1f * (-(depth + 500) / 200), MyDamageType.Temperature, true);
                                     }
                                 }
                             }
@@ -1262,6 +1290,14 @@ namespace Jakaria
         }
 
         /// <summary>
+        /// Creates a bubble
+        /// </summary>
+        public void CreateBubble(Vector3 position, float radius)
+        {
+            bubbles.Add(new Bubble(position, radius));
+        }
+
+        /// <summary>
         /// Simulates water physics
         /// </summary>
         public void SimulatePhysics()
@@ -1270,6 +1306,9 @@ namespace Jakaria
             {
                 foreach (var water in waters)
                 {
+                    if (water.viscosity == 0 && water.buoyancy == 0)
+                        continue;
+
                     water.waveTimer++;
                     water.currentRadius = (float)Math.Max(water.radius + (Math.Sin(water.waveTimer * water.waveSpeed) * water.waveHeight), 0);
 
@@ -1289,8 +1328,10 @@ namespace Jakaria
                             entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -entity.Physics.LinearVelocity * water.viscosity * entity.Physics.Mass * 12, null, null);
 
                             if ((entity as MyFloatingObject).Item.Content.SubtypeName == WaterData.IceItem.SubtypeName && !IsPositionAirtight(entity.PositionComp.GetPosition()))
+                            {
+                                CreateBubble(entity.PositionComp.GetPosition(), entity.PositionComp.LocalVolume.Radius / 2);
                                 entity.Close();
-
+                            }
                             continue;
                         }
                     }
@@ -1310,7 +1351,7 @@ namespace Jakaria
 
                             if (water.IsUnderwater(player.GetPosition()) && !IsPositionAirtight((player.Character.GetHeadMatrix(false).Translation)))
                             {
-                                player.Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -player.Character.Physics.LinearVelocity * water.viscosity * player.Character.Physics.Mass * 12, null, null);
+                                player.Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -player.Character.Physics.LinearVelocity * water.viscosity * player.Character.Physics.Mass * 20, null, null);
                             }
                         }
                 }
@@ -1427,14 +1468,6 @@ namespace Jakaria
             } //End Draygo
             else if (dragForce.IsValid())
             {
-                //Jak stop applying drag when drag mod is active reeeee :D
-                //No PauseChamp
-
-                if (grid.Physics.AngularVelocity.IsValid())
-                {
-                    grid.Physics.AngularVelocity *= 1f - (percentGridUnderWater * water.viscosity * (grid.Physics.Speed / 20f));
-                }
-
                 grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce / 2, null, null, null, false, false);
             }
             //End Drag
@@ -1514,7 +1547,8 @@ namespace Jakaria
         /// </summary>
         public override void Draw()
         {
-            cameraPosition = MyAPIGateway.Session.Camera.Position;
+            WaterMod.Session.CameraPosition = MyAPIGateway.Session.Camera.Position;
+            WaterMod.Session.CameraRotation = MyAPIGateway.Session.Camera.WorldMatrix.Forward;
 
             Vector3D grav0 = Vector3.Forward;
             Vector3D grav90 = Vector3.Up;
@@ -1528,7 +1562,7 @@ namespace Jakaria
             //Text Hud API Update
             if (TextAPI.Heartbeat)
             {
-                DepthMeter.Visible = WaterMod.Settings.ShowDepth && depth < 0;
+                DepthMeter.Visible = WaterMod.Settings.ShowDepth && WaterMod.Session.CameraDepth < 0;
             }
 
             foreach (var water in waters)
@@ -1540,42 +1574,44 @@ namespace Jakaria
 
                 if (water != closestWater)
                 {
-                    Color white2 = new Color(0.4f, 0.4f, 0.4f, 0.8f);
-                    MySimpleObjectDraw.DrawTransparentSphere(ref worldMatrix, water.currentRadius, ref white2, MySimpleObjectRasterizer.Solid, 35, faceMaterial: WaterData.WaterMaterial);
+                    Color white2 = new Color(0.5f, 0.5f, 0.5f, 1f);
+                    MySimpleObjectDraw.DrawTransparentSphere(ref worldMatrix, water.currentRadius + 100, ref white2, MySimpleObjectRasterizer.Solid, 24, faceMaterial: WaterData.WaterMaterial);
                     /*Color white2 = new Color(0.4f, 0.4f, 0.4f, 0.9f * (MathHelper.Clamp(depth - 25f, 0, 300) / 300f));
                     MySimpleObjectDraw.DrawTransparentSphere(ref worldMatrix, water.currentRadius, ref white2, MySimpleObjectRasterizer.Solid, 35, faceMaterial: WaterData.WaterMaterial);*/
                 }
-                /*else
+                else if (!WaterMod.Session.CameraUnderwater)
                 {
-                    Color white2 = new Color(0.4f, 0.4f, 0.4f, 0.8f);
-                    MySimpleObjectDraw.DrawTransparentSphere(ref worldMatrix, water.currentRadius, ref white2, MySimpleObjectRasterizer.Solid, 35, faceMaterial: WaterData.WaterMaterial);
-                }*/
+                    Color white2 = new Color(0.5f, 0.5f, 0.5f, Math.Min((Math.Max(WaterMod.Session.CameraDepth - 250, 0f) / 250f), 1f));
+
+                    if (white2.A != 0)
+                        MySimpleObjectDraw.DrawTransparentSphere(ref worldMatrix, water.currentRadius, ref white2, MySimpleObjectRasterizer.Solid, 35, faceMaterial: WaterData.WaterMaterial);
+                }
             }
 
             if (closestWater != null)
             {
-                depth = closestWater.GetDepth(cameraPosition);
-                underwater = depth <= 0;
+                WaterMod.Session.CameraDepth = closestWater.GetDepth(WaterMod.Session.CameraPosition);
+                WaterMod.Session.CameraUnderwater = WaterMod.Session.CameraDepth <= 0;
 
-                if (underwater)
-                    MyTransparentGeometry.AddBillboardOriented(WaterData.WaterMaterial, new Vector4(1, 1, 1, 0.9f), closestWater.position - (gravityDirection * closestWater.currentRadius), grav0, grav90, 50000);
+                if (WaterMod.Session.CameraUnderwater)
+                    MyTransparentGeometry.AddBillboardOriented(WaterData.WaterMaterial, new Vector4(0.4f, 0.4f, 0.4f, 0.9f), closestWater.position - (gravityDirection * closestWater.currentRadius), grav0, grav90, 50000);
             }
             else
             {
-                depth = 0;
-                underwater = false;
+                WaterMod.Session.CameraDepth = 0;
+                WaterMod.Session.CameraUnderwater = false;
             }
 
-            double seperation = ((double)waterLayerSeperation / WaterMod.Settings.Quality) + (depth / 100);
+            double seperation = ((double)waterLayerSeperation / WaterMod.Settings.Quality) + (WaterMod.Session.CameraDepth / 50);
 
             for (int i = 0; i < waterLayers.Length; i++)
             {
                 if (waterLayers[i] == null)
                     continue;
 
-                waterLayers[i].Render.Visible = !underwater && closestWater != null;
+                waterLayers[i].Render.Visible = !WaterMod.Session.CameraUnderwater && closestWater != null;
 
-                if (!underwater && closestWater != null)
+                if (!WaterMod.Session.CameraUnderwater && closestWater != null)
                 {
                     double radius = (closestWater.currentRadius - ((i + 1) * seperation));
 
@@ -1587,35 +1623,37 @@ namespace Jakaria
                 }
             }
 
-            if (underwater)
+            if (WaterMod.Session.CameraUnderwater)
             {
                 if (WaterMod.Settings.ShowFog)
-                    MyAPIGateway.Session.WeatherEffects.FogDensityOverride = 0.015f * (1f + (-depth / 100f)) * ((25f - Math.Max(insideGrid - 10, 0)) / 25f);
+                    weatherEffects.FogDensityOverride = (0.02f + (0.0025f * (1f + (-WaterMod.Session.CameraDepth / 100f)))) * ((25f - Math.Max(WaterMod.Session.InsideGrid - 10, 0)) / 25f);
                 else
-                    MyAPIGateway.Session.WeatherEffects.FogDensityOverride = 0.001f;
+                    weatherEffects.FogDensityOverride = 0.001f;
 
-                MyAPIGateway.Session.WeatherEffects.FogMultiplierOverride = 1;
-                MyAPIGateway.Session.WeatherEffects.FogColorOverride = Vector3D.Lerp(new Vector3D(0.1, 0.125, 0.176), Vector3D.Zero, -depth / 1000.0);
-                MyAPIGateway.Session.WeatherEffects.FogAtmoOverride = 1;
-                MyAPIGateway.Session.WeatherEffects.FogSkyboxOverride = 1;
+                weatherEffects.FogMultiplierOverride = 1;
+                weatherEffects.FogColorOverride = Vector3D.Lerp(new Vector3D(0.1, 0.125, 0.176), Vector3D.Zero, -WaterMod.Session.CameraDepth / 500.0);
+                weatherEffects.FogAtmoOverride = 1;
+                weatherEffects.FogSkyboxOverride = 1;
+
+                weatherEffects.SunIntensityOverride = Math.Max(5 - (-Math.Min(WaterMod.Session.CameraDepth, -10) / 15f), 0.0001f);
+                MyAPIGateway.Utilities.ShowNotification(weatherEffects.SunIntensityOverride.ToString(), 1);
             }
 
             //Only Change fog once above water and all the time underwater
-            if (previousUnderwaterState != underwater)
+            if (previousUnderwaterState != WaterMod.Session.CameraUnderwater)
             {
-                previousUnderwaterState = underwater;
+                previousUnderwaterState = WaterMod.Session.CameraUnderwater;
 
-                if (underwater)
+                if (WaterMod.Session.CameraUnderwater)
                 {
-                    //MyAPIGateway.Session.WeatherEffects.FogColorOverride = Vector3D.Lerp(new Vector3D(0.1, 0.125, 0.176), Vector3D.Zero, -depth / 1000.0);
-                    MyAPIGateway.Session.WeatherEffects.SunIntensityOverride = 0.1f;
-                    MyAPIGateway.Session.WeatherEffects.ParticleVelocityOverride = new Vector3(float.NaN, float.NaN, float.NaN);
+                    //weatherEffects.FogColorOverride = Vector3D.Lerp(new Vector3D(0.1, 0.125, 0.176), Vector3D.Zero, -depth / 1000.0);
+                    weatherEffects.ParticleVelocityOverride = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
                 }
                 else
                 {
                     MyVisualScriptLogicProvider.FogSetAll(null, null, null, null, null);
-                    MyAPIGateway.Session.WeatherEffects.SunIntensityOverride = null;
-                    MyAPIGateway.Session.WeatherEffects.ParticleVelocityOverride = null;
+                    weatherEffects.SunIntensityOverride = null;
+                    weatherEffects.ParticleVelocityOverride = null;
                 }
             }
 
@@ -1643,8 +1681,11 @@ namespace Jakaria
                             MyTransparentGeometry.AddPointBillboard(WaterData.IconMaterial, WaterData.WhiteColor, indicator.position, 0.75f, 0, blendType: BlendTypeEnum.AdditiveTop);
                     }
 
-                if (underwater && insideGrid < 15)
+                if (WaterMod.Session.CameraUnderwater && !WaterMod.Session.CameraAirtight)
                 {
+                    //MyTransparentGeometry.AddPointBillboard(WaterData.BlankMaterial, new Vector4(0, 0, 1, 0.1f), WaterMod.Session.CameraPosition + WaterMod.Session.CameraRotation, 100, 0, blendType: BlendTypeEnum.PostPP);
+                    MyTransparentGeometry.AddBillboardOriented(WaterData.BlankMaterial, new Vector4(0.1f, 0.125f, 0.276f, 0.1f), WaterMod.Session.CameraPosition + WaterMod.Session.CameraRotation, MyAPIGateway.Session.Camera.WorldMatrix.Left, MyAPIGateway.Session.Camera.WorldMatrix.Up, 10000, blendType: BlendTypeEnum.PostPP);
+
                     foreach (var bubble in smallBubbles)
                     {
                         if (bubble == null)
@@ -1653,7 +1694,7 @@ namespace Jakaria
                         MyTransparentGeometry.AddPointBillboard(WaterData.FireflyMaterial, bubble.color * (1f - ((float)bubble.life / bubble.maxLife)), bubble.position, bubble.radius, bubble.angle);
                     }
 
-                    if (depth > -1000 && closestWater?.enableFish == true)
+                    if (WaterMod.Session.CameraDepth > -1000 && closestWater?.enableFish == true)
                         foreach (var fish in fishes)
                         {
                             if (fish == null)
@@ -1724,10 +1765,9 @@ namespace Jakaria
 
                 seagulls = new Seagull[(int)Math.Min(256 * WaterMod.Settings.Quality, 128)];
                 fishes = new Fish[(int)Math.Min(128 * WaterMod.Settings.Quality, 64)];
-                //fishes = new Fish[8192];
             }
 
-            MyAPIGateway.Parallel.For(0, waterLayers.Length, i =>
+            for (int i = 0; i < waterLayers.Length; i++)
             {
                 if (waterLayers[i] == null)
                 {
@@ -1736,7 +1776,7 @@ namespace Jakaria
                     else
                         waterLayers[i] = CreateWater2Mesh();
                 }
-            });
+            }
         }
 
         /// <summary>
@@ -1746,12 +1786,12 @@ namespace Jakaria
         {
             if (closestPlanet?.HasAtmosphere == true && closestWater != null)
             {
-                if (cameraPosition != null)
+                if (WaterMod.Session.CameraPosition != null)
                 {
                     if (AmbientBoatSoundEmitter == null || AmbientSoundEmitter == null || EnvironmentOceanSoundEmitter == null || EnvironmentBeachSoundEmitter == null || EnvironmentUnderwaterSoundEmitter == null)
                         return;
 
-                    if (underwater)
+                    if (WaterMod.Session.CameraUnderwater)
                     {
                         ambientTimer--;
                         if (ambientTimer <= 0)
@@ -1761,7 +1801,7 @@ namespace Jakaria
                             if (!AmbientSoundEmitter.IsPlaying)
                             {
                                 AmbientSoundEmitter.PlaySound(WaterData.AmbientSound);
-                                AmbientSoundEmitter.SetPosition(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
+                                AmbientSoundEmitter.SetPosition(WaterMod.Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
                                 AmbientSoundEmitter.VolumeMultiplier = WaterMod.Settings.Volume;
                             }
                         }
@@ -1781,11 +1821,11 @@ namespace Jakaria
                         {
                             ambientBoatTimer = MyUtils.GetRandomInt(1000, 1500); //Divide by 60 to get in seconds
 
-                            if (underwater && !AmbientBoatSoundEmitter.IsPlaying && insideGrid > 10 && depth < -500f)
+                            if (WaterMod.Session.CameraUnderwater && !AmbientBoatSoundEmitter.IsPlaying && WaterMod.Session.InsideGrid > 10 && WaterMod.Session.CameraDepth < -500f)
                             {
                                 AmbientBoatSoundEmitter.PlaySound(WaterData.GroanSound);
                                 AmbientBoatSoundEmitter.VolumeMultiplier = WaterMod.Settings.Volume;
-                                AmbientBoatSoundEmitter.SetPosition(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
+                                AmbientBoatSoundEmitter.SetPosition(WaterMod.Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
                             }
                         }
                     }
@@ -1816,10 +1856,10 @@ namespace Jakaria
                             EnvironmentUnderwaterSoundEmitter.StopSound(true, false);
                     }
 
-                    float volumeMultiplier = (25f - Math.Max(insideGrid - 5, 0)) / 25f * WaterMod.Settings.Volume;
+                    float volumeMultiplier = (25f - Math.Max(WaterMod.Session.InsideGrid - 5, 0)) / 25f * WaterMod.Settings.Volume;
                     EnvironmentUnderwaterSoundEmitter.VolumeMultiplier = volumeMultiplier;
-                    EnvironmentOceanSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((100f - depth) / 100f, 0, 1f);
-                    EnvironmentBeachSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((50f - depth) / 50f, 0, 1f);
+                    EnvironmentOceanSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((100f - WaterMod.Session.CameraDepth) / 100f, 0, 1f);
+                    EnvironmentBeachSoundEmitter.VolumeMultiplier = volumeMultiplier * MyMath.Clamp((50f - WaterMod.Session.CameraDepth) / 50f, 0, 1f);
                 }
             }
             else
@@ -1889,12 +1929,12 @@ namespace Jakaria
                         indicators[i].life++;
                     }
 
-                if (smallBubbles != null && underwater)
+                if (smallBubbles != null && WaterMod.Session.CameraUnderwater)
                     for (int i = smallBubbles.Length - 1; i >= 0; i--)
                     {
                         if (smallBubbles[i] == null || smallBubbles[i].life > smallBubbles[i].maxLife)
                         {
-                            smallBubbles[i] = new SmallBubble(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
+                            smallBubbles[i] = new SmallBubble(WaterMod.Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
                             continue;
                         }
                         smallBubbles[i].position += -gravityDirection * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 2;
@@ -1909,7 +1949,7 @@ namespace Jakaria
                             if (seagulls[i]?.cawSound?.IsPlaying == true)
                                 continue;
 
-                            seagulls[i] = new Seagull(closestWater.GetClosestSurfacePoint(cameraPosition) + (-gravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -gravityDirection);
+                            seagulls[i] = new Seagull(closestWater.GetClosestSurfacePoint(WaterMod.Session.CameraPosition) + (-gravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -gravityDirection);
                             continue;
                         }
 
@@ -1917,12 +1957,12 @@ namespace Jakaria
                         seagulls[i].position += seagulls[i].velocity;
                     }
 
-                if (fishes != null && closestWater?.enableFish == true && depth > -1000)
+                if (fishes != null && closestWater?.enableFish == true && WaterMod.Session.CameraDepth > -1000)
                     for (int i = 0; i < fishes.Length; i++)
                     {
                         if (fishes[i] == null || fishes[i].life > fishes[i].maxLife || closestPlanet == null)
                         {
-                            fishes[i] = new Fish(cameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(50, 250)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.11f), gravityDirection);
+                            fishes[i] = new Fish(WaterMod.Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(50, 250)), MyUtils.GetRandomPerpendicularVector(gravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.11f), gravityDirection);
                             continue;
                         }
 

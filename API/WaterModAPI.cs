@@ -93,6 +93,13 @@ namespace Jakaria
 
                 if (Waters == null)
                     Waters = new List<Water>();
+                else foreach (var water in Waters)
+                    {
+                        MyEntity entity = MyEntities.GetEntityById(water.planetID);
+
+                        if (entity != null)
+                            water.planet = MyEntities.GetEntityById(water.planetID) as MyPlanet;
+                    }
 
                 int count = Waters.Count;
                 RecievedData?.Invoke();
@@ -102,13 +109,7 @@ namespace Jakaria
                 if (count < Waters.Count)
                     WaterRemovedEvent?.Invoke();
 
-                foreach (var water in Waters)
-                {
-                    MyEntity entity = MyEntities.GetEntityById(water.planetID);
 
-                    if (entity != null)
-                        water.planet = MyEntities.GetEntityById(water.planetID) as MyPlanet;
-                }
             }
 
             if (data is int && (int)data != ModAPIVersion)

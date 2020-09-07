@@ -12,13 +12,13 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "1.0.41";
+        public const string Version = "1.0.44";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
         public static readonly MyStringId WaterMaterial = MyStringId.GetOrCompute("JWater3");
         public static readonly MyStringId Water2Material = MyStringId.GetOrCompute("JWater2");
-        //public const MyStringId BlankMaterial = MyStringId.GetOrCompute("Square");
+        public static readonly MyStringId BlankMaterial = MyStringId.GetOrCompute("Square");
         public static readonly MyStringId SplashMaterial = MyStringId.GetOrCompute("JSplash");
         public static readonly MyStringId BubblesMaterial = MyStringId.GetOrCompute("JBubbles");
         public static readonly MyStringId WakeMaterial = MyStringId.GetOrCompute("JWake");

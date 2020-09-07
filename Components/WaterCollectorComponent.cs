@@ -23,7 +23,7 @@ using VRageMath;
 
 namespace Jakaria
 {
-    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false, "Collector", "CollectorSmall")]
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false)]
     public class WaterCollectorComponent : MyGameLogicComponent
     {
         IMyCollector collector;
@@ -31,6 +31,7 @@ namespace Jakaria
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
+            WaterUtils.ShowMessage("co");
             if (MyAPIGateway.Session.IsServer)
             {
                 collector = Entity as IMyCollector;
@@ -38,9 +39,11 @@ namespace Jakaria
             }
         }
 
-
         public override void UpdateAfterSimulation10()
         {
+            if (!collector.IsWorking)
+                return;
+
             if (collector.CubeGrid?.Physics?.Gravity != null)
                 water = WaterMod.Static.GetClosestWater(collector.PositionComp.GetPosition());
 
@@ -49,9 +52,12 @@ namespace Jakaria
                 if (water.IsUnderwater(collector.PositionComp.GetPosition()))
                 {
                     if (collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                        collector.GetInventory().AddItems(50, WaterData.IceItem);
+                        collector.GetInventory().AddItems(200, WaterData.IceItem);
                     else
-                        collector.GetInventory().AddItems(10, WaterData.IceItem);
+                        collector.GetInventory().AddItems(15, WaterData.IceItem);
+
+                    if(MyUtils.GetRandomInt(0, 2) < 1)
+                    WaterMod.Static.CreateBubble(collector.PositionComp.GetPosition(), collector.CubeGrid.GridSize / 2);
                 }
             }
         }

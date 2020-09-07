@@ -38,24 +38,26 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="COBIndicator.cs" />
+    <Compile Include="Effects\COBIndicator.cs" />
+    <Compile Include="Components\WaterFarmComponent.cs" />
     <Compile Include="DragClientAPI.cs" />
-    <Compile Include="Fish.cs" />
+    <Compile Include="Effects\Fish.cs" />
     <Compile Include="HudAPIv2.cs" />
     <Compile Include="Language.cs" />
-    <Compile Include="SmallBubble.cs" />
-    <Compile Include="Bubble.cs" />
-    <Compile Include="Splash.cs" />
-    <Compile Include="Seagull.cs" />
-    <Compile Include="Wake.cs" />
+    <Compile Include="Effects\SmallBubble.cs" />
+    <Compile Include="Effects\Bubble.cs" />
+    <Compile Include="Effects\Splash.cs" />
+    <Compile Include="Effects\Seagull.cs" />
+    <Compile Include="Effects\Wake.cs" />
     <Compile Include="API\Water.cs" />
+    <Compile Include="Components\WaterSolarComponent.cs" />
     <Compile Include="WaterData.cs" />
     <Compile Include="WaterLocalization.cs" />
     <Compile Include="WaterMod.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="WaterSettings.cs" />
-    <Compile Include="WaterCollectorComponent.cs" />
-    <Compile Include="WaterTurretComponent.cs" />
+    <Compile Include="Components\WaterCollectorComponent.cs" />
+    <Compile Include="Components\WaterTurretComponent.cs" />
     <Compile Include="WaterUtils.cs" />
   </ItemGroup>
   <ItemGroup>
