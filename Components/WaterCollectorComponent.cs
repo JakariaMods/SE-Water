@@ -31,7 +31,6 @@ namespace Jakaria
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
-            WaterUtils.ShowMessage("co");
             if (MyAPIGateway.Session.IsServer)
             {
                 collector = Entity as IMyCollector;

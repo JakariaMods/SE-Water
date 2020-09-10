@@ -34,7 +34,7 @@ namespace Jakaria
         public float waveHeight = 1f;
         /// <summary>how fast a wave will oscillate</summary>
         [ProtoMember(16)]
-        public float waveSpeed = 0.004f;
+        public float waveSpeed = 0.006f;
         /// <summary>timer value for syncing waves between clients</summary>
         [ProtoMember(17)]
         public double waveTimer = 0;

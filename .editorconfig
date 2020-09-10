@@ -2,3 +2,6 @@
 
 # CS5001: Program does not contain a static 'Main' method suitable for an entry point
 dotnet_diagnostic.CS5001.severity = none
+
+# CS0108: Member hides inherited member; missing new keyword
+dotnet_diagnostic.CS0108.severity = none
