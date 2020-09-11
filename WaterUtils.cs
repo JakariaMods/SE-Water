@@ -7,6 +7,7 @@ using VRageMath;
 using Sandbox.Game.Entities;
 using Sandbox.Game;
 using Sandbox.ModAPI;
+using VRage.Utils;
 
 namespace Jakaria
 {
@@ -49,6 +50,11 @@ namespace Jakaria
         public static void ShowMessage(string message)
         {
             MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
+        }
+
+        public static void WriteLog(string message)
+        {
+            MyLog.Default.WriteLine("WaterMod: " + message);
         }
 
         /// <summary>

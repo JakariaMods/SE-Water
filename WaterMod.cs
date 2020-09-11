@@ -224,9 +224,18 @@ namespace Jakaria
                 if (Vector3.DistanceSquared(position, player.GetPosition()) < dist)
                     player = playerLoop;
             }
-
-            players.Clear();
             return player;
+        }
+
+        public bool HasWater(MyPlanet planet)
+        {
+            foreach (var water in waters)
+            {
+                if (water.planetID == planet.EntityId)
+                    return true;
+            }
+
+            return false;
         }
 
         public override void BeforeStart()
@@ -236,9 +245,12 @@ namespace Jakaria
 
         private void Entities_OnEntityAdd(IMyEntity obj)
         {
-            if (obj is MyPlanet)
+            if (MyAPIGateway.Session.IsServer && obj is MyPlanet)
             {
                 MyPlanet planet = obj as MyPlanet;
+
+                if (HasWater(obj as MyPlanet))
+                    return;
 
                 foreach (var weather in planet.Generator.WeatherGenerators)
                 {
@@ -246,6 +258,7 @@ namespace Jakaria
                     {
                         WaterSettings settings = MyAPIGateway.Utilities.SerializeFromXML<WaterSettings>(weather.Weathers?[0]?.Name);
                         Water water = new Water(planet);
+
                         water.radius = settings.Radius * planet.MinimumRadius;
                         water.waveHeight = settings.WaveHeight;
                         water.waveSpeed = settings.WaveSpeed;
@@ -764,13 +777,10 @@ namespace Jakaria
                             return;
                         }
 
-                        foreach (var water in waters)
+                        if (HasWater(closestPlanet))
                         {
-                            if (water.planetID == closestPlanet.EntityId)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.HasWater);
-                                return;
-                            }
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.HasWater);
+                            return;
                         }
 
                         if (args.Length == 2)
@@ -867,6 +877,22 @@ namespace Jakaria
                 return;
 
             waters = MyAPIGateway.Utilities.SerializeFromXML<List<Water>>(packet);
+
+            WaterUtils.WriteLog("Loading Water");
+            for (int i = waters.Count - 1; i >= 0; i--)
+            {
+                for (int j = 0; j < waters.Count; j++)
+                {
+                    if (i != j && waters[i].planetID == waters[j].planetID)
+                    {
+                        WaterUtils.WriteLog("Found duplicate water, removing");
+                        waters.RemoveAtFast(j);
+                        break;
+                    }
+                }
+            }
+
+            WaterUtils.WriteLog("Loaded World");
 
             LoadSettings();
 
@@ -1212,8 +1238,6 @@ namespace Jakaria
             {
                 if (MyAPIGateway.Session.IsServer)
                 {
-                    players.Clear();
-                    MyAPIGateway.Players.GetPlayers(players);
 
                     //Player Damage
                     if (players != null)
@@ -1456,11 +1480,11 @@ namespace Jakaria
             {
                 Vector3 characterforce = -player.Physics.LinearVelocity * water.viscosity * player.Physics.Mass * 12;
 
+                if ((!player.EnabledThrusts || !player.EnabledDamping) && (player.CurrentMovementState == MyCharacterMovementEnum.Falling || player.CurrentMovementState == MyCharacterMovementEnum.Jump || player.CurrentMovementState == MyCharacterMovementEnum.Flying))
+                    characterforce += player.Physics.Mass * -player.Physics.Gravity * 1.3f * water.buoyancy;
+
                 if (characterforce.IsValid())
                     player.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, characterforce, null, null);
-
-                if ((!player.EnabledThrusts || !player.EnabledDamping) && (player.CurrentMovementState == MyCharacterMovementEnum.Falling || player.CurrentMovementState == MyCharacterMovementEnum.Jump || player.CurrentMovementState == MyCharacterMovementEnum.Flying))
-                    player.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, player.Physics.Mass * -player.Physics.Gravity * 1.3f, null, null);
             }
         }
 
