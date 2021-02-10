@@ -92,9 +92,12 @@ namespace Jakaria
         [XmlIgnore, ProtoIgnore]
         public MyPlanet planet;
 
+        /// COMMENT OUT IF USING API
         [XmlIgnore, ProtoIgnore]
         public WaterFace[] waterFaces;
+        /// COMMENT OUT IF USING API
 
+        /// <summary>The water seed</summary>
         public int seed = 42069;
 
         [XmlIgnore, ProtoIgnore]
@@ -140,15 +143,17 @@ namespace Jakaria
             this.planet = planet;
             this.textureId = MyStringId.GetOrCompute(texture);
 
+            ///COMMENT OUT IF USING API
             waterFaces = new WaterFace[WaterData.Directions.Length];
-
-            if (noise == null)
-                noise = new FastNoiseLite(seed);
-
             for (int i = 0; i < WaterData.Directions.Length; i++)
             {
                 waterFaces[i] = new WaterFace(this, WaterData.Directions[i]);
+
             }
+            ///COMMENT OUT IF USING API
+
+            if (noise == null)
+                noise = new FastNoiseLite(seed);
         }
 
         public void UpdateTexture()

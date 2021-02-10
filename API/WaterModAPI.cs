@@ -12,7 +12,7 @@ namespace Jakaria
     public class WaterModAPI
     {
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 9;
+        public const int ModAPIVersion = 10;
 
         /// <summary>
         /// List of all water objects in the world, null if not registered

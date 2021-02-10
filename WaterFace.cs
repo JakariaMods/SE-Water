@@ -137,17 +137,14 @@ namespace Jakaria
                 Vector3D corner3;
                 Vector3D corner4;
 
-                float distFromSurface = float.MaxValue;
-
                 if (radius < 100)
                 {
                     corner1 = face.water.GetClosestSurfacePoint(corner1);
                     corner2 = face.water.GetClosestSurfacePoint(corner2);
                     corner3 = face.water.GetClosestSurfacePoint(face.position + (normal3 * face.water.currentRadius));
                     corner4 = face.water.GetClosestSurfacePoint(face.position + (normal4 * face.water.currentRadius));
-                    
-                    distFromSurface = (float)WaterUtils.GetAltitude(face.water.planet, corner1);
-                    if (distFromSurface < radius + radius && WaterUtils.IsUnderGround(face.water.planet, corner3, radius + radius))
+
+                    if (WaterUtils.GetAltitude(face.water.planet, corner1) < radius + radius && WaterUtils.IsUnderGround(face.water.planet, corner3, radius + radius))
                         return;
 
                     if (WaterMod.Session.CameraAirtight && WaterUtils.IsPositionAirtight(corner1))
@@ -178,8 +175,8 @@ namespace Jakaria
                 {
                     if (WaterMod.Session.CameraUnderwater || !closestToCamera)
                     {
-                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WaterColor * 0.5f, blendType: BlendTypeEnum.Standard);
-                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WaterColor * 0.5f, blendType: BlendTypeEnum.Standard);
+                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WaterColor * 0.5f);
+                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WaterColor * 0.5f);
                     }
                     else
                     {
@@ -193,28 +190,28 @@ namespace Jakaria
 
                                 if (i == count - 1)
                                 {
-                                    MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner2 + layerSeperation, corner3 + layerSeperation, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
-                                    MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner4 + layerSeperation, corner2 + layerSeperation, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
+                                    MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner2 + layerSeperation, corner3 + layerSeperation, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
+                                    MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner4 + layerSeperation, corner2 + layerSeperation, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
                                 }
                                 else
                                 {
                                     if (i == 0)
                                     {
-                                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WaterColor, blendType: BlendTypeEnum.Standard);
-                                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WaterColor, blendType: BlendTypeEnum.Standard);
+                                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WaterColor);
+                                        MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WaterColor);
                                     }
                                     else
                                     {
-                                        MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner2 + layerSeperation, corner3 + layerSeperation, normal1, normal2, normal3, uv1, uv2, uv3, face.water.textureId, 0, Vector3D.Zero, WaterFadeColor, blendType: BlendTypeEnum.Standard);
-                                        MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner4 + layerSeperation, corner2 + layerSeperation, normal1, normal4, normal2, uv1, uv4, uv2, face.water.textureId, 0, Vector3D.Zero, WaterFadeColor, blendType: BlendTypeEnum.Standard);
+                                        MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner2 + layerSeperation, corner3 + layerSeperation, normal1, normal2, normal3, uv1, uv2, uv3, face.water.textureId, 0, Vector3D.Zero, WaterFadeColor);
+                                        MyTransparentGeometry.AddTriangleBillboard(corner1 + layerSeperation, corner4 + layerSeperation, corner2 + layerSeperation, normal1, normal4, normal2, uv1, uv4, uv2, face.water.textureId, 0, Vector3D.Zero, WaterFadeColor);
                                     }
                                 }
                             }
                         }
                         else
                         {
-                            MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
-                            MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
+                            MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
+                            MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
                         }
 
                     }
@@ -222,10 +219,10 @@ namespace Jakaria
                 else
                 {
                     Vector3 Seperator = WaterMod.Session.GravityDirection * face.water.waveHeight;
-                    MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
-                    MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
-                    MyTransparentGeometry.AddTriangleBillboard(corner1 + Seperator, corner2 + Seperator, corner3 + Seperator, normal1, normal2, normal3, uv1, uv2, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
-                    MyTransparentGeometry.AddTriangleBillboard(corner1 + Seperator, corner4 + Seperator, corner2 + Seperator, normal1, normal4, normal2, uv1, uv4, uv2, face.water.textureId, 0, Vector3D.Zero, WhiteColor, blendType: BlendTypeEnum.Standard);
+                    MyTransparentGeometry.AddTriangleBillboard(corner1, corner2, corner3, normal1, normal2, normal3, uv2, uv1, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
+                    MyTransparentGeometry.AddTriangleBillboard(corner1, corner4, corner2, normal1, normal4, normal2, uv2, uv4, uv1, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
+                    MyTransparentGeometry.AddTriangleBillboard(corner1 + Seperator, corner2 + Seperator, corner3 + Seperator, normal1, normal2, normal3, uv1, uv2, uv3, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
+                    MyTransparentGeometry.AddTriangleBillboard(corner1 + Seperator, corner4 + Seperator, corner2 + Seperator, normal1, normal4, normal2, uv1, uv4, uv2, face.water.textureId, 0, Vector3D.Zero, WhiteColor);
                 }
             }
         }

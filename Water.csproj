@@ -56,7 +56,7 @@
     <Compile Include="API\Water.cs" />
     <Compile Include="Components\WaterSolarComponent.cs" />
     <Compile Include="TSSDepth.cs" />
-    <Compile Include="Utils\FastNoiseLite.cs" />
+    <Compile Include="API\FastNoiseLite.cs" />
     <Compile Include="Utils\Quadtree.cs" />
     <Compile Include="WaterData.cs" />
     <Compile Include="WaterFace.cs" />

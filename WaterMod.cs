@@ -2204,6 +2204,7 @@ namespace Jakaria
                     {
                         rebuildTree = true;
                         Session.LastLODBuildPosition = Session.CameraPosition;
+                        WaterData.DotMaxFOV = 1f - ((MyAPIGateway.Session.Camera.FieldOfViewAngle / 90f) + 0.2f);
                     }
 
                     MyAPIGateway.Parallel.ForEach(waters, water =>

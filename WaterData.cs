@@ -13,7 +13,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.0";
+        public const string Version = "2.1";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
@@ -30,7 +30,7 @@ namespace Jakaria
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
         public static readonly MyStringId ShadowMaterial = MyStringId.GetOrCompute("JShadow");
 
-        public static readonly float DotMaxFOV = 1f - ((MyAPIGateway.Session.Camera.FieldOfViewAngle / 90f) + 0.2f);
+        public static float DotMaxFOV = 1f - ((MyAPIGateway.Session.Camera.FieldOfViewAngle / 90f) + 0.2f);
 
         public static readonly MyStringId[] FishMaterials = new MyStringId[]
         {
