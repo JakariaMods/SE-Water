@@ -13,28 +13,28 @@ namespace Jakaria
 {
     public class Seagull
     {
-        public Vector3D position;
-        public Vector3 velocity;
-        public Vector3 leftVector;
-        public Vector3 upVector;
+        public Vector3D Position;
+        public Vector3D Velocity;
 
-        public int life = 1;
-        public int maxLife;
+        public Vector3 LeftVector { protected set; get; }
+        public Vector3 UpVector { protected set; get; }
+
+        public int Life { set; get; } = 0;
+        public int MaxLife { protected set; get; }
 
         public MyEntity3DSoundEmitter cawSound;
-        MySoundPair sound;
 
         public Seagull(Vector3D Position, Vector3D Velocity, Vector3 GravityDirection, int MaxLife = 0)
         {
-            position = Position;
-            velocity = Velocity;
-            upVector = Vector3.Normalize(Velocity);
-            leftVector = Vector3.Normalize(Vector3.Cross(GravityDirection, velocity));
+            this.Position = Position;
+            this.Velocity = Velocity;
+            this.UpVector = Vector3.Normalize(Velocity);
+            this.LeftVector = Vector3.Normalize(Vector3.Cross(GravityDirection, Velocity));
 
             if (MaxLife == 0)
-                maxLife = MyUtils.GetRandomInt(1000, 2000);
+                this.MaxLife = MyUtils.GetRandomInt(1000, 2000);
             else
-                maxLife = MaxLife;
+                this.MaxLife = MaxLife;
 
             cawSound = new MyEntity3DSoundEmitter(null);
         }
@@ -44,7 +44,7 @@ namespace Jakaria
             if (cawSound.IsPlaying)
                 return;
 
-            cawSound.SetPosition(position);
+            cawSound.SetPosition(this.Position);
             cawSound.PlaySound(WaterData.SeagullSound);
             cawSound.VolumeMultiplier = WaterMod.Settings.Volume * ((25f - Math.Max(WaterMod.Session.InsideGrid - 10, 0)) / 25f);
         }

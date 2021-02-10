@@ -1,4 +1,5 @@
 ﻿using Sandbox.Game.Entities;
+using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +13,14 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "1.0.47";
+        public const string Version = "2.0";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
-        public static readonly MyStringId WaterMaterial = MyStringId.GetOrCompute("JWater3");
-        public static readonly MyStringId Water2Material = MyStringId.GetOrCompute("JWater2");
+        public static readonly MyStringId WaterMaterial = MyStringId.GetOrCompute("JWater");
+        public static readonly MyStringId LavaMaterial = MyStringId.GetOrCompute("JLava");
+        public static readonly MyStringId WaterCircleMaterial = MyStringId.GetOrCompute("JWater2");
+        public static readonly MyStringId DebugMaterial = MyStringId.GetOrCompute("JDebug");
         public static readonly MyStringId BlankMaterial = MyStringId.GetOrCompute("Square");
         public static readonly MyStringId SplashMaterial = MyStringId.GetOrCompute("JSplash");
         public static readonly MyStringId BubblesMaterial = MyStringId.GetOrCompute("JBubbles");
@@ -25,6 +28,9 @@ namespace Jakaria
         public static readonly MyStringId IconMaterial = MyStringId.GetOrCompute("RedDot");
         public static readonly MyStringId FireflyMaterial = MyStringId.GetOrCompute("Firefly");
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
+        public static readonly MyStringId ShadowMaterial = MyStringId.GetOrCompute("JShadow");
+
+        public static readonly float DotMaxFOV = 1f - ((MyAPIGateway.Session.Camera.FieldOfViewAngle / 90f) + 0.2f);
 
         public static readonly MyStringId[] FishMaterials = new MyStringId[]
         {
@@ -74,16 +80,53 @@ namespace Jakaria
         };
 
         public static readonly Vector4 BubbleColor = new Vector4(0.05f, 0.0625f, 0.075f, 0.5f);
-        public static readonly Vector4 WhiteColor = new Vector4(1, 1, 1, 1);
-
-        public enum WaterIntersectionEnum : int
-        {
-            Overwater = 0,
-            ExitsWater = 1,
-            EntersWater = 2,
-            Underwater = 3,
-        }
+        public static readonly Vector4 WhiteColor = Vector4.One;
+        public static readonly Vector4 WaterColor = new Vector4(1, 1, 1, 0.9f);
+        public static readonly Vector4 WaterUnderwaterColor = new Vector4(1, 1, 1, 0.75f);
+        public static readonly Vector4 WaterFadeColor = new Vector4(1, 1, 1, 0.5f);
 
         public static readonly MyObjectBuilder_Ore IceItem = new MyObjectBuilder_Ore() { SubtypeName = "Ice" };
+
+        public static readonly Vector3D[] Directions = new Vector3D[]
+        {
+            Vector3D.Up,
+            Vector3D.Down,
+            Vector3D.Left,
+            Vector3D.Right,
+            Vector3D.Backward,
+            Vector3D.Forward,
+        };
+
+        public const float TSSFontScale = 28.8f / 37f;
+        public const char TSSNewLine = '\n';
+
+        public const double TwoPi = 6.28318530717958647692528676655900576839433879875021164194988918461563281257241799725606965068423413596429617302656461329418768921910116446345071881625696;
+
+        /*public static readonly Dictionary<int, float> WaterLODDistance = new Dictionary<int, float>()
+        {
+            { 0, float.PositiveInfinity },
+            { 1, 500000f * 500000f },
+            { 2, 25000f * 25000f },
+            { 3, 2500f * 2500f },
+            { 4, 1250f * 1250f},
+            { 5, 800f * 800f},
+            { 6, 500f * 500f},
+            { 7, 400f * 400f},
+            { 8, 250f * 250f},
+            { 9, 100f *  100},
+            { 10, 50f  * 50},
+        };
+
+        public static readonly Dictionary<int, float> WaterLODQuality = new Dictionary<int, float>()
+        {
+            { 10000, float.PositiveInfinity },
+            { 1000, 10000f },
+            { 100, 500f },
+            { 50, 400},
+            { 25, 200},
+            { 10, 100},
+            { 2, 50}
+        };*/
+
     }
 }

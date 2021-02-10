@@ -12,7 +12,7 @@ namespace Jakaria
     public class WaterModAPI
     {
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 8;
+        public const int ModAPIVersion = 9;
 
         /// <summary>
         /// List of all water objects in the world, null if not registered
@@ -81,12 +81,6 @@ namespace Jakaria
             if (data == null)
                 return;
 
-            if (!Registered)
-            {
-                Registered = true;
-                OnRegisteredEvent?.Invoke();
-            }
-
             if (data is byte[])
             {
                 Waters = MyAPIGateway.Utilities.SerializeFromBinary<List<Water>>((byte[])data);
@@ -108,8 +102,12 @@ namespace Jakaria
                     WaterCreatedEvent?.Invoke();
                 if (count < Waters.Count)
                     WaterRemovedEvent?.Invoke();
+            }
 
-
+            if (!Registered)
+            {
+                Registered = true;
+                OnRegisteredEvent?.Invoke();
             }
 
             if (data is int && (int)data != ModAPIVersion)
@@ -126,7 +124,7 @@ namespace Jakaria
         {
             foreach (var water in Waters)
             {
-                water.waveTimer++;
+                water.waveTimer += water.waveSpeed;
                 water.currentRadius = (float)Math.Max(water.radius + (Math.Sin((water.waveTimer) * water.waveSpeed) * water.waveHeight), 0);
             }
         }

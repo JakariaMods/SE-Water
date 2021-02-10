@@ -5,6 +5,11 @@ VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Water", "Water.csproj", "{81B4798E-2756-4731-8A74-A91E81AF65BF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7671D7DB-2502-4E4A-82F5-95979B3B8B0A}"
+	ProjectSection(SolutionItems) = preProject
+		FastNoiseLite.cs = FastNoiseLite.cs
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -28,7 +28,7 @@ namespace Jakaria
     {
         IMyCollector collector;
         Water water;
-
+        
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             if (MyAPIGateway.Session.IsServer)
@@ -46,18 +46,15 @@ namespace Jakaria
             if (collector.CubeGrid?.Physics?.Gravity != null)
                 water = WaterMod.Static.GetClosestWater(collector.PositionComp.GetPosition());
 
-            if (collector.IsWorking && water != null)
+            if (collector.IsWorking && water != null && !collector.GetInventory().IsFull && water.IsUnderwater(collector.PositionComp.GetPosition()))
             {
-                if (water.IsUnderwater(collector.PositionComp.GetPosition()))
-                {
-                    if (collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                        collector.GetInventory().AddItems(200, WaterData.IceItem);
-                    else
-                        collector.GetInventory().AddItems(15, WaterData.IceItem);
+                if (collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
+                    collector.GetInventory().AddItems(200, WaterData.IceItem);
+                else
+                    collector.GetInventory().AddItems(15, WaterData.IceItem);
 
-                    if(MyUtils.GetRandomInt(0, 2) < 1)
+                if (MyUtils.GetRandomInt(0, 2) < 1)
                     WaterMod.Static.CreateBubble(collector.PositionComp.GetPosition(), collector.CubeGrid.GridSize / 2);
-                }
             }
         }
     }

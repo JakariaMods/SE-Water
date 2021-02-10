@@ -57,11 +57,32 @@
         public string ToggleFog = "Toggled fog.";
 
         public string GenericNoParse = "Could not parse '{0}'.";
+        public string GenericNoPermissions = "You do not have permissions to run this command.";
+        public string GenericNoCreative = "You must be in creative mode to toggle fog.";
 
         public string ToggleDebug = "Toggled debug mode.";
 
         public string GetVolume = "Your water volume '{0}'.";
         public string SetVolume = "Set water volume to '{0}'.";
         public string SetVolumeNoParse = "Couldn't parse water volume '{0}'.";
+
+        public string GetWaveScale = "The water's wave scale is '{0}'.";
+        public string SetWaveScale = "Set the water's wave scale to '{0}'.";
+        public string SetWaveScaleNoParse = "Couldn't parse wave scale '{0}'.";
+
+        public string GetTexture = "The water's texture is '{0}'.";
+        public string SetTexture = "Set the water's texture to '{0}'.";
+        public string SetTextureNoFind = "Couldn't find texture '{0}'.";
+
+        public string NoTextAPI = "You do not have Text HUD API installed to show the depth meter.";
+
+        public string GetCrushDepth = "The water's crush depth is '{0}m'";
+        public string SetCrushDepth = "Set the water's crush depth to '{0}m'";
+
+        public string TogglePlayerDrag = "Toggled player drag.";
+
+        public string ToggleTransparency = "Toggled transparency.";
+
+        public string ToggleLighting = "Toggled lighting.";
     }
 }

@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{81B4798E-2756-4731-8A74-A91E81AF65BF}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Blank</RootNamespace>
-    <AssemblyName>Blank</AssemblyName>
+    <RootNamespace>Jakaria</RootNamespace>
+    <AssemblyName>Jakaria</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -38,27 +38,35 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="API\WaterAPI.cs" />
+    <Compile Include="API\WaterAPICore.cs" />
+    <Compile Include="Components\TurbineDamageComponent.cs" />
     <Compile Include="Effects\COBIndicator.cs" />
     <Compile Include="Components\WaterFarmComponent.cs" />
     <Compile Include="DragClientAPI.cs" />
-    <Compile Include="Effects\Fish.cs" />
+    <Compile Include="Creatures\Fish.cs" />
+    <Compile Include="FatBlockStorage.cs" />
     <Compile Include="HudAPIv2.cs" />
     <Compile Include="Language.cs" />
     <Compile Include="Effects\SmallBubble.cs" />
     <Compile Include="Effects\Bubble.cs" />
     <Compile Include="Effects\Splash.cs" />
-    <Compile Include="Effects\Seagull.cs" />
+    <Compile Include="Creatures\Seagull.cs" />
     <Compile Include="Effects\Wake.cs" />
     <Compile Include="API\Water.cs" />
     <Compile Include="Components\WaterSolarComponent.cs" />
+    <Compile Include="TSSDepth.cs" />
+    <Compile Include="Utils\FastNoiseLite.cs" />
+    <Compile Include="Utils\Quadtree.cs" />
     <Compile Include="WaterData.cs" />
+    <Compile Include="WaterFace.cs" />
     <Compile Include="WaterLocalization.cs" />
     <Compile Include="WaterMod.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Components\WaterCollectorComponent.cs" />
     <Compile Include="Components\WaterTurretComponent.cs" />
-    <Compile Include="WaterUtils.cs" />
+    <Compile Include="Utils\WaterUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="HavokWrapper">
@@ -85,6 +93,7 @@
     <Reference Include="SpaceEngineers.ObjectBuilders">
       <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.ObjectBuilders.dll</HintPath>
     </Reference>
+    <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
@@ -108,5 +117,6 @@
       <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Render.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
