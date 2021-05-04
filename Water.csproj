@@ -34,13 +34,13 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="API Package.zip" />
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="API\WaterAPI.cs" />
-    <Compile Include="API\WaterAPICore.cs" />
-    <Compile Include="Components\TurbineDamageComponent.cs" />
+    <Compile Include="API\WaterModAPI.cs" />
+    <Compile Include="Components\WaterVentComponent.cs" />
     <Compile Include="Effects\COBIndicator.cs" />
     <Compile Include="Components\WaterFarmComponent.cs" />
     <Compile Include="DragClientAPI.cs" />
@@ -62,7 +62,6 @@
     <Compile Include="WaterFace.cs" />
     <Compile Include="WaterLocalization.cs" />
     <Compile Include="WaterMod.cs" />
-    <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Components\WaterCollectorComponent.cs" />
     <Compile Include="Components\WaterTurretComponent.cs" />

@@ -78,11 +78,20 @@
 
         public string GetCrushDepth = "The water's crush depth is '{0}m'";
         public string SetCrushDepth = "Set the water's crush depth to '{0}m'";
+        public string SetCrushDepthNoParse = "Couldn't parse crush depth '{0}'";
 
         public string TogglePlayerDrag = "Toggled player drag.";
 
         public string ToggleTransparency = "Toggled transparency.";
 
         public string ToggleLighting = "Toggled lighting.";
+
+        public string GetCollectRate = "The water's collection rate is '{0}'";
+        public string SetCollectRate = "Set the water's collection rate to '{0}'";
+        public string SetCollectRateNoParse = "Couldn't parse collection rate '{0}'";
+
+        public string GetFogColor = "The water's fog color is '{0}'";
+        public string SetFogColor = "Set the water's fog color to '{0}'";
+        public string SetFogColorNoParse = "Couldn't parse fog color '{0}'";
     }
 }

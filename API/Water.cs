@@ -13,10 +13,11 @@ using VRage.Game.Entity;
 using VRage.Game.Models;
 using VRage.Utils;
 using VRageMath;
-using Jakaria.Utils;
+using Jakaria.API;
 
 namespace Jakaria
 {
+
     [ProtoContract(UseProtoMembersOnly = true)]
     public class Water
     {
@@ -45,7 +46,7 @@ namespace Jakaria
 
         /// <summary>center position of the water</summary>
         [ProtoMember(20)]
-        public Vector3 position;
+        public Vector3D position;
 
         //Physics properties
 
@@ -84,6 +85,12 @@ namespace Jakaria
         [ProtoMember(50)]
         public bool lit = true;
 
+        [ProtoMember(55)]
+        public float collectionRate = 1f;
+
+        [ProtoMember(60)]
+        public Vector3D fogColor = new Vector3D(0.1, 0.125, 0.196);
+
         /// <summary>All entites currently under the water</summary>
         [XmlIgnore, ProtoIgnore]
         public List<MyEntity> underWaterEntities = new List<MyEntity>();
@@ -102,16 +109,6 @@ namespace Jakaria
 
         [XmlIgnore, ProtoIgnore]
         public FastNoiseLite noise;
-
-        /// <summary>Without any arguments is used for Protobuf</summary>
-        public Water()
-        {
-            if (noise == null)
-                noise = new FastNoiseLite(seed);
-
-            if (textureId == null)
-                textureId = MyStringId.GetOrCompute(texture);
-        }
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
         public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.032f)
@@ -143,17 +140,25 @@ namespace Jakaria
             this.planet = planet;
             this.textureId = MyStringId.GetOrCompute(texture);
 
-            ///COMMENT OUT IF USING API
             waterFaces = new WaterFace[WaterData.Directions.Length];
             for (int i = 0; i < WaterData.Directions.Length; i++)
             {
                 waterFaces[i] = new WaterFace(this, WaterData.Directions[i]);
 
             }
-            ///COMMENT OUT IF USING API
 
             if (noise == null)
                 noise = new FastNoiseLite(seed);
+        }
+
+        /// <summary>Without any arguments is used for Protobuf</summary>
+        public Water()
+        {
+            if (noise == null)
+                noise = new FastNoiseLite(seed);
+
+            if (textureId == null)
+                textureId = MyStringId.GetOrCompute(texture);
         }
 
         public void UpdateTexture()
@@ -172,7 +177,7 @@ namespace Jakaria
             return position + (GetWaveHeight(position) * GetUpDirection(position));
         }
 
-        public bool IsUnderwater(Vector3 position, float altitudeOffset = 0)
+        public bool IsUnderwater(Vector3D position, float altitudeOffset = 0)
         {
             return GetDepth(position) + altitudeOffset < 0;
         }
@@ -222,33 +227,27 @@ namespace Jakaria
         }
 
         /// <summary>Returns the depth of water a position is at, negative numbers are underwater</summary>
-        public float GetDepth(Vector3 position)
+        public float GetDepth(Vector3D position)
         {
             return Vector3.Distance(this.position, position) - (this.currentRadius + (float)GetWaveHeight(GetClosestSurfacePoint(position)));
         }
 
         /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
-        public float GetDepthSquared(Vector3 position)
+        public float GetDepthSquared(Vector3D position)
         {
             return Vector3.DistanceSquared(this.position, position) - this.currentRadius;
         }
 
         /// <summary>Returns the depth of water a position is at using sea level, negative numbers are underwater</summary>
-        public float GetDepthSimple(Vector3 position)
+        public float GetDepthSimple(Vector3D position)
         {
             return Vector3.Distance(this.position, position) - this.radius;
         }
 
         /// <summary>Returns the up direction at a position</summary>
-        public Vector3 GetUpDirection(Vector3 position)
-        {
-            return Vector3.Normalize(position - this.position);
-        }
-
-        /// <summary>Returns the up direction at a position</summary>
         public Vector3D GetUpDirection(Vector3D position)
         {
-            return Vector3D.Normalize(position - this.position);
+            return Vector3.Normalize(position - this.position);
         }
     }
 }

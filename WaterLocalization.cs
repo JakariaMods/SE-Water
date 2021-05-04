@@ -250,8 +250,8 @@ namespace Jakaria
                 ExportWater = "Экспортировано в буфер обмена.",
                 ImportWater = "Imported water settings.",
 
-                Depth = "Bысота: {0}m",
-                ToggleShowDepth = "Переключатель bысота.",
+                Depth = "Глубина: {0}m",
+                ToggleShowDepth = "Переключатель Глубина.",
 
                 ToggleBirds = "Переключатель птицы.",
                 ToggleFish = "Переключатель рыбы.",

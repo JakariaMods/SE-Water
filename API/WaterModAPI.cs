@@ -7,9 +7,10 @@ using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Utils;
 
-namespace Jakaria
+namespace Jakaria.API
 {
-    public class WaterModAPI
+    [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
+    public class WaterModAPI : MySessionComponentBase
     {
         public const ushort ModHandlerID = 50271;
         public const int ModAPIVersion = 10;
@@ -17,61 +18,42 @@ namespace Jakaria
         /// <summary>
         /// List of all water objects in the world, null if not registered
         /// </summary>
-        public List<Water> Waters { get; private set; }
+        public static List<Water> Waters { get; private set; } = new List<Water>();
 
         /// <summary>
         /// Invokes when the API recieves data from the Water Mod
         /// </summary>
-        public event Action RecievedData;
+        public static event Action RecievedData;
 
         /// <summary>
         /// Invokes when a water is added to the Waters list
         /// </summary>
-        public event Action WaterCreatedEvent;
+        public static event Action WaterCreatedEvent;
 
         /// <summary>
         /// Invokes when a water is removed from the Waters list
         /// </summary>
-        public event Action WaterRemovedEvent;
+        public static event Action WaterRemovedEvent;
 
         /// <summary>
         /// Invokes when the water API becomes registered and ready to work
         /// </summary>
-        public event Action OnRegisteredEvent;
+        public static event Action OnRegisteredEvent;
 
         /// <summary>
         /// True if the API is registered/alive
         /// </summary>
-        public bool Registered { get; private set; } = false;
+        public static bool Registered { get; private set; } = false;
 
         /// <summary>
         /// Used to tell in chat what mod is out of date
         /// </summary>
-        private string ModName = "UnknownMod";
+        public static string ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
 
         //Water API Guide
         //Drag WaterModAPI.cs and Water.cs into your mod
-        //Create a new WaterModAPI object in your mod's script, "WaterModAPI api = new WaterModAPI();"
-        //Register the api at the start of your session with api.Register()
-        //Unregister the api at the end of your session with api.Unregister()
-        //Run api.UpdateRadius() inside of an update method
-
-        /// <summary>
-        /// Register with a mod name so version control can recognize what mod may be out of date
-        /// </summary>
-        public void Register(string modName)
-        {
-            ModName = modName;
-            MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
-        }
-
-        /// <summary>
-        /// Unregister to prevent odd behavior after reloading your save/game
-        /// </summary>
-        public void Unregister()
-        {
-            MyAPIGateway.Utilities.UnregisterMessageHandler(ModHandlerID, ModHandler);
-        }
+        //You no longer have to register your mod or create a new WaterModAPI Object, just grab WaterModAPI.Water itself, it's super easy!
+        //
 
         /// <summary>
         /// Do not use, for interfacing with Water Mod
@@ -112,21 +94,38 @@ namespace Jakaria
 
             if (data is int && (int)data != ModAPIVersion)
             {
-                MyLog.Default.WriteLine("Water API V" + ModAPIVersion + " for " + ModName + " is outdated, expected V" + (int)data);
-                MyAPIGateway.Utilities.ShowMessage(ModName, "Water API V" + ModAPIVersion + " is outdated, expected V" + (int)data);
+                MyLog.Default.WriteLine("Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)data);
+                MyAPIGateway.Utilities.ShowMessage(ModName, "Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)data);
             }
         }
 
         /// <summary>
-        /// Recalculates the CurrentRadius for all waters
+        /// Do not use, for interfacing with Water Mod
         /// </summary>
-        public void UpdateRadius()
+        public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
-            foreach (var water in Waters)
-            {
-                water.waveTimer += water.waveSpeed;
-                water.currentRadius = (float)Math.Max(water.radius + (Math.Sin((water.waveTimer) * water.waveSpeed) * water.waveHeight), 0);
-            }
+            MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
+        }
+
+        /// <summary>
+        /// Do not use, for interfacing with Water Mod
+        /// </summary>
+        public override void UpdateAfterSimulation()
+        {
+            if (Waters != null)
+                foreach (var water in Waters)
+                {
+                    water.waveTimer += water.waveSpeed;
+                    water.currentRadius = (float)Math.Max(water.radius + (Math.Sin((water.waveTimer) * water.waveSpeed) * water.waveHeight), 0);
+                }
+        }
+
+        /// <summary>
+        /// Do not use, for interfacing with Water Mod
+        /// </summary>
+        protected override void UnloadData()
+        {
+            MyAPIGateway.Utilities.UnregisterMessageHandler(ModHandlerID, ModHandler);
         }
     }
 }

@@ -13,7 +13,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.1";
+        public const string Version = "2.9";
         public const ushort ClientHandlerID = 50270;
 
         //Materials
@@ -30,7 +30,13 @@ namespace Jakaria
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
         public static readonly MyStringId ShadowMaterial = MyStringId.GetOrCompute("JShadow");
 
-        public static float DotMaxFOV = 1f - ((MyAPIGateway.Session.Camera.FieldOfViewAngle / 90f) + 0.2f);
+        public static float DotMaxFOV = UpdateFovFrustum();
+
+        public static float UpdateFovFrustum()
+        {
+            DotMaxFOV = (float)(Math.Sin(((MyAPIGateway.Session.Camera.FieldOfViewAngle + 45) * 2) * (Math.PI / 180f)));
+            return DotMaxFOV;
+        }
 
         public static readonly MyStringId[] FishMaterials = new MyStringId[]
         {
@@ -83,7 +89,7 @@ namespace Jakaria
         public static readonly Vector4 WhiteColor = Vector4.One;
         public static readonly Vector4 WaterColor = new Vector4(1, 1, 1, 0.9f);
         public static readonly Vector4 WaterUnderwaterColor = new Vector4(1, 1, 1, 0.75f);
-        public static readonly Vector4 WaterFadeColor = new Vector4(1, 1, 1, 0.5f);
+        public static readonly Vector4 WaterFadeColor = new Vector4(1, 1, 1, 0.8f);
 
         public static readonly MyObjectBuilder_Ore IceItem = new MyObjectBuilder_Ore() { SubtypeName = "Ice" };
 

@@ -14,17 +14,16 @@ namespace Jakaria
         public float minimumRadius;
         public float maximumRadius;
         public Vector3D velocity;
-        public Vector4 color;
         public int life = 1;
         public int maxLife;
         public float angle;
         public Vector3 upVector;
         public Vector3 leftVector;
+        public Vector4 colorMultiplier;
 
-        public Wake(Vector3D Position, Vector3D Velocity, Vector3 GravityDirection, float MinimumRadius = 0f, float MaximumRadius = 1f, int MaxLife = 0)
+        public Wake(Vector3D Position, Vector3D Velocity, Vector3 GravityDirection, Vector4 ColorMultiplier, float MinimumRadius = 0f, float MaximumRadius = 1f, int MaxLife = 0)
         {
             position = Position;
-            color = Vector4.One;
             velocity = Velocity;
             leftVector = Vector3.Normalize(velocity);
             upVector = Vector3.Normalize(Vector3.Cross(GravityDirection, velocity));
@@ -37,6 +36,7 @@ namespace Jakaria
             angle = MyUtils.GetRandomFloat(0, 360);
             minimumRadius = MinimumRadius;
             maximumRadius = MaximumRadius;
+            colorMultiplier = ColorMultiplier;
         }
     }
 }
