@@ -13,7 +13,8 @@ namespace Jakaria.API
     public class WaterModAPI : MySessionComponentBase
     {
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 10;
+        public const int ModAPIVersion = 11;
+        public const ushort ClientHandlerID = 50270;
 
         /// <summary>
         /// List of all water objects in the world, null if not registered
@@ -55,7 +56,7 @@ namespace Jakaria.API
         //You no longer have to register your mod or create a new WaterModAPI Object, just grab WaterModAPI.Water itself, it's super easy!
         //
 
-        /// <summary>
+        /*/// <summary>
         /// Do not use, for interfacing with Water Mod
         /// </summary>
         private void ModHandler(object data)
@@ -97,6 +98,42 @@ namespace Jakaria.API
                 MyLog.Default.WriteLine("Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)data);
                 MyAPIGateway.Utilities.ShowMessage(ModName, "Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)data);
             }
+        }*/
+
+        private void ClientHandler(byte[] packet)
+        {
+            Waters = MyAPIGateway.Utilities.SerializeFromBinary<List<Water>>(packet);
+
+            if (Waters == null)
+                Waters = new List<Water>();
+            else foreach (var water in Waters)
+                {
+                    MyEntity entity = MyEntities.GetEntityById(water.planetID);
+
+                    if (entity != null)
+                        water.planet = MyEntities.GetEntityById(water.planetID) as MyPlanet;
+                }
+
+            int count = Waters.Count;
+            RecievedData?.Invoke();
+
+            if (count > Waters.Count)
+                WaterCreatedEvent?.Invoke();
+            if (count < Waters.Count)
+                WaterRemovedEvent?.Invoke();
+
+            if (!Registered)
+            {
+                Registered = true;
+                OnRegisteredEvent?.Invoke();
+            }
+
+            /*int version = MyAPIGateway.Utilities.SerializeFromBinary<int>(packet);
+            if (version != ModAPIVersion && version > 0)
+            {
+                MyLog.Default.WriteLine("Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)version);
+                MyAPIGateway.Utilities.ShowMessage(ModName, "Water API V" + ModAPIVersion + " for mod '" + ModName + "' is outdated, expected V" + (int)version);
+            }*/
         }
 
         /// <summary>
@@ -104,7 +141,10 @@ namespace Jakaria.API
         /// </summary>
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
-            MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
+            /*if (MyAPIGateway.Session.IsServer)
+                MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
+            else*/
+                MyAPIGateway.Multiplayer.RegisterMessageHandler(ClientHandlerID, ClientHandler);
         }
 
         /// <summary>
@@ -125,7 +165,10 @@ namespace Jakaria.API
         /// </summary>
         protected override void UnloadData()
         {
-            MyAPIGateway.Utilities.UnregisterMessageHandler(ModHandlerID, ModHandler);
+            /*if (MyAPIGateway.Session.IsServer)
+                MyAPIGateway.Utilities.UnregisterMessageHandler(ModHandlerID, ModHandler);
+            else*/
+                MyAPIGateway.Multiplayer.UnregisterMessageHandler(ClientHandlerID, ClientHandler);
         }
     }
 }
