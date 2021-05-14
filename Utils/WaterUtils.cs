@@ -180,13 +180,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static bool HasWater(MyPlanet planet)
         {
-            foreach (var water in WaterMod.Static.waters)
-            {
-                if (water.planetID == planet.EntityId)
-                    return true;
-            }
-
-            return false;
+            return WaterMod.Static.Waters.ContainsKey(planet.EntityId);
         }
 
         /// <summary>

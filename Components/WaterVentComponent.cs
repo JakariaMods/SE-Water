@@ -45,7 +45,7 @@ namespace Jakaria
         {
             try
             {
-                if (vent == null || vent.MarkedForClose || WaterMod.Static?.waters == null || !vent.IsWorking)
+                if (vent == null || vent.MarkedForClose || WaterMod.Static?.Waters == null || !vent.IsWorking)
                     return;
 
                 Water water = WaterMod.Static.GetClosestWater(vent.PositionComp.GetPosition());

@@ -51,7 +51,7 @@ using System;
 using System.Runtime.CompilerServices;
 
 //Jakaria - This is a slightly modified version of FastNoiseLight to work with the SE API.
-namespace Jakaria.API
+namespace Jakaria
 {
     // Switch between using floats or doubles for input position
     //using double = System.Single;

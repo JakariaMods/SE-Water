@@ -13,7 +13,8 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.9";
+        public const string Version = "2.10";
+        public const int MinAPIVersion = 1;
         public const ushort ClientHandlerID = 50270;
 
         //Materials

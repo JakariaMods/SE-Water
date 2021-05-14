@@ -169,10 +169,10 @@ namespace Jakaria
         /// <summary>Returns the closest point to water without regard to voxels</summary>
         public Vector3D GetClosestSurfacePoint(Vector3D position, float altitudeOffset = 0)
         {
-            return foo(this.position + ((Vector3D.Normalize(position - this.position) * (this.currentRadius + altitudeOffset))));
+            return GetSurfacePositionWithWaves(this.position + ((Vector3D.Normalize(position - this.position) * (this.currentRadius + altitudeOffset))));
         }
 
-        public Vector3D foo(Vector3D position)
+        public Vector3D GetSurfacePositionWithWaves(Vector3D position)
         {
             return position + (GetWaveHeight(position) * GetUpDirection(position));
         }
@@ -220,6 +220,26 @@ namespace Jakaria
             else
             {
                 if (IsUnderwater(line.To))
+                    return 2; //EntersWater
+                else
+                    return 0; //Overwater
+            }
+        }
+
+        public int Intersects(BoundingSphereD Sphere)
+        {
+            Vector3D Up = GetUpDirection(Sphere.Center) * Sphere.Radius;
+
+            if (IsUnderwater(Sphere.Center + Up))
+            {
+                if (IsUnderwater(Sphere.Center - Up))
+                    return 3; //Underwater
+                else
+                    return 1;//ExitsWater
+            }
+            else
+            {
+                if (IsUnderwater(Sphere.Center - Up))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
