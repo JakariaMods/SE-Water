@@ -14,7 +14,7 @@ namespace Jakaria.API
 {
     public class WaterModAPIBackend
     {
-        public const int MinVersion = 12;
+        public const int MinVersion = 13;
         public const ushort ModHandlerID = 50271;
 
         private static readonly Dictionary<string, Delegate> ModAPIMethods = new Dictionary<string, Delegate>()
