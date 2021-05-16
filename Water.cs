@@ -13,7 +13,6 @@ using VRage.Game.Entity;
 using VRage.Game.Models;
 using VRage.Utils;
 using VRageMath;
-using Jakaria.API;
 
 namespace Jakaria
 {
@@ -99,10 +98,8 @@ namespace Jakaria
         [XmlIgnore, ProtoIgnore]
         public MyPlanet planet;
 
-        /// COMMENT OUT IF USING API
         [XmlIgnore, ProtoIgnore]
         public WaterFace[] waterFaces;
-        /// COMMENT OUT IF USING API
 
         /// <summary>The water seed</summary>
         public int seed = 42069;
@@ -166,7 +163,7 @@ namespace Jakaria
             textureId = MyStringId.GetOrCompute(texture);
         }
 
-        /// <summary>Returns the closest point to water without regard to voxels</summary>
+        /// <summary>Returns the closest point to water</summary>
         public Vector3D GetClosestSurfacePoint(Vector3D position, float altitudeOffset = 0)
         {
             return GetSurfacePositionWithWaves(this.position + ((Vector3D.Normalize(position - this.position) * (this.currentRadius + altitudeOffset))));

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Utils;
@@ -18,7 +19,7 @@ namespace Jakaria.API
     {
         public static string ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 12;
+        public const int ModAPIVersion = 13;
         public bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -27,12 +28,12 @@ namespace Jakaria.API
 
         private static Func<Vector3D, long?, bool> _IsUnderwater;
         private static Func<LineD, long?, int> _LineIntersectsWater;
-        private static Func<List<LineD>, long?, List<int>> _LineIntersectsWaterList;
+        private static Action<List<LineD>, ICollection<int>, long?> _LineIntersectsWaterList;
         private static Func<Vector3D, long?> _GetClosestWater;
         private static Func<BoundingSphereD, long?, int> _SphereIntersectsWater;
-        private static Func<List<BoundingSphereD>, long?, List<int>> _SphereIntersectsWaterList;
+        private static Action<List<BoundingSphereD>, ICollection<int>, long?> _SphereIntersectsWaterList;
         private static Func<Vector3D, long?, Vector3D> _GetClosestSurfacePoint;
-        private static Func<List<Vector3D>, long?, List<Vector3D>> _GetClosestSurfacePointList;
+        private static Action<List<Vector3D>, ICollection<Vector3D>, long?> _GetClosestSurfacePointList;
         private static Func<Vector3D, long?, float?> _GetDepth;
         private static Action _ForceSync;
         private static Action<string> _RunCommand;
@@ -40,6 +41,9 @@ namespace Jakaria.API
         private static Func<long, bool> _HasWater;
         private static Func<Vector3D, MyCubeSize, long?, float> _GetBuoyancyMultiplier;
         private static Func<long, int> _GetCrushDepth;
+        private static Func<long, MyTuple<Vector3D, float, float, float>> _GetPhysicalData;
+        private static Func<long, MyTuple<float, float, float, int>> _GetWaveData;
+        private static Func<long, MyTuple<Vector3D, bool, bool>> _GetRenderData;
 
         private static Action<Vector3D, float, bool> _CreateSplash;
         private static Action<Vector3D, float> _CreateBubble;
@@ -49,6 +53,9 @@ namespace Jakaria.API
         /// </summary>
         public static bool VerifyVersion(int Version, string ModName) => _VerifyVersion?.Invoke(Version, ModName) ?? false;
 
+        /// <summary>
+        /// Returns true if the provided planet entity ID has water
+        /// </summary>
         public static bool HasWater(long ID) => _HasWater?.Invoke(ID) ?? false;
 
         /// <summary>
@@ -64,7 +71,7 @@ namespace Jakaria.API
         /// <summary>
         /// Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3
         /// </summary>
-        public static List<int> LineIntersectsWater(List<LineD> Lines, long? ID = null) => _LineIntersectsWaterList?.Invoke(Lines, ID) ?? null;
+        public static void LineIntersectsWater(List<LineD> Lines, ICollection<int> Intersections, long? ID = null) => _LineIntersectsWaterList?.Invoke(Lines, Intersections, ID);
 
         /// <summary>
         /// Gets the closest water to the provided water
@@ -79,7 +86,7 @@ namespace Jakaria.API
         /// <summary>
         /// Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3
         /// </summary>
-        public static List<int> SphereIntersectsWater(List<BoundingSphereD> Spheres, long? ID = null) => _SphereIntersectsWaterList?.Invoke(Spheres, ID) ?? null;
+        public static void SphereIntersectsWater(List<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = null) => _SphereIntersectsWaterList?.Invoke(Spheres, Intersections, ID);
 
 
         /// <summary>
@@ -90,7 +97,7 @@ namespace Jakaria.API
         /// <summary>
         /// Returns the closest position on the water surface
         /// </summary>
-        public static List<Vector3D> GetClosestSurfacePoint(List<Vector3D> Positions, long? ID = null) => _GetClosestSurfacePointList?.Invoke(Positions, ID) ?? Positions;
+        public static void GetClosestSurfacePoint(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null) => _GetClosestSurfacePointList?.Invoke(Positions, Points, ID);
 
 
         /// <summary>
@@ -132,6 +139,22 @@ namespace Jakaria.API
         /// Gets crush depth
         /// </summary>
         public static int GetCrushDepth(long ID) => _GetCrushDepth?.Invoke(ID) ?? 500;
+
+        /// <summary>
+        /// Gets radius, minimum radius, and maximum radius- in that order.
+        /// </summary>
+        public static MyTuple<Vector3D, float, float, float> GetRadiusData(long ID) => (MyTuple<Vector3D, float, float, float>)(_GetPhysicalData?.Invoke(ID) ?? null);
+
+        /// <summary>
+        /// Gets wave height, wave speed, and seed- in that order.
+        /// </summary>
+        public static MyTuple<float, float, float, int> GetWaveData(long ID) => (MyTuple<float, float, float, int>)(_GetWaveData?.Invoke(ID) ?? null);
+
+        /// <summary>
+        /// Gets fog color, transparency toggle, and lighting toggle- in that order.
+        /// </summary>
+        public static MyTuple<Vector3D, bool, bool> GetRenderData(long ID) => (MyTuple<Vector3D, bool, bool>)(_GetRenderData?.Invoke(ID) ?? null);
+
         public override void LoadData()
         {
             MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
@@ -153,29 +176,32 @@ namespace Jakaria.API
             {
                 ModAPIMethods = (Dictionary<string, Delegate>)obj;
                 _VerifyVersion = (Func<int, string, bool>)ModAPIMethods["VerifyVersion"];
-            }
 
-            Registered = VerifyVersion(ModAPIVersion, ModName);
+                Registered = VerifyVersion(ModAPIVersion, ModName);
 
-            if (Registered)
-            {
-                _IsUnderwater = (Func<Vector3D, long?, bool>)ModAPIMethods["IsUnderwater"];
-                _GetClosestWater = (Func<Vector3D, long?>)ModAPIMethods["GetClosestWater"];
-                _SphereIntersectsWater = (Func<BoundingSphereD, long?, int>)ModAPIMethods["SphereIntersectsWater"];
-                _SphereIntersectsWaterList = (Func<List<BoundingSphereD>, long?, List<int>>)ModAPIMethods["SphereIntersectsWaterList"];
-                _GetClosestSurfacePoint = (Func<Vector3D, long?, Vector3D>)ModAPIMethods["GetClosestSurfacePoint"];
-                _GetClosestSurfacePointList = (Func<List<Vector3D>, long?, List<Vector3D>>)ModAPIMethods["GetClosestSurfacePointList"];
-                _LineIntersectsWater = (Func<LineD, long?, int>)ModAPIMethods["LineIntersectsWater"];
-                _LineIntersectsWaterList = (Func<List<LineD>, long?, List<int>>)ModAPIMethods["LineIntersectsWaterList"];
-                _GetDepth = (Func<Vector3D, long?, float?>)ModAPIMethods["GetDepth"];
-                _CreateSplash = (Action<Vector3D, float, bool>)ModAPIMethods["CreateSplash"];
-                _CreateBubble = (Action<Vector3D, float>)ModAPIMethods["CreateBubble"];
-                _ForceSync = (Action)ModAPIMethods["ForceSync"];
-                _RunCommand = (Action<string>)ModAPIMethods["RunCommand"];
-                _GetUpDirection = (Func<Vector3D, long?, Vector3D>)ModAPIMethods["GetUpDirection"];
-                _HasWater = (Func<long, bool>)ModAPIMethods["HasWater"];
-                _GetBuoyancyMultiplier = (Func<Vector3D, MyCubeSize, long?, float>)ModAPIMethods["GetBuoyancyMultiplier"];
-                _GetCrushDepth = (Func<long, int>)ModAPIMethods["GetCrushDepth"];
+                if (Registered)
+                {
+                    _IsUnderwater = (Func<Vector3D, long?, bool>)ModAPIMethods["IsUnderwater"];
+                    _GetClosestWater = (Func<Vector3D, long?>)ModAPIMethods["GetClosestWater"];
+                    _SphereIntersectsWater = (Func<BoundingSphereD, long?, int>)ModAPIMethods["SphereIntersectsWater"];
+                    _SphereIntersectsWaterList = (Action<List<BoundingSphereD>, ICollection<int>, long?>)ModAPIMethods["SphereIntersectsWaterList"];
+                    _GetClosestSurfacePoint = (Func<Vector3D, long?, Vector3D>)ModAPIMethods["GetClosestSurfacePoint"];
+                    _GetClosestSurfacePointList = (Action<List<Vector3D>, ICollection<Vector3D>, long?>)ModAPIMethods["GetClosestSurfacePointList"];
+                    _LineIntersectsWater = (Func<LineD, long?, int>)ModAPIMethods["LineIntersectsWater"];
+                    _LineIntersectsWaterList = (Action<List<LineD>, ICollection<int>, long?>)ModAPIMethods["LineIntersectsWaterList"];
+                    _GetDepth = (Func<Vector3D, long?, float?>)ModAPIMethods["GetDepth"];
+                    _CreateSplash = (Action<Vector3D, float, bool>)ModAPIMethods["CreateSplash"];
+                    _CreateBubble = (Action<Vector3D, float>)ModAPIMethods["CreateBubble"];
+                    _ForceSync = (Action)ModAPIMethods["ForceSync"];
+                    _RunCommand = (Action<string>)ModAPIMethods["RunCommand"];
+                    _GetUpDirection = (Func<Vector3D, long?, Vector3D>)ModAPIMethods["GetUpDirection"];
+                    _HasWater = (Func<long, bool>)ModAPIMethods["HasWater"];
+                    _GetBuoyancyMultiplier = (Func<Vector3D, MyCubeSize, long?, float>)ModAPIMethods["GetBuoyancyMultiplier"];
+                    _GetCrushDepth = (Func<long, int>)ModAPIMethods["GetCrushDepth"];
+                    _GetPhysicalData = (Func<long, MyTuple<Vector3D, float, float, float>>)ModAPIMethods["GetPhysicalData"];
+                    _GetWaveData = (Func<long, MyTuple<float, float, float, int>>)ModAPIMethods["GetWaveData"];
+                    _GetRenderData = (Func<long, MyTuple<Vector3D, bool, bool>>)ModAPIMethods["GetRenderData"];
+                }
             }
         }
     }

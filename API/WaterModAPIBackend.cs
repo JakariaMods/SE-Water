@@ -8,6 +8,7 @@ using Jakaria.Utils;
 using Sandbox.ModAPI;
 using VRage.Serialization;
 using VRage.Game;
+using VRage;
 
 namespace Jakaria.API
 {
@@ -22,11 +23,11 @@ namespace Jakaria.API
             ["IsUnderwater"] = new Func<Vector3D, long?, bool>(IsUnderwater),
             ["GetClosestWater"] = new Func<Vector3D, long?>(GetClosestWater),
             ["SphereIntersectsWater"] = new Func<BoundingSphereD, long?, int>(SphereIntersects),
-            ["SphereIntersectsWaterList"] = new Func<List<BoundingSphereD>, long?, List<int>>(SphereIntersects),
+            ["SphereIntersectsWaterList"] = new Action<List<BoundingSphereD>, ICollection<int>, long?>(SphereIntersects),
             ["GetClosestSurfacePoint"] = new Func<Vector3D, long?, Vector3D>(GetClosestSurfacePoint),
-            ["GetClosestSurfacePointList"] = new Func<List<Vector3D>, long?, List<Vector3D>>(GetClosestSurfacePoint),
+            ["GetClosestSurfacePointList"] = new Action<List<Vector3D>, ICollection<Vector3D>, long?>(GetClosestSurfacePoint),
             ["LineIntersectsWater"] = new Func<LineD, long?, int>(LineIntersectsWater),
-            ["LineIntersectsWaterList"] = new Func<List<LineD>, long?, List<int>>(LineIntersectsWaterList),
+            ["LineIntersectsWaterList"] = new Action<List<LineD>, ICollection<int>, long?>(LineIntersectsWaterList),
             ["GetDepth"] = new Func<Vector3D, long?, float?>(GetDepth),
             ["CreateSplash"] = new Action<Vector3D, float, bool>(CreateSplash),
             ["CreateBubble"] = new Action<Vector3D, float>(CreateBubble),
@@ -37,7 +38,28 @@ namespace Jakaria.API
             ["GetBuoyancyMultiplier"] = new Func<Vector3D, MyCubeSize, long?, float>(GetBuoyancyMultiplier),
 
             ["GetCrushDepth"] = new Func<long, int>(GetCrushDepth),
+            ["GetPhysicalData"] = new Func<long, MyTuple<Vector3D, float, float, float>>(GetPhysicalData),
+            ["GetWaveData"] = new Func<long, MyTuple<float, float, float, int>>(GetWaveData),
+            ["GetRenderData"] = new Func<long, MyTuple<Vector3D, bool, bool>>(GetRenderData),
         };
+
+        private static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return new MyTuple<Vector3D, bool, bool>(Water.fogColor, Water.transparent, Water.lit);
+        }
+
+        private static MyTuple<float, float, float, int> GetWaveData(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return new MyTuple<float, float, float, int>(Water.waveHeight, Water.waveSpeed, Water.waveScale, Water.seed);
+        }
+
+        private static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return new MyTuple<Vector3D, float, float, float>(Water.position, Water.radius, Water.radius - Water.waveHeight, Water.radius + Water.waveHeight);
+        }
 
         private static int GetCrushDepth(long ID)
         {
@@ -70,9 +92,8 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].Intersects(Sphere);
         }
 
-        private static List<int> SphereIntersects(List<BoundingSphereD> Spheres, long? ID = 0)
+        private static void SphereIntersects(ICollection<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = 0)
         {
-            List<int> Intersections = new List<int>();
             if (ID == null)
             {
                 foreach (var Sphere in Spheres)
@@ -88,7 +109,6 @@ namespace Jakaria.API
                     Intersections.Add(Water.Intersects(Sphere));
                 }
             }
-            return Intersections;
         }
 
         private static int LineIntersectsWater(LineD Line, long? ID = 0)
@@ -99,10 +119,8 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].Intersects(Line);
         }
 
-        private static List<int> LineIntersectsWaterList(List<LineD> Lines, long? ID)
+        private static void LineIntersectsWaterList(List<LineD> Lines, ICollection<int> Intersections, long? ID)
         {
-            List<int> Intersections = new List<int>();
-
             if (ID == null)
             {
                 foreach (var Line in Lines)
@@ -118,8 +136,6 @@ namespace Jakaria.API
                     Intersections.Add(Water?.Intersects(Line) ?? 0);
                 }
             }
-
-            return Intersections;
         }
 
         private static void RunCommand(string MessageText)
@@ -160,10 +176,8 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
         }
 
-        private static List<Vector3D> GetClosestSurfacePoint(List<Vector3D> Positions, long? ID = 0)
+        private static void GetClosestSurfacePoint(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = 0)
         {
-            List<Vector3D> Points = new List<Vector3D>();
-
             if (ID == null)
             {
                 foreach (var Position in Positions)
@@ -180,8 +194,6 @@ namespace Jakaria.API
                     Points.Add(Water.GetClosestSurfacePoint(Position));
                 }
             }
-
-            return Points;
         }
 
         private static void ForceSync()
@@ -214,7 +226,7 @@ namespace Jakaria.API
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Position).IsUnderwater(Position);
             else
-                return WaterMod.Static.Waters[ID.Value].IsUnderwater(Position);
+                return WaterMod.Static.Waters[ID.Value]?.IsUnderwater(Position) ?? false;
         }
 
         public static bool HasWater(long ID)

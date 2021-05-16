@@ -87,6 +87,9 @@ namespace Jakaria
             ListReader<MyCubeBlock> fatBlocks;
             Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
             Storage.TryAdd(obj.CubeGrid.EntityId, obj.CubeGrid.GetFatBlocks());
+
+            if (WaterMod.Static.WheelStorage.ContainsKey(obj.EntityId))
+                WaterMod.Static.WheelStorage.Remove(obj.EntityId);
         }
 
         protected override void UnloadData()

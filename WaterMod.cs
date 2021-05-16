@@ -40,6 +40,7 @@ namespace Jakaria
         //Water Effects
         //public List<Water> waters = new List<Water>();
         public Dictionary<long, Water> Waters = new Dictionary<long, Water>();
+        public Dictionary<long, MyTuple<float, float>> WheelStorage = new Dictionary<long, MyTuple<float, float>>();
 
         List<Splash> Splashes = new List<Splash>(128);
         Seagull[] Seagulls = new Seagull[1];
@@ -543,7 +544,7 @@ namespace Jakaria
                                 if (water.planetID == closestPlanet.EntityId)
                                 {
                                     water.buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
-                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(Waters.Values));
+                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
                                     WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetBuoyancy.Replace("{0}", water.buoyancy.ToString()));
                                     return;
                                 }
@@ -2418,10 +2419,11 @@ namespace Jakaria
                 Fishes = new Fish[(int)Math.Min(128 * Settings.Quality, 64)];
             }
 
-            foreach (var water in Waters.Values)
-            {
-                water.UpdateTexture();
-            }
+            if (Waters != null)
+                foreach (var water in Waters.Values)
+                {
+                    water.UpdateTexture();
+                }
         }
 
         /// <summary>
