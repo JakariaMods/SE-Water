@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VRage.Utils;
 using Jakaria.API;
+using VRageMath;
 
 namespace Jakaria
 {
@@ -47,6 +48,18 @@ namespace Jakaria
         [ProtoMember(30)]
         public bool Lit = true;
 
+        [ProtoMember(35)]
+        public Vector3D FogColor = new Vector3D(0.1, 0.125, 0.196);
+
+        [ProtoMember(40)]
+        public float CollectionRate = 1;
+
+        [ProtoMember(45)]
+        public float TideHeight = 0.5f;
+
+        [ProtoMember(45)]
+        public float TideSpeed = 1;
+
         public WaterSettings()
         {
 
@@ -66,6 +79,10 @@ namespace Jakaria
             this.CrushDepth = water.crushDepth;
             this.Transparent = water.transparent;
             this.Lit = water.lit;
+            this.FogColor = water.fogColor;
+            this.CollectionRate = water.collectionRate;
+            this.TideHeight = water.tideHeight;
+            this.TideSpeed = water.tideSpeed;
         }
     }
 }

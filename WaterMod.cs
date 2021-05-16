@@ -739,6 +739,124 @@ namespace Jakaria
                             WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveHeightNoParse.Replace("{0}", args[1]));
                     }
                     break;
+                case "wtideheight":
+                    sendToOthers = false;
+
+                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
+                    {
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
+                        return;
+                    }
+
+                    //Get Tide Height
+                    if (args.Length == 1)
+                    {
+                        if (closestPlanet == null)
+                        {
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                            return;
+                        }
+
+                        if (closestWater != null)
+                        {
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveHeight.Replace("{0}", closestWater.tideHeight.ToString()));
+                            return;
+
+                        }
+
+                        //If foreach loop doesn't find the planet, assume it doesn't exist
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                    }
+
+                    //Set Tide Height
+                    if (args.Length == 2)
+                    {
+                        float tideHeight;
+                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideHeight))
+                        {
+                            if (closestPlanet == null)
+                            {
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                                return;
+                            }
+
+                            foreach (var water in Waters.Values)
+                            {
+                                if (water.planetID == closestPlanet.EntityId)
+                                {
+                                    water.tideHeight = tideHeight;
+                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideHeight.Replace("{0}", water.tideHeight.ToString()));
+                                    return;
+                                }
+                            }
+
+                            //If foreach loop doesn't find the planet, assume it doesn't exist
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        }
+                        else
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideHeightNoParse.Replace("{0}", args[1]));
+                    }
+                    break;
+                case "wtidespeed":
+                    sendToOthers = false;
+
+                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
+                    {
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
+                        return;
+                    }
+
+                    //Get Tide Scale
+                    if (args.Length == 1)
+                    {
+                        if (closestPlanet == null)
+                        {
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                            return;
+                        }
+
+                        if (closestWater != null)
+                        {
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetTideSpeed.Replace("{0}", closestWater.tideSpeed.ToString()));
+                            return;
+
+                        }
+
+                        //If foreach loop doesn't find the planet, assume it doesn't exist
+                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                    }
+
+                    //Set Tide Speed
+                    if (args.Length == 2)
+                    {
+                        float tideSpeed;
+                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideSpeed))
+                        {
+                            if (closestPlanet == null)
+                            {
+                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                                return;
+                            }
+
+                            foreach (var water in Waters.Values)
+                            {
+                                if (water.planetID == closestPlanet.EntityId)
+                                {
+                                    water.tideSpeed = tideSpeed;
+                                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
+                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideSpeed.Replace("{0}", water.tideSpeed.ToString()));
+                                    return;
+                                }
+                            }
+
+                            //If foreach loop doesn't find the planet, assume it doesn't exist
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
+                        }
+                        else
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideSpeedNoParse.Replace("{0}", args[1]));
+                    }
+                    break;
 
                 case "wreset":
                     sendToOthers = false;
@@ -1550,6 +1668,8 @@ namespace Jakaria
                     if (closestPlanet != null)
                         nightValue = 1f - MyMath.Clamp(Vector3.Dot(Session.GravityDirection, WaterMod.Session.SunDirection) + 0.05f, 0.05f, 1f);
 
+                    Session.SunDirection = MyVisualScriptLogicProvider.GetSunDirection();
+
                     if (closestWater != null && closestPlanet != null)
                     {
                         if (TextAPI.Heartbeat && DepthMeter.Visible)
@@ -1768,7 +1888,6 @@ namespace Jakaria
         {
             try
             {
-                Session.SunDirection = MyVisualScriptLogicProvider.GetSunDirection();
 
                 if (Settings.ShowDebug && MyAPIGateway.Session?.Player?.Character != null)
                 {
@@ -1873,6 +1992,8 @@ namespace Jakaria
                         continue;
 
                     water.waveTimer += water.waveSpeed;
+                    water.tideTimer += (water.tideSpeed / 1000f);
+                    water.tideDirection = new Vector3D(Math.Cos(water.tideTimer), 0, Math.Sin(water.tideTimer));
                     //water.currentRadius = (float)Math.Max(water.radius + (Math.Sin(water.waveTimer) * water.waveHeight), 0);
                     water.currentRadius = water.radius;
 

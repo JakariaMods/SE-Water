@@ -93,5 +93,13 @@
         public string GetFogColor = "The water's fog color is '{0}'";
         public string SetFogColor = "Set the water's fog color to '{0}'";
         public string SetFogColorNoParse = "Couldn't parse fog color '{0}'";
+
+        public string GetTideHeight = "The water's tide height is '{0}m'.";
+        public string SetTideHeight = "Set the water's tide height to '{0}m'.";
+        public string SetTideHeightNoParse = "Couldn't parse tide height '{0}'.";
+
+        public string GetTideSpeed = "The water's tide speed is '{0}'.";
+        public string SetTideSpeed = "Set the water's tide speed to '{0}'.";
+        public string SetTideSpeedNoParse = "Couldn't parse tide speed '{0}'.";
     }
 }

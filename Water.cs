@@ -90,6 +90,9 @@ namespace Jakaria
         [ProtoMember(60)]
         public Vector3D fogColor = new Vector3D(0.1, 0.125, 0.196);
 
+        [ProtoIgnore(), XmlIgnore()]
+        public Vector3D tideDirection;
+
         /// <summary>All entites currently under the water</summary>
         [XmlIgnore, ProtoIgnore]
         public List<MyEntity> underWaterEntities = new List<MyEntity>();
@@ -106,6 +109,15 @@ namespace Jakaria
 
         [XmlIgnore, ProtoIgnore]
         public FastNoiseLite noise;
+
+        [ProtoMember(65)]
+        public float tideHeight = 2f;
+
+        [ProtoMember(66)]
+        public float tideSpeed = 1;
+
+        [ProtoMember(67)]
+        public double tideTimer = 0;
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
         public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.032f)
@@ -124,6 +136,8 @@ namespace Jakaria
                 this.crushDepth = settings.CrushDepth;
                 this.transparent = settings.Transparent;
                 this.lit = settings.Lit;
+                this.fogColor = settings.FogColor;
+                this.collectionRate = settings.CollectionRate;
             }
             else
                 radius = planet.MinimumRadius * radiusMultiplier;
@@ -166,23 +180,29 @@ namespace Jakaria
         /// <summary>Returns the closest point to water</summary>
         public Vector3D GetClosestSurfacePoint(Vector3D position, float altitudeOffset = 0)
         {
-            return GetSurfacePositionWithWaves(this.position + ((Vector3D.Normalize(position - this.position) * (this.currentRadius + altitudeOffset))));
+            Vector3D up = Vector3D.Normalize(position - this.position);
+            return GetSurfacePositionWithWaves(this.position + ((up * (this.currentRadius + altitudeOffset))), ref up);
         }
 
-        public Vector3D GetSurfacePositionWithWaves(Vector3D position)
+        public Vector3D GetSurfacePositionWithWaves(Vector3D position, ref Vector3D up)
         {
-            return position + (GetWaveHeight(position) * GetUpDirection(position));
+            return position + (GetWaveHeight(position) * up) + (GetTideHeight(up) * up);
         }
 
-        public bool IsUnderwater(Vector3D position, float altitudeOffset = 0)
+        public double GetTideHeight(Vector3D direction)
         {
-            return GetDepth(position) + altitudeOffset < 0;
+            return tideHeight * Math.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z)) * Vector3D.Dot(direction, tideDirection);
         }
 
         public double GetWaveHeight(Vector3D position)
         {
             position = (position + (Vector3D.One * this.waveTimer)) * this.waveScale;
             return noise.GetNoise(position.X, position.Y, position.Z) * this.waveHeight;
+        }
+
+        public bool IsUnderwater(Vector3D position, float altitudeOffset = 0)
+        {
+            return GetDepth(position) + altitudeOffset < 0;
         }
 
         /// <summary>Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3</summary>
@@ -246,19 +266,19 @@ namespace Jakaria
         /// <summary>Returns the depth of water a position is at, negative numbers are underwater</summary>
         public float GetDepth(Vector3D position)
         {
-            return Vector3.Distance(this.position, position) - (this.currentRadius + (float)GetWaveHeight(GetClosestSurfacePoint(position)));
+            return (float)((this.position - position).Length() - (this.position - GetClosestSurfacePoint(position)).Length());
         }
 
         /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
         public float GetDepthSquared(Vector3D position)
         {
-            return Vector3.DistanceSquared(this.position, position) - this.currentRadius;
+            return (float)((this.position - position).LengthSquared() - (this.position - GetClosestSurfacePoint(position)).LengthSquared());
         }
 
-        /// <summary>Returns the depth of water a position is at using sea level, negative numbers are underwater</summary>
+        /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
         public float GetDepthSimple(Vector3D position)
         {
-            return Vector3.Distance(this.position, position) - this.radius;
+            return (float)((this.position - position).Length() - radius);
         }
 
         /// <summary>Returns the up direction at a position</summary>

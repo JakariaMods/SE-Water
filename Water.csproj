@@ -38,6 +38,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="API\APIUsageExample.cs" />
     <Compile Include="API\WaterModAPIBackend.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="Components\WaterWheelComponent.cs" />
@@ -65,7 +66,6 @@
     <Compile Include="WaterMod.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Components\WaterCollectorComponent.cs" />
-    <Compile Include="Components\WaterTurretComponent.cs" />
     <Compile Include="Utils\WaterUtils.cs" />
   </ItemGroup>
   <ItemGroup>

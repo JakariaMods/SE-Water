@@ -15,6 +15,7 @@ using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.Game.ObjectBuilders.ComponentSystem;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
 using VRage.Serialization;
@@ -45,19 +46,19 @@ namespace Jakaria
             if (suspension == null)
                 suspension = wheel.Base as IMyMotorSuspension;
 
-            if (!wheel.IsFunctional || suspension == null)
+            if (wheel == null || !wheel.IsFunctional || suspension == null)
                 return;
 
             water = WaterMod.Static.GetClosestWater(wheel.GetPosition());
 
             MyTuple<float, float> WheelSettings;
-            if (water.IsUnderwater(wheel.GetPosition()))
+            if (water.IsUnderwater(wheel.PositionComp.GetPosition()))
             {
-                if (suspension.Friction > 15f || suspension.Power > 40f)
+                if (suspension.Friction > 20f || suspension.Power > 40f)
                 {
                     WaterMod.Static.WheelStorage[wheel.EntityId] = new MyTuple<float, float>(suspension.Friction, suspension.Power);
-                    suspension.Friction = Math.Min(WaterMod.Static.WheelStorage[wheel.EntityId].Item1, 15f);
-                    suspension.Power = Math.Min(WaterMod.Static.WheelStorage[wheel.EntityId].Item2, 40f);
+                    suspension.Friction = Math.Min(suspension.Friction, 20f);
+                    suspension.Power = Math.Min(suspension.Power, 40f);
                 }
             }
             else if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
@@ -66,6 +67,30 @@ namespace Jakaria
                 suspension.Power = WheelSettings.Item2;
                 WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
             }
+        }
+
+        public override void MarkForClose()
+        {
+            MyTuple<float, float> WheelSettings;
+            if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+            {
+                suspension.Friction = WheelSettings.Item1;
+                suspension.Power = WheelSettings.Item2;
+                WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+            }
+        }
+
+        public override MyObjectBuilder_ComponentBase Serialize(bool copy = false)
+        {
+            MyTuple<float, float> WheelSettings;
+            if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+            {
+                suspension.Friction = WheelSettings.Item1;
+                suspension.Power = WheelSettings.Item2;
+                WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+            }
+
+            return base.Serialize(copy);
         }
     }
 }

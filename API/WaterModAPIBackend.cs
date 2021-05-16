@@ -41,7 +41,21 @@ namespace Jakaria.API
             ["GetPhysicalData"] = new Func<long, MyTuple<Vector3D, float, float, float>>(GetPhysicalData),
             ["GetWaveData"] = new Func<long, MyTuple<float, float, float, int>>(GetWaveData),
             ["GetRenderData"] = new Func<long, MyTuple<Vector3D, bool, bool>>(GetRenderData),
+            ["GetPhysicsData"] = new Func<long, MyTuple<float, float>>(GetPhysicsData),
+            ["GetTideData"] = new Func<long, MyTuple<float, float>>(GetTideData),
         };
+
+        private static MyTuple<float, float> GetTideData(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return new MyTuple<float, float>(Water.tideHeight, Water.tideSpeed);
+        }
+
+        private static MyTuple<float, float> GetPhysicsData(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return new MyTuple<float, float>(Water.viscosity, Water.buoyancy);
+        }
 
         private static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
         {
