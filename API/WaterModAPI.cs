@@ -19,7 +19,7 @@ namespace Jakaria.API
     {
         public static string ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 14;
+        public const int ModAPIVersion = 15;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -47,6 +47,7 @@ namespace Jakaria.API
         private static Func<long, MyTuple<Vector3D, bool, bool>> _GetRenderData;
         private static Func<long, MyTuple<float, float>> _GetPhysicsData;
         private static Func<long, MyTuple<float, float>> _GetTideData;
+        private static Func<long, Vector3D> _GetTideDirection;
 
         private static Action<Vector3D, float, bool> _CreateSplash;
         private static Action<Vector3D, float> _CreateBubble;
@@ -149,7 +150,7 @@ namespace Jakaria.API
         public static MyTuple<Vector3D, float, float, float> GetPhysical(long ID) => (MyTuple<Vector3D, float, float, float>)(_GetPhysicalData?.Invoke(ID) ?? null);
 
         /// <summary>
-        /// Gets wave height, wave speed, and seed- in that order.
+        /// Gets wave height, wave speed, wave scale, and seed- in that order.
         /// </summary>
         public static MyTuple<float, float, float, int> GetWaveData(long ID) => (MyTuple<float, float, float, int>)(_GetWaveData?.Invoke(ID) ?? null);
 
@@ -163,8 +164,15 @@ namespace Jakaria.API
         /// </summary>
         public static MyTuple<float, float> GetTideData(long ID) => (MyTuple<float, float>)(_GetTideData?.Invoke(ID) ?? null);
 
-
+        /// <summary>
+        /// Gets tide height and tide speed- in that order.
+        /// </summary>
         public static MyTuple<float, float> GetPhysicsData(long ID) => (MyTuple<float, float>)(_GetPhysicsData?.Invoke(ID) ?? null);
+
+        /// <summary>
+        /// Gets the direction of high tide, from center of the water to the surface
+        /// </summary>
+        public static Vector3D GetTideDirection(long ID) => (Vector3D)(_GetTideDirection?.Invoke(ID) ?? null);
 
         public override void LoadData()
         {
@@ -216,6 +224,7 @@ namespace Jakaria.API
                         _GetRenderData = (Func<long, MyTuple<Vector3D, bool, bool>>)ModAPIMethods["GetRenderData"];
                         _GetPhysicsData = (Func<long, MyTuple<float, float>>)ModAPIMethods["GetPhysicsData"];
                         _GetTideData = (Func<long, MyTuple<float, float>>)ModAPIMethods["GetTideData"];
+                        _GetTideDirection = (Func<long, Vector3D>)ModAPIMethods["GetTideDirection"];
                     }
                     catch(Exception e)
                     {

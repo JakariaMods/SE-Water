@@ -55,7 +55,7 @@ namespace Jakaria
         public float CollectionRate = 1;
 
         [ProtoMember(45)]
-        public float TideHeight = 0.5f;
+        public float TideHeight = 2f;
 
         [ProtoMember(45)]
         public float TideSpeed = 1;

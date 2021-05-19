@@ -14,7 +14,7 @@ namespace Jakaria.API
 {
     public class WaterModAPIBackend
     {
-        public const int MinVersion = 13;
+        public const int MinVersion = 14;
         public const ushort ModHandlerID = 50271;
 
         private static readonly Dictionary<string, Delegate> ModAPIMethods = new Dictionary<string, Delegate>()
@@ -43,7 +43,14 @@ namespace Jakaria.API
             ["GetRenderData"] = new Func<long, MyTuple<Vector3D, bool, bool>>(GetRenderData),
             ["GetPhysicsData"] = new Func<long, MyTuple<float, float>>(GetPhysicsData),
             ["GetTideData"] = new Func<long, MyTuple<float, float>>(GetTideData),
+            ["GetTideDirection"] = new Func<long, Vector3D>(GetTideDirection),
         };
+
+        private static Vector3D GetTideDirection(long ID)
+        {
+            Water Water = WaterMod.Static.Waters[ID];
+            return Water.tideDirection;
+        }
 
         private static MyTuple<float, float> GetTideData(long ID)
         {
@@ -72,7 +79,7 @@ namespace Jakaria.API
         private static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<Vector3D, float, float, float>(Water.position, Water.radius, Water.radius - Water.waveHeight, Water.radius + Water.waveHeight);
+            return new MyTuple<Vector3D, float, float, float>(Water.position, Water.radius, Water.radius - Water.waveHeight - Water.tideHeight, Water.radius + Water.waveHeight + Water.tideHeight);
         }
 
         private static int GetCrushDepth(long ID)

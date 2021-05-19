@@ -784,7 +784,7 @@ namespace Jakaria
                             {
                                 if (water.planetID == closestPlanet.EntityId)
                                 {
-                                    water.tideHeight = tideHeight;
+                                    water.tideHeight = MyMath.Clamp(tideHeight, 0, 10000);
                                     MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
                                     WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideHeight.Replace("{0}", water.tideHeight.ToString()));
                                     return;
@@ -843,7 +843,7 @@ namespace Jakaria
                             {
                                 if (water.planetID == closestPlanet.EntityId)
                                 {
-                                    water.tideSpeed = tideSpeed;
+                                    water.tideSpeed = MyMath.Clamp(tideSpeed, 0, 1000);
                                     MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
                                     WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideSpeed.Replace("{0}", water.tideSpeed.ToString()));
                                     return;
@@ -1624,12 +1624,15 @@ namespace Jakaria
 
                 //Server and Client
 
-                foreach (var Key in Waters.Keys)
+                for (int i = Waters.Keys.Count - 1; i >= 0; i--)
                 {
+                    long Key = Waters.Keys.ToList()[i];
                     if (!MyEntities.EntityExists(Key))
                     {
                         Waters.Remove(Key);
+                        continue;
                     }
+
                     if (Waters[Key].planet == null)
                         Waters[Key].planet = (MyPlanet)MyEntities.GetEntityById(Key);
                 }
@@ -1642,7 +1645,7 @@ namespace Jakaria
                     foreach (var water in Waters.Values)
                     {
                         //Update Underwater Entities
-                        BoundingSphereD sphere = new BoundingSphereD(water.position, water.currentRadius + water.waveHeight);
+                        BoundingSphereD sphere = new BoundingSphereD(water.position, water.currentRadius + water.waveHeight + water.tideHeight);
                         water.underWaterEntities.Clear();
                         MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, water.underWaterEntities, MyEntityQueryType.Dynamic);
 
@@ -1984,18 +1987,20 @@ namespace Jakaria
         /// </summary>
         public void SimulatePhysics()
         {
+            foreach (var water in Waters.Values)
+            {
+                water.waveTimer += water.waveSpeed;
+                water.tideTimer += (water.tideSpeed / 1000f);
+                water.tideDirection = new Vector3D(Math.Cos(water.tideTimer), 0, Math.Sin(water.tideTimer));
+                water.currentRadius = water.radius;
+            }
+
             if (MyAPIGateway.Session.IsServer)
             {
                 foreach (var water in Waters.Values)
                 {
                     if (water.viscosity == 0 && water.buoyancy == 0)
                         continue;
-
-                    water.waveTimer += water.waveSpeed;
-                    water.tideTimer += (water.tideSpeed / 1000f);
-                    water.tideDirection = new Vector3D(Math.Cos(water.tideTimer), 0, Math.Sin(water.tideTimer));
-                    //water.currentRadius = (float)Math.Max(water.radius + (Math.Sin(water.waveTimer) * water.waveHeight), 0);
-                    water.currentRadius = water.radius;
 
                     foreach (var entity in water.underWaterEntities)
                     {
@@ -2068,10 +2073,6 @@ namespace Jakaria
             {
                 if (closestWater != null)
                 {
-                    closestWater.waveTimer += closestWater.waveSpeed;
-                    //closestWater.currentRadius = (float)Math.Max(closestWater.radius + (Math.Sin(closestWater.waveTimer) * closestWater.waveHeight), 0);
-                    closestWater.currentRadius = closestWater.radius;
-
                     if (MyAPIGateway.Session.Player?.Character != null)
                         SimulatePlayer(closestWater, MyAPIGateway.Session.Player.Character);
 
@@ -2481,38 +2482,60 @@ namespace Jakaria
                         WaterData.UpdateFovFrustum();
                     }
 
-                    MyAPIGateway.Parallel.ForEach(Waters.Values, water =>
+                    if (Session.CameraUnderwater)
                     {
-                        double waterDiameter = water.radius * 2;
-                        double tempTime = Session.SessionTimer * 0.0001;
-                        float offset = (float)((tempTime - (int)tempTime) * 0.5);
-                        float offset2 = (float)((tempTime - (int)tempTime + 1) * 0.5);
-
-                        if (water?.planet == null)
-                            return;
-
-                        if (water.waterFaces == null)
+                        if (closestWater != null)
                         {
-                            water.waterFaces = new WaterFace[WaterData.Directions.Length];
-                            for (int i = 0; i < WaterData.Directions.Length; i++)
+                            if (closestWater.waterFaces == null)
                             {
-                                water.waterFaces[i] = new WaterFace(water, WaterData.Directions[i]);
-                            }
-                        }
-
-                        foreach (var face in water.waterFaces)
-                        {
-                            if (face?.water == null)
-                                continue;
-
-                            if (rebuildTree)
-                            {
-                                face.ConstructTree();
+                                closestWater.waterFaces = new WaterFace[WaterData.Directions.Length];
+                                for (int i = 0; i < WaterData.Directions.Length; i++)
+                                {
+                                    closestWater.waterFaces[i] = new WaterFace(closestWater, WaterData.Directions[i]);
+                                }
                             }
 
-                            face.Draw(face.water.planetID == closestWater?.planetID);
+                            foreach (var face in closestWater.waterFaces)
+                            {
+                                if (rebuildTree)
+                                {
+                                    face.ConstructTree();
+                                }
+
+                                face.Draw(true);
+                            }
                         }
-                    });
+                    }
+                    else
+                    {
+                        MyAPIGateway.Parallel.ForEach(Waters.Values, water =>
+                        {
+                            if (water?.planet == null)
+                                return;
+
+                            if (water.waterFaces == null)
+                            {
+                                water.waterFaces = new WaterFace[WaterData.Directions.Length];
+                                for (int i = 0; i < WaterData.Directions.Length; i++)
+                                {
+                                    water.waterFaces[i] = new WaterFace(water, WaterData.Directions[i]);
+                                }
+                            }
+
+                            foreach (var face in water.waterFaces)
+                            {
+                                if (face?.water == null)
+                                    continue;
+
+                                if (rebuildTree)
+                                {
+                                    face.ConstructTree();
+                                }
+
+                                face.Draw(face.water.planetID == closestWater?.planetID && closestPlanet != null);
+                            }
+                        });
+                    }
                 });
         }
 

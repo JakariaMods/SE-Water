@@ -30,7 +30,6 @@ namespace Jakaria
         IMyWheel wheel;
         IMyMotorSuspension suspension;
         Water water;
-
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             if (MyAPIGateway.Session.IsServer)
@@ -51,43 +50,58 @@ namespace Jakaria
 
             water = WaterMod.Static.GetClosestWater(wheel.GetPosition());
 
-            MyTuple<float, float> WheelSettings;
-            if (water.IsUnderwater(wheel.PositionComp.GetPosition()))
+            if (water != null)
             {
-                if (suspension.Friction > 20f || suspension.Power > 40f)
+                MyTuple<float, float> WheelSettings;
+                if (water.IsUnderwater(wheel.PositionComp.GetPosition()))
                 {
-                    WaterMod.Static.WheelStorage[wheel.EntityId] = new MyTuple<float, float>(suspension.Friction, suspension.Power);
-                    suspension.Friction = Math.Min(suspension.Friction, 20f);
-                    suspension.Power = Math.Min(suspension.Power, 40f);
+                    if (suspension.Friction > 20f || suspension.Power > 40f)
+                    {
+                        WaterMod.Static.WheelStorage[wheel.EntityId] = new MyTuple<float, float>(suspension.Friction, suspension.Power);
+                        suspension.Friction = Math.Min(suspension.Friction, 20f);
+                        suspension.Power = Math.Min(suspension.Power, 40f);
+                    }
                 }
-            }
-            else if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
-            {
-                suspension.Friction = WheelSettings.Item1;
-                suspension.Power = WheelSettings.Item2;
-                WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                else if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+                {
+                    suspension.Friction = WheelSettings.Item1;
+                    suspension.Power = WheelSettings.Item2;
+                    WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                }
             }
         }
 
         public override void MarkForClose()
         {
-            MyTuple<float, float> WheelSettings;
-            if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+            if (wheel == null || !wheel.IsFunctional || suspension == null)
+                return;
+
+            if (water != null)
             {
-                suspension.Friction = WheelSettings.Item1;
-                suspension.Power = WheelSettings.Item2;
-                WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                MyTuple<float, float> WheelSettings;
+                if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+                {
+                    suspension.Friction = WheelSettings.Item1;
+                    suspension.Power = WheelSettings.Item2;
+                    WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                }
             }
         }
 
         public override MyObjectBuilder_ComponentBase Serialize(bool copy = false)
         {
-            MyTuple<float, float> WheelSettings;
-            if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+            if (wheel == null || !wheel.IsFunctional || suspension == null)
+                return base.Serialize(copy); ;
+
+            if (water != null)
             {
-                suspension.Friction = WheelSettings.Item1;
-                suspension.Power = WheelSettings.Item2;
-                WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                MyTuple<float, float> WheelSettings;
+                if (WaterMod.Static.WheelStorage.TryGetValue(wheel.EntityId, out WheelSettings))
+                {
+                    suspension.Friction = WheelSettings.Item1;
+                    suspension.Power = WheelSettings.Item2;
+                    WaterMod.Static.WheelStorage.Remove(wheel.EntityId);
+                }
             }
 
             return base.Serialize(copy);

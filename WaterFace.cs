@@ -111,10 +111,24 @@ namespace Jakaria
                 Vector3D normal3 = Vector3D.Normalize(position + ((-face.axisA + face.axisB) * radius) - face.position);
                 Vector3D normal4 = Vector3D.Normalize(position + ((face.axisA + -face.axisB) * radius) - face.position);
 
-                Vector3D corner1 = face.water.GetClosestSurfacePoint(face.position + (normal1 * face.water.currentRadius));
-                Vector3D corner2 = face.water.GetClosestSurfacePoint(face.position + (normal2 * face.water.currentRadius));
-                Vector3D corner3 = face.water.GetClosestSurfacePoint(face.position + (normal3 * face.water.currentRadius));
-                Vector3D corner4 = face.water.GetClosestSurfacePoint(face.position + (normal4 * face.water.currentRadius));
+                Vector3D corner1;
+                Vector3D corner2;
+                Vector3D corner3;
+                Vector3D corner4;
+                if (closestToCamera)
+                {
+                    corner1 = face.water.GetClosestSurfacePoint(face.position + (normal1 * face.water.currentRadius));
+                    corner2 = face.water.GetClosestSurfacePoint(face.position + (normal2 * face.water.currentRadius));
+                    corner3 = face.water.GetClosestSurfacePoint(face.position + (normal3 * face.water.currentRadius));
+                    corner4 = face.water.GetClosestSurfacePoint(face.position + (normal4 * face.water.currentRadius));
+                }
+                else
+                {
+                    corner1 = face.position + (normal1 * face.water.currentRadius);
+                    corner2 = face.position + (normal2 * face.water.currentRadius);
+                    corner3 = face.position + (normal3 * face.water.currentRadius);
+                    corner4 = face.position + (normal4 * face.water.currentRadius);
+                }
 
                 Vector3D average = ((corner1 + corner2 + corner3 + corner4) / 4);
                 float distToCamera = Vector3.RectangularDistance(average, WaterMod.Session.CameraPosition);
@@ -124,7 +138,7 @@ namespace Jakaria
                     if (Vector3.Dot(Vector3.Normalize(average - WaterMod.Session.CameraPosition), WaterMod.Session.CameraRotation) < WaterData.DotMaxFOV)
                         return;
 
-                    if (closestToCamera && (distToCamera > WaterMod.Session.DistanceToHorizon + (radius * 4)))
+                    if (closestToCamera && (distToCamera > WaterMod.Session.DistanceToHorizon + (radius * 6)))
                         return;
 
                     if (Vector3.Dot(Vector3.Normalize(average - WaterMod.Session.CameraPosition), WaterMod.Session.CameraRotation) < 0)
@@ -157,64 +171,84 @@ namespace Jakaria
 
                 if (face.water.transparent)
                 {
-                    if (WaterMod.Session.CameraUnderwater || !closestToCamera)
+                    if (closestToCamera)
                     {
-                        MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor * 0.5f, ref refZero);
-                    }
-                    else
-                    {
-                        if (detailLevel > 4)
+                        if (WaterMod.Session.CameraUnderwater)
                         {
-                            int count = (int)Math.Min(Math.Ceiling(detailLevel - 2f) * 1.25f, 8);
-
-                            for (int i = 0; i < count; i++)
+                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor * 0.5f, ref refZero);
+                        }
+                        else
+                        {
+                            if (detailLevel > 4)
                             {
-                                Vector3D layerSeperation = WaterMod.Session.GravityDirection * ((float)i / count) * 20;
+                                int count = (int)Math.Min(Math.Ceiling(detailLevel - 2f) * 1.25f, 8);
 
-                                if (i == count - 1)
+                                Vector3D layerSeperation = -normal1 * ((float)1 / count) * 25f;
+
+                                for (int i = 0; i < count; i++)
                                 {
-                                    MyQuadD quad2 = quad;
-                                    quad2.Point0 += layerSeperation;
-                                    quad2.Point1 += layerSeperation;
-                                    quad2.Point2 += layerSeperation;
-                                    quad2.Point3 += layerSeperation;
-                                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad2, WhiteColor, ref refZero);
-                                }
-                                else
-                                {
-                                    if (i == 0)
+
+                                    if (i == count - 1)
                                     {
-                                        MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor, ref refZero);
+                                        quad.Point0 += layerSeperation;
+                                        quad.Point1 += layerSeperation;
+                                        quad.Point2 += layerSeperation;
+                                        quad.Point3 += layerSeperation;
+
+                                        MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
                                     }
                                     else
                                     {
-                                        MyQuadD quad2 = quad;
-                                        quad2.Point0 += layerSeperation;
-                                        quad2.Point1 += layerSeperation;
-                                        quad2.Point2 += layerSeperation;
-                                        quad2.Point3 += layerSeperation;
-                                        MyTransparentGeometry.AddQuad(face.water.textureId, ref quad2, WaterFadeColor, ref refZero);
+                                        if (i == 0)
+                                        {
+                                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor, ref refZero);
+                                        }
+                                        else
+                                        {
+                                            quad.Point0 += layerSeperation;
+                                            quad.Point1 += layerSeperation;
+                                            quad.Point2 += layerSeperation;
+                                            quad.Point3 += layerSeperation;
+                                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterFadeColor, ref refZero);
+                                        }
                                     }
                                 }
                             }
+                            else
+                            {
+                                if (Vector3.Dot(normal1, quad.Point0 - WaterMod.Session.CameraPosition) < 0.25f)
+                                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (WaterMod.Session.CameraUnderwater)
+                        {
+                            return;
+                            //Don't Draw
                         }
                         else
                         {
                             MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+                            Vector3D offset = normal1 * 100;
+                            quad.Point0 += offset;
+                            quad.Point1 += offset;
+                            quad.Point2 += offset;
+                            quad.Point3 += offset;
+                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor, ref refZero);
                         }
-
                     }
                 }
                 else
                 {
                     Vector3D Seperator = WaterMod.Session.GravityDirection * face.water.waveHeight;
                     MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
-                    MyQuadD quad2 = quad;
-                    quad2.Point0 += Seperator;
-                    quad2.Point1 += Seperator;
-                    quad2.Point2 += Seperator;
-                    quad2.Point3 += Seperator;
-                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad2, WhiteColor, ref refZero);
+                    quad.Point0 += Seperator;
+                    quad.Point1 += Seperator;
+                    quad.Point2 += Seperator;
+                    quad.Point3 += Seperator;
+                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
                 }
             }
         }

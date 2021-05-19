@@ -275,7 +275,6 @@ namespace Jakaria
             return (float)((this.position - position).LengthSquared() - (this.position - GetClosestSurfacePoint(position)).LengthSquared());
         }
 
-        /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
         public float GetDepthSimple(Vector3D position)
         {
             return (float)((this.position - position).Length() - radius);
