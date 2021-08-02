@@ -19,13 +19,13 @@ namespace Jakaria
 
         MyEntity3DSoundEmitter splashSound;
 
-        public Splash(Vector3D Position, float Radius = 1f, bool Audible = true, float Volume = 1f)
+        public Splash(Vector3D Position, float Radius = 1f, float Volume = 1f)
         {
             position = Position;
             radius = Radius;
             maxLife = (int)MyUtils.GetRandomFloat(60, 80);
-
-            if (Audible)
+            
+            if (Volume != 0)
             {
                 splashSound = new MyEntity3DSoundEmitter(null);
                 splashSound.SetPosition(position);

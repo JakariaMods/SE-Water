@@ -13,7 +13,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.14";
+        public const string Version = "2.24";
 
         public const ushort ClientHandlerID = 50270;
 
@@ -29,9 +29,30 @@ namespace Jakaria
         public static readonly MyStringId IconMaterial = MyStringId.GetOrCompute("RedDot");
         public static readonly MyStringId FireflyMaterial = MyStringId.GetOrCompute("Firefly");
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
-        public static readonly MyStringId ShadowMaterial = MyStringId.GetOrCompute("JShadow");
+        public static readonly MyStringId HotTubMaterial = MyStringId.GetOrCompute("JHotTub");
+        public static readonly MyStringId GodRayMaterial = MyStringId.GetOrCompute("JGodRay");
+        public static readonly MyStringId FoamMaterial = MyStringId.GetOrCompute("JFoam");
+        public static readonly MyStringId FoamLightMaterial = MyStringId.GetOrCompute("JFoamLight");
+
+        public static readonly MyStringId[] FoamMaterials = new MyStringId[4]
+        {
+            MyStringId.GetOrCompute("JFoam"),
+            MyStringId.GetOrCompute("JFoam90"),
+            MyStringId.GetOrCompute("JFoam180"),
+            MyStringId.GetOrCompute("JFoam270"),
+        };
+
+        public static readonly MyStringId[] FoamLightMaterials = new MyStringId[4]
+        {
+            MyStringId.GetOrCompute("JFoamLight"),
+            MyStringId.GetOrCompute("JFoamLight90"),
+            MyStringId.GetOrCompute("JFoamLight180"),
+            MyStringId.GetOrCompute("JFoamLight270"),
+        };
 
         public static float DotMaxFOV = UpdateFovFrustum();
+
+        public const int MinWaterSplit = 2;
 
         public static float UpdateFovFrustum()
         {
@@ -57,6 +78,7 @@ namespace Jakaria
         public static readonly MySoundPair EnvironmentUnderwaterSound = new MySoundPair("JUnderwater");
         public static readonly MySoundPair EnvironmentBeachSound = new MySoundPair("JBeach");
         public static readonly MySoundPair EnvironmentOceanSound = new MySoundPair("JOcean");
+        public static readonly MySoundPair EnvironmentUndergroundSound = new MySoundPair("JUnderground");
         public static readonly MySoundPair AmbientSound = new MySoundPair("JAmbient");
         public static readonly MySoundPair GroanSound = new MySoundPair("JGroan");
         public static readonly MySoundPair SplashSound = new MySoundPair("JSplash");

@@ -41,7 +41,7 @@ namespace Jakaria
 
         public void Caw()
         {
-            if (cawSound.IsPlaying)
+            if (cawSound.IsPlaying || WaterMod.Session.InsideVoxel > 15)
                 return;
 
             cawSound.SetPosition(this.Position);

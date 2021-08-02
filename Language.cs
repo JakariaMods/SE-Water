@@ -49,6 +49,7 @@
         public string ImportWater = "Imported water settings.";
 
         public string Depth = "Depth: {0}m";
+        public string Altitude = "Altitude: {0}m";
         public string ToggleShowDepth = "Toggled rendering of depth.";
 
         public string ToggleBirds = "Toggled birds at your closest planet.";
@@ -76,9 +77,9 @@
 
         public string NoTextAPI = "You do not have Text HUD API installed to show the depth meter.";
 
-        public string GetCrushDepth = "The water's crush depth is '{0}m'";
-        public string SetCrushDepth = "Set the water's crush depth to '{0}m'";
-        public string SetCrushDepthNoParse = "Couldn't parse crush depth '{0}'";
+        public string GetCrushDepth = "The water's crush depth is '{0}m'.";
+        public string SetCrushDepth = "Set the water's crush depth to '{0}m'.";
+        public string SetCrushDepthNoParse = "Couldn't parse crush depth '{0}'.";
 
         public string TogglePlayerDrag = "Toggled player drag.";
 
@@ -86,13 +87,13 @@
 
         public string ToggleLighting = "Toggled lighting.";
 
-        public string GetCollectRate = "The water's collection rate is '{0}'";
-        public string SetCollectRate = "Set the water's collection rate to '{0}'";
-        public string SetCollectRateNoParse = "Couldn't parse collection rate '{0}'";
+        public string GetCollectRate = "The water's collection rate is '{0}'.";
+        public string SetCollectRate = "Set the water's collection rate to '{0}'.";
+        public string SetCollectRateNoParse = "Couldn't parse collection rate '{0}'.";
 
-        public string GetFogColor = "The water's fog color is '{0}'";
-        public string SetFogColor = "Set the water's fog color to '{0}'";
-        public string SetFogColorNoParse = "Couldn't parse fog color '{0}'";
+        public string GetFogColor = "The water's fog color is '{0}'.";
+        public string SetFogColor = "Set the water's fog color to '{0}'.";
+        public string SetFogColorNoParse = "Couldn't parse fog color '{0}'.";
 
         public string GetTideHeight = "The water's tide height is '{0}m'.";
         public string SetTideHeight = "Set the water's tide height to '{0}m'.";
@@ -101,5 +102,9 @@
         public string GetTideSpeed = "The water's tide speed is '{0}'.";
         public string SetTideSpeed = "Set the water's tide speed to '{0}'.";
         public string SetTideSpeedNoParse = "Couldn't parse tide speed '{0}'.";
+
+        public string GetWaterSettings = "The water's settings are:";
+
+        public string ToggleFoam = "Toggled surface foam.";
     }
 }

@@ -19,9 +19,11 @@ namespace Jakaria
     [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
     public class FatBlockStorage : MySessionComponentBase
     {
-        public static ConcurrentDictionary<long, ListReader<MyCubeBlock>> Storage { get; private set; } = new ConcurrentDictionary<long, ListReader<MyCubeBlock>>();
+        public static ConcurrentDictionary<long, ListReader<BlockStorage>> Storage { get; private set; } = new ConcurrentDictionary<long, ListReader<BlockStorage>>();
 
         private ConcurrentCachingList<MyCubeGrid> GridsToAdd = new ConcurrentCachingList<MyCubeGrid>();
+
+        public static ConcurrentCachingList<WaterCollectorComponent> HotTubs = new ConcurrentCachingList<WaterCollectorComponent>();
 
         public override void LoadData()
         {
@@ -51,7 +53,7 @@ namespace Jakaria
                             Storage.Remove(grid.EntityId);
                         }
 
-                        if (Storage.TryAdd(grid.EntityId, grid.GetFatBlocks()))
+                        if (Storage.TryAdd(grid.EntityId, ConstructList(grid.GetFatBlocks())))
                         {
                             grid.OnFatBlockAdded += FatBlockStorage_OnFatBlockAdded;
                             grid.OnFatBlockClosed += FatBlockStorage_OnFatBlockRemoved;
@@ -63,11 +65,23 @@ namespace Jakaria
             }
         }
 
+        ListReader<BlockStorage> ConstructList(ListReader<MyCubeBlock> Blocks)
+        {
+            List<BlockStorage> List = new List<BlockStorage>();
+
+            foreach (var Block in Blocks)
+            {
+                List.Add(new BlockStorage(Block));
+            }
+
+            return List;
+        }
+
         private void Entities_OnEntityRemove(MyEntity obj)
         {
             if (!obj.IsPreview && obj is MyCubeGrid)
             {
-                ListReader<MyCubeBlock> fatBlocks;
+                ListReader<BlockStorage> fatBlocks;
                 Storage.TryRemove(obj.EntityId, out fatBlocks);
 
                 (obj as MyCubeGrid).OnFatBlockAdded -= FatBlockStorage_OnFatBlockAdded;
@@ -77,16 +91,16 @@ namespace Jakaria
 
         private void FatBlockStorage_OnFatBlockAdded(MyCubeBlock obj)
         {
-            ListReader<MyCubeBlock> fatBlocks;
+            ListReader<BlockStorage> fatBlocks;
             Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
-            Storage.TryAdd(obj.CubeGrid.EntityId, obj.CubeGrid.GetFatBlocks());
+            Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
         }
 
         private void FatBlockStorage_OnFatBlockRemoved(MyCubeBlock obj)
         {
-            ListReader<MyCubeBlock> fatBlocks;
+            ListReader<BlockStorage> fatBlocks;
             Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
-            Storage.TryAdd(obj.CubeGrid.EntityId, obj.CubeGrid.GetFatBlocks());
+            Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
 
             if (WaterMod.Static.WheelStorage.ContainsKey(obj.EntityId))
                 WaterMod.Static.WheelStorage.Remove(obj.EntityId);
@@ -96,6 +110,17 @@ namespace Jakaria
         {
             MyEntities.OnEntityAdd -= Entities_OnEntityCreate;
             MyEntities.OnEntityRemove -= Entities_OnEntityRemove;
+        }
+
+        public class BlockStorage
+        {
+            public MyCubeBlock Block;
+            public bool PreviousUnderwater = false;
+
+            public BlockStorage(MyCubeBlock Block)
+            {
+                this.Block = Block;
+            }
         }
     }
 }

@@ -52,7 +52,9 @@ namespace Jakaria
 
                 if (water != null)
                 {
-                    if (!vent.CanPressurize && vent.Depressurize && water.IsUnderwater(vent.PositionComp.GetPosition()))
+                    Vector3D VentPosition = vent.PositionComp.GetPosition();
+                    if (!vent.CanPressurize && vent.Depressurize && water.IsUnderwater(ref VentPosition
+                        ))
                         vent.Depressurize = false;
                 }
             }

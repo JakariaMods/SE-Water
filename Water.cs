@@ -33,10 +33,10 @@ namespace Jakaria
 
         /// <summary>the maximum height of waves in meters</summary>
         [ProtoMember(15)]
-        public float waveHeight = 0.5f;
+        public float waveHeight = 1f;
         /// <summary>how fast a wave will oscillate</summary>
         [ProtoMember(16)]
-        public float waveSpeed = 0.04f;
+        public float waveSpeed = 0.1f;
         /// <summary>timer value for syncing waves between clients</summary>
         [ProtoMember(17)]
         public double waveTimer = 0;
@@ -65,12 +65,15 @@ namespace Jakaria
         [ProtoMember(31)]
         public bool enableSeagulls = true;
 
+        [ProtoMember(33)]
+        public bool enableFoam = true;
+
         /// <summary>the serializable texture name</summary>
         [ProtoMember(32)]
         public string texture = "JWater";
 
         [ProtoIgnore(), XmlIgnore()]
-        public MyStringId textureId;
+        public MyStringId textureId = MyStringId.GetOrCompute("JWater");
 
         [ProtoMember(35)]
         public int crushDepth = 500;
@@ -88,7 +91,7 @@ namespace Jakaria
         public float collectionRate = 1f;
 
         [ProtoMember(60)]
-        public Vector3D fogColor = new Vector3D(0.1, 0.125, 0.196);
+        public Vector3D fogColor = new Vector3D(0.1, 0.125, 0.2);
 
         [ProtoIgnore(), XmlIgnore()]
         public Vector3D tideDirection;
@@ -114,7 +117,7 @@ namespace Jakaria
         public float tideHeight = 2f;
 
         [ProtoMember(66)]
-        public float tideSpeed = 1;
+        public float tideSpeed = 0.25f;
 
         [ProtoMember(67)]
         public double tideTimer = 0;
@@ -149,7 +152,6 @@ namespace Jakaria
             currentRadius = radius;
 
             this.planet = planet;
-            this.textureId = MyStringId.GetOrCompute(texture);
 
             waterFaces = new WaterFace[WaterData.Directions.Length];
             for (int i = 0; i < WaterData.Directions.Length; i++)
@@ -158,18 +160,25 @@ namespace Jakaria
 
             }
 
-            if (noise == null)
-                noise = new FastNoiseLite(seed);
+            Init();
         }
 
         /// <summary>Without any arguments is used for Protobuf</summary>
         public Water()
         {
+            Init();
+        }
+
+        public void Init()
+        {
+            if (planet == null)
+                planet = (MyPlanet)MyEntities.GetEntityById(planetID);
+
             if (noise == null)
                 noise = new FastNoiseLite(seed);
 
-            if (textureId == null)
-                textureId = MyStringId.GetOrCompute(texture);
+            if (textureId.String != texture)
+                textureId = MyStringId.GetOrCompute(texture?? "JWater");
         }
 
         public void UpdateTexture()
@@ -182,6 +191,12 @@ namespace Jakaria
         {
             Vector3D up = Vector3D.Normalize(position - this.position);
             return GetSurfacePositionWithWaves(this.position + ((up * (this.currentRadius + altitudeOffset))), ref up);
+        }
+
+        /// <summary>Returns the closest point to water</summary>
+        public Vector3D GetClosestSurfacePointSimple(Vector3D position, float altitudeOffset = 0)
+        {
+            return this.position + ((Vector3D.Normalize(position - this.position) * (this.currentRadius + altitudeOffset)));
         }
 
         public Vector3D GetSurfacePositionWithWaves(Vector3D position, ref Vector3D up)
@@ -200,7 +215,7 @@ namespace Jakaria
             return noise.GetNoise(position.X, position.Y, position.Z) * this.waveHeight;
         }
 
-        public bool IsUnderwater(Vector3D position, float altitudeOffset = 0)
+        public bool IsUnderwater(ref Vector3D position, float altitudeOffset = 0)
         {
             return GetDepth(position) + altitudeOffset < 0;
         }
@@ -208,16 +223,16 @@ namespace Jakaria
         /// <summary>Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3</summary>
         public int Intersects(Vector3D from, Vector3D to)
         {
-            if (IsUnderwater(from))
+            if (IsUnderwater(ref from))
             {
-                if (IsUnderwater(to))
+                if (IsUnderwater(ref to))
                     return 3; //Underwater
                 else
                     return 1; //ExitsWater
             }
             else
             {
-                if (IsUnderwater(to))
+                if (IsUnderwater(ref to))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
@@ -225,38 +240,41 @@ namespace Jakaria
         }
 
         /// <summary>Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3</summary>
-        public int Intersects(LineD line)
+        public int Intersects(ref LineD line)
         {
-            if (IsUnderwater(line.From))
+            if (IsUnderwater(ref line.From))
             {
-                if (IsUnderwater(line.To))
+                if (IsUnderwater(ref line.To))
                     return 3; //Underwater
                 else
                     return 1; //ExitsWater
             }
             else
             {
-                if (IsUnderwater(line.To))
+                if (IsUnderwater(ref line.To))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
             }
         }
 
-        public int Intersects(BoundingSphereD Sphere)
+        public int Intersects(ref BoundingSphereD Sphere)
         {
             Vector3D Up = GetUpDirection(Sphere.Center) * Sphere.Radius;
 
-            if (IsUnderwater(Sphere.Center + Up))
+            Vector3D CenterUp = Sphere.Center + Up;
+            Vector3D CenterDown = Sphere.Center - Up;
+
+            if (IsUnderwater(ref CenterUp))
             {
-                if (IsUnderwater(Sphere.Center - Up))
+                if (IsUnderwater(ref CenterDown))
                     return 3; //Underwater
                 else
                     return 1;//ExitsWater
             }
             else
             {
-                if (IsUnderwater(Sphere.Center - Up))
+                if (IsUnderwater(ref CenterDown))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
@@ -284,6 +302,32 @@ namespace Jakaria
         public Vector3D GetUpDirection(Vector3D position)
         {
             return Vector3.Normalize(position - this.position);
+        }
+
+        public override string ToString()
+        {
+            string text = WaterLocalization.CurrentLanguage.GetWaterSettings;
+
+            text += "\n Radius: " + (radius / planet.MinimumRadius);
+            text += "\n WaveHeight: " + waveHeight;
+            text += "\n WaveSpeed: " + waveSpeed;
+            text += "\n WaveScale: " + waveScale;
+            text += "\n Viscosity: " + viscosity;
+            text += "\n Buoyancy: " + buoyancy;
+            text += "\n Enablefish: " + enableFish;
+            text += "\n Enableseagulls: " + enableSeagulls;
+            text += "\n Texture: " + texture;
+            text += "\n Crushdepth: " + crushDepth;
+            text += "\n Playerdrag: " + playerDrag;
+            text += "\n Transparent:" + transparent;
+            text += "\n Lighting: " + lit;
+            text += "\n CollectorRate: " + collectionRate;
+            text += "\n FogColor: " + fogColor;
+            text += "\n Seed: " + seed;
+            text += "\n TideHeight: " + tideHeight;
+            text += "\n TideSpeed: " + tideSpeed;
+
+            return text;
         }
     }
 }

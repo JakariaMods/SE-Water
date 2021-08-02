@@ -16,10 +16,10 @@ namespace Jakaria
         public float Radius = 1;
 
         [ProtoMember(10)]
-        public float WaveHeight = 0.1f;
+        public float WaveHeight = 1f;
 
         [ProtoMember(11)]
-        public float WaveSpeed = 40f;
+        public float WaveSpeed = 0.04f;
 
         [ProtoMember(12)]
         public float Viscosity = 0.1f;
@@ -28,7 +28,7 @@ namespace Jakaria
         public float Buoyancy = 1f;
 
         [ProtoMember(14)]
-        public float WaveScale = 0.25f;
+        public float WaveScale = 3f;
 
         [ProtoMember(15)]
         public bool EnableFish = true;
@@ -49,7 +49,7 @@ namespace Jakaria
         public bool Lit = true;
 
         [ProtoMember(35)]
-        public Vector3D FogColor = new Vector3D(0.1, 0.125, 0.196);
+        public Vector3D FogColor = new Vector3D(0.1, 0.125, 0.2);
 
         [ProtoMember(40)]
         public float CollectionRate = 1;
@@ -58,7 +58,10 @@ namespace Jakaria
         public float TideHeight = 2f;
 
         [ProtoMember(45)]
-        public float TideSpeed = 1;
+        public float TideSpeed = 0.25f;
+
+        [ProtoMember(50)]
+        public bool EnableFoam = true;
 
         public WaterSettings()
         {
@@ -83,6 +86,7 @@ namespace Jakaria
             this.CollectionRate = water.collectionRate;
             this.TideHeight = water.tideHeight;
             this.TideSpeed = water.tideSpeed;
+            this.EnableFoam = water.enableFoam;
         }
     }
 }

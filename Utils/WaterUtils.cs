@@ -15,6 +15,7 @@ using System.Diagnostics;
 using VRage.Game.ModAPI;
 using VRageRender;
 using VRage.Game.ModAPI.Ingame.Utilities;
+using Sandbox.Game.GameSystems;
 
 namespace Jakaria.Utils
 {
@@ -69,9 +70,20 @@ namespace Jakaria.Utils
         /// </summary>
         public static string ValidateCommandData(string input)
         {
-            input = input.Replace("[", "");
-            input = input.Replace("]", "");
-            return input;
+            StringBuilder sb = new StringBuilder();
+
+            foreach (var letter in input)
+            {
+                if (letter == '[' || letter == ']')
+                    continue;
+
+                if (letter == ',')
+                    sb.Append('.');
+                else
+                    sb.Append(letter);
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -102,7 +114,7 @@ namespace Jakaria.Utils
         /// <summary>
         /// Checks if a position is airtight
         /// </summary>
-        public static bool IsPositionAirtight(Vector3 position)
+        public static bool IsPositionAirtight(Vector3D position)
         {
             if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
                 return false;
@@ -115,32 +127,88 @@ namespace Jakaria.Utils
             {
                 MyCubeGrid grid = entity as MyCubeGrid;
 
-                if (grid != null)
+                if (grid != null && grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(position)))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool HotTubUnderwater(Vector3D Position)
+        {
+            foreach (var Tub in FatBlockStorage.HotTubs)
+            {
+                if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
                 {
-                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(position)))
-                    {
+                    float HeightOffset = -(Tub.Block.CubeGrid.GridSize / 2) + (((float)Tub.inventory.CurrentVolume / (float)Tub.inventory.MaxVolume) * (Tub.Block.CubeGrid.GridSize / 2)) + 0.1f;
+
+                    if (Vector3D.Dot(Tub.Block.PositionComp.WorldMatrixRef.Up, Vector3D.Normalize(Position - (Tub.Block.PositionComp.GetPosition() + (Tub.Block.PositionComp.WorldMatrixRef.Up * HeightOffset)))) < 0)
                         return true;
-                    }
                 }
             }
+            return false;
+        }
+
+        public static bool HotTubUnderwater(Vector3D Position, out IMyCubeGrid grid)
+        {
+            foreach (var Tub in FatBlockStorage.HotTubs)
+            {
+                if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
+                {
+                    float HeightOffset = -(Tub.Block.CubeGrid.GridSize / 2) + (((float)Tub.inventory.CurrentVolume / (float)Tub.inventory.MaxVolume) * (Tub.Block.CubeGrid.GridSize / 2)) + 0.1f;
+
+                    if (Vector3D.Dot(Tub.Block.PositionComp.WorldMatrixRef.Up, Vector3D.Normalize(Position - (Tub.Block.PositionComp.GetPosition() + (Tub.Block.PositionComp.WorldMatrixRef.Up * HeightOffset)))) < 0)
+                    {
+                        grid = Tub.Block.CubeGrid;
+                        return true;
+                    }
+
+                }
+            }
+            grid = null;
             return false;
         }
 
         /// <summary>
         /// Checks if a position is airtight
         /// </summary>
-        public static bool IsNearGrid(Vector3 position, float radius = 5)
+        public static bool IsNearGrid(Vector3 position, ref MyCubeGrid grid)
         {
-            BoundingSphereD sphere = new BoundingSphereD(position, radius);
+            if (WaterMod.Static.nearbyEntities != null)
+                foreach (var entity in WaterMod.Static.nearbyEntities)
+                {
+                    if (entity is MyCubeGrid)
+                    {
+                        if (!entity.IsPreview && (entity as MyCubeGrid).GridSizeEnum == MyCubeSize.Large && entity.Physics?.IsStatic == false)
+                            if (entity.PositionComp.WorldAABB.Contains(position) > ContainmentType.Disjoint)
+                            {
+                                grid = entity as MyCubeGrid;
+                                return true;
+                            }
+
+                    }
+                }
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the closest grid to the position
+        /// </summary>
+        public static MyCubeGrid GetApproximateGrid(Vector3 position, MyEntityQueryType queryType = MyEntityQueryType.Both)
+        {
+            BoundingSphereD sphere = new BoundingSphereD(position, 1);
             List<MyEntity> entities = new List<MyEntity>();
-            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
+            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities, queryType);
 
             foreach (var entity in entities)
             {
-                if (entity is MyCubeGrid && Vector3D.Distance(entity.PositionComp.GetPosition(), position) <= radius)
-                    return true;
+                if (entity.IsPreview || entity.Physics == null)
+                    continue;
+
+                if (entity is MyCubeGrid)
+                    return entity as MyCubeGrid;
             }
-            return false;
+            entities.Clear();
+            return null;
         }
 
         /// <summary>
@@ -148,6 +216,9 @@ namespace Jakaria.Utils
         /// </summary>
         public static bool IsUnderGround(MyPlanet planet, Vector3D position, double altitudeOffset = 0)
         {
+            if (planet == null)
+                return false;
+
             double altitude = (position - planet.WorldMatrix.Translation).Length() + altitudeOffset;
 
             if (altitude < planet.MinimumRadius)
@@ -223,6 +294,17 @@ namespace Jakaria.Utils
             }
 
             return new Vector2(maxPxWidth * scale, lines * 1 * scale);
+        }
+
+        public static double Clamp(double val, double min, double max)
+        {
+            if (val < min)
+                return min;
+
+            if (val > max)
+                return max;
+
+            return val;
         }
     }
 }

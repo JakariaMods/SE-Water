@@ -28,7 +28,7 @@ namespace Jakaria
     {
         IMyFunctionalBlock oxygenFarm;
         Water water;
-
+        
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             if (MyAPIGateway.Session.IsServer)
@@ -47,7 +47,8 @@ namespace Jakaria
 
             if (water != null)
             {
-                oxygenFarm.Enabled = !water.IsUnderwater(oxygenFarm.PositionComp.GetPosition());
+                Vector3D FarmPosition = oxygenFarm.PositionComp.GetPosition();
+                oxygenFarm.Enabled = !water.IsUnderwater(ref FarmPosition);
             }
         }
     }

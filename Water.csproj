@@ -47,6 +47,9 @@
     <Compile Include="Components\WaterFarmComponent.cs" />
     <Compile Include="DragClientAPI.cs" />
     <Compile Include="Creatures\Fish.cs" />
+    <Compile Include="Effects\GodRay.cs" />
+    <Compile Include="Effects\SimulatedSplash.cs" />
+    <Compile Include="FastNoiseLite.cs" />
     <Compile Include="FatBlockStorage.cs" />
     <Compile Include="HudAPIv2.cs" />
     <Compile Include="Language.cs" />
@@ -55,10 +58,10 @@
     <Compile Include="Effects\Splash.cs" />
     <Compile Include="Creatures\Seagull.cs" />
     <Compile Include="Effects\Wake.cs" />
+    <Compile Include="Utils\PressurizationUtils.cs" />
     <Compile Include="Water.cs" />
     <Compile Include="Components\WaterSolarComponent.cs" />
     <Compile Include="TSSDepth.cs" />
-    <Compile Include="FastNoiseLite.cs" />
     <Compile Include="Utils\Quadtree.cs" />
     <Compile Include="WaterData.cs" />
     <Compile Include="WaterFace.cs" />

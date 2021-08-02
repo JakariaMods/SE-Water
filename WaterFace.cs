@@ -64,6 +64,8 @@ namespace Jakaria
         int detailLevel = 0;
         public WaterFace face;
         public static Vector3D refZero = Vector3D.Zero;
+        int textureId;
+        Vector3I wakeKey;
 
         public Chunk(Vector3D position, double radius, int detailLevel, WaterFace face)
         {
@@ -71,6 +73,8 @@ namespace Jakaria
             this.radius = radius;
             this.face = face;
             this.detailLevel = detailLevel;
+            this.wakeKey = (Vector3I)(position / 10);
+            this.textureId = Math.Abs(((int)(position.X + position.Y + position.Z) / 10) % 2);
         }
 
         public void GenerateChildren()
@@ -93,6 +97,8 @@ namespace Jakaria
 
         public void Draw(bool closestToCamera)
         {
+            if (face.water == null || face.water.planet == null)
+                return;
 
             //if (WaterUtils.IsUnderGround(face.water.planet, face.position + (Vector3D.Normalize(position + ((-face.axisA + -face.axisB) * radius) - face.position) * face.water.currentRadius), radius))
             //return;
@@ -111,24 +117,10 @@ namespace Jakaria
                 Vector3D normal3 = Vector3D.Normalize(position + ((-face.axisA + face.axisB) * radius) - face.position);
                 Vector3D normal4 = Vector3D.Normalize(position + ((face.axisA + -face.axisB) * radius) - face.position);
 
-                Vector3D corner1;
-                Vector3D corner2;
-                Vector3D corner3;
-                Vector3D corner4;
-                if (closestToCamera)
-                {
-                    corner1 = face.water.GetClosestSurfacePoint(face.position + (normal1 * face.water.currentRadius));
-                    corner2 = face.water.GetClosestSurfacePoint(face.position + (normal2 * face.water.currentRadius));
-                    corner3 = face.water.GetClosestSurfacePoint(face.position + (normal3 * face.water.currentRadius));
-                    corner4 = face.water.GetClosestSurfacePoint(face.position + (normal4 * face.water.currentRadius));
-                }
-                else
-                {
-                    corner1 = face.position + (normal1 * face.water.currentRadius);
-                    corner2 = face.position + (normal2 * face.water.currentRadius);
-                    corner3 = face.position + (normal3 * face.water.currentRadius);
-                    corner4 = face.position + (normal4 * face.water.currentRadius);
-                }
+                Vector3D corner1 = face.water.GetClosestSurfacePoint(face.position + (normal1 * face.water.currentRadius));
+                Vector3D corner2 = face.water.GetClosestSurfacePoint(face.position + (normal2 * face.water.currentRadius));
+                Vector3D corner3 = face.water.GetClosestSurfacePoint(face.position + (normal3 * face.water.currentRadius));
+                Vector3D corner4 = face.water.GetClosestSurfacePoint(face.position + (normal4 * face.water.currentRadius));
 
                 Vector3D average = ((corner1 + corner2 + corner3 + corner4) / 4);
                 float distToCamera = Vector3.RectangularDistance(average, WaterMod.Session.CameraPosition);
@@ -145,17 +137,25 @@ namespace Jakaria
                         return;
                 }
 
-                if (WaterUtils.IsUnderGround(face.water.planet, average, radius * 2) && (face.water.planet.GetMaterialAt(ref average) != null && face.water.planet.GetMaterialAt(ref corner1) != null && face.water.planet.GetMaterialAt(ref corner2) != null && face.water.planet.GetMaterialAt(ref corner3) != null && face.water.planet.GetMaterialAt(ref corner4) != null))
-                    return;
+                double altitude = 0;
+
+                if (face.water.planet != null)
+                {
+                    MyPlanet planet = face.water.planet;
+                    altitude = WaterUtils.GetAltitude(planet, average);
+
+                    if (altitude < -radius * 2 && (planet.GetMaterialAt(ref average) != null && planet.GetMaterialAt(ref corner1) != null && planet.GetMaterialAt(ref corner2) != null && planet.GetMaterialAt(ref corner3) != null && planet.GetMaterialAt(ref corner4) != null))
+                        return;
+                }
 
                 Vector4 WaterColor = WaterData.WaterColor;
                 Vector4 WaterFadeColor = WaterData.WaterFadeColor;
                 Vector4 WhiteColor = Vector4.One;
 
+                float dot = face.water.lit ? MyMath.Clamp(Vector3.Dot(normal1, WaterMod.Session.SunDirection) + 0.22f, 0.22f, 1f) : 1;
+
                 if (face.water.lit)
                 {
-                    float dot = MyMath.Clamp(Vector3.Dot(normal1, WaterMod.Session.SunDirection) + 0.05f, 0.05f, 1f);
-
                     WaterColor *= dot;
                     WaterColor.W = WaterData.WaterColor.W;
                     WaterFadeColor *= dot;
@@ -169,25 +169,64 @@ namespace Jakaria
                 quad.Point2 = corner2;
                 quad.Point3 = corner4;
 
+                if (!WaterMod.Session.CameraUnderwater && closestToCamera)
+                    if (face.water.enableFoam && radius < 64 * WaterMod.Settings.Quality)
+                    {
+                        Vector3D noisePosition = (average + (Vector3D.One * face.water.waveTimer)) * face.water.waveScale;
+                        
+                        float intensity = (float)MyMath.Clamp((face.water.noise.GetNoise(noisePosition.X, noisePosition.Y, noisePosition.Z) / 0.25f), 0, 1);
+
+                        if (altitude > -radius)
+                        {
+                            
+                            if (intensity > 0.1f)
+                                WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref WaterData.FoamMaterials[textureId], ref quad, WhiteColor * intensity));
+
+                            if (intensity < 0.9f)
+                                WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref WaterData.FoamLightMaterials[textureId], ref quad, WhiteColor * (1f - (intensity * intensity))));
+
+                            /*if (radius < 64 * WaterMod.Settings.Quality)
+                            {
+                                MyCubeGrid grid = null;
+
+                                float intensity2 = 0;
+
+                                //WaterMod.Static.Wakes.TryGetValue(wakeKey, out intensity2);
+
+                                if (WaterUtils.IsNearGrid(average, ref grid))
+                                    //{
+                                    //WaterMod.Static.Wakes[wakeKey] = Math.Max((float)(1f - Math.Min(((Vector3D.Distance(average, Vector3D.Clamp(average, grid.PositionComp.WorldAABB.Min, grid.PositionComp.WorldAABB.Max)) + (radius / 2)) / radius), 0.75f)) * 600, intensity2);
+                                    //}
+
+                                    intensity2 = Math.Max((float)(1f - Math.Min(((Vector3D.Distance(average, Vector3D.Clamp(average, grid.PositionComp.WorldAABB.Min, grid.PositionComp.WorldAABB.Max)) + (radius / 2)) / radius), 0.75f)), intensity2);
+
+                                intensity2 *= intensity2;
+
+                                if (intensity2 > 0.1f)
+                                    MyTransparentGeometry.AddQuad(WaterData.BlankMaterial, ref quad, WhiteColor * intensity2, ref refZero);
+
+                            }*/
+                        }
+                    }
+
                 if (face.water.transparent)
                 {
                     if (closestToCamera)
                     {
                         if (WaterMod.Session.CameraUnderwater)
                         {
-                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor * 0.5f, ref refZero);
+                            WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, WaterColor * 0.5f));
                         }
                         else
                         {
                             if (detailLevel > 4)
                             {
-                                int count = (int)Math.Min(Math.Ceiling(detailLevel - 2f) * 1.25f, 8);
+                                int count = (int)Math.Max(Math.Min(Math.Ceiling((detailLevel - 2) * WaterMod.Settings.Quality), 8), 3);
 
-                                Vector3D layerSeperation = -normal1 * ((float)1 / count) * 25f;
+                                Vector3D layerSeperation = -normal1 * (1.0 / count) * 20f;
 
                                 for (int i = 0; i < count; i++)
                                 {
-
                                     if (i == count - 1)
                                     {
                                         quad.Point0 += layerSeperation;
@@ -195,13 +234,13 @@ namespace Jakaria
                                         quad.Point2 += layerSeperation;
                                         quad.Point3 += layerSeperation;
 
-                                        MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+                                        WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
                                     }
                                     else
                                     {
                                         if (i == 0)
                                         {
-                                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor, ref refZero);
+                                            WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WaterColor));
                                         }
                                         else
                                         {
@@ -209,7 +248,7 @@ namespace Jakaria
                                             quad.Point1 += layerSeperation;
                                             quad.Point2 += layerSeperation;
                                             quad.Point3 += layerSeperation;
-                                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterFadeColor, ref refZero);
+                                            WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WaterFadeColor));
                                         }
                                     }
                                 }
@@ -217,7 +256,7 @@ namespace Jakaria
                             else
                             {
                                 if (Vector3.Dot(normal1, quad.Point0 - WaterMod.Session.CameraPosition) < 0.25f)
-                                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+                                    WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
                             }
                         }
                     }
@@ -226,29 +265,35 @@ namespace Jakaria
                         if (WaterMod.Session.CameraUnderwater)
                         {
                             return;
-                            //Don't Draw
                         }
                         else
                         {
-                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+                            WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
                             Vector3D offset = normal1 * 100;
                             quad.Point0 += offset;
                             quad.Point1 += offset;
                             quad.Point2 += offset;
                             quad.Point3 += offset;
-                            MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WaterColor, ref refZero);
+                            WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
                         }
                     }
                 }
                 else
                 {
-                    Vector3D Seperator = WaterMod.Session.GravityDirection * face.water.waveHeight;
-                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
-                    quad.Point0 += Seperator;
-                    quad.Point1 += Seperator;
-                    quad.Point2 += Seperator;
-                    quad.Point3 += Seperator;
-                    MyTransparentGeometry.AddQuad(face.water.textureId, ref quad, WhiteColor, ref refZero);
+
+
+                    WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
+
+                    if (!WaterMod.Session.CameraUnderwater)
+                    {
+                        Vector3D Seperator = normal1 * face.water.waveHeight;
+
+                        quad.Point0 -= Seperator;
+                        quad.Point1 -= Seperator;
+                        quad.Point2 -= Seperator;
+                        quad.Point3 -= Seperator;
+                        WaterMod.Static.QuadBillboards.Push(new WaterMod.QuadBillboard(ref face.water.textureId, ref quad, ref WhiteColor));
+                    }
                 }
             }
         }

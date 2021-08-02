@@ -53,7 +53,8 @@ namespace Jakaria
             if (water != null)
             {
                 MyTuple<float, float> WheelSettings;
-                if (water.IsUnderwater(wheel.PositionComp.GetPosition()))
+                Vector3D WheelPosition = wheel.PositionComp.GetPosition();
+                if (water.IsUnderwater(ref WheelPosition))
                 {
                     if (suspension.Friction > 20f || suspension.Power > 40f)
                     {

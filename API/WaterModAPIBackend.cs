@@ -108,9 +108,9 @@ namespace Jakaria.API
         private static int SphereIntersects(BoundingSphereD Sphere, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(Sphere) ?? 0;
+                return WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(ref Sphere) ?? 0;
             else
-                return WaterMod.Static.Waters[ID.Value].Intersects(Sphere);
+                return WaterMod.Static.Waters[ID.Value].Intersects(ref Sphere);
         }
 
         private static void SphereIntersects(ICollection<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = 0)
@@ -119,7 +119,8 @@ namespace Jakaria.API
             {
                 foreach (var Sphere in Spheres)
                 {
-                    Intersections.Add(WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(Sphere) ?? 0);
+                    BoundingSphereD sphere = Sphere;
+                    Intersections.Add(WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(ref sphere) ?? 0);
                 }
             }
             else
@@ -127,7 +128,8 @@ namespace Jakaria.API
                 Water Water = WaterMod.Static.Waters[ID.Value];
                 foreach (var Sphere in Spheres)
                 {
-                    Intersections.Add(Water.Intersects(Sphere));
+                    BoundingSphereD sphere = Sphere;
+                    Intersections.Add(Water.Intersects(ref sphere));
                 }
             }
         }
@@ -135,9 +137,9 @@ namespace Jakaria.API
         private static int LineIntersectsWater(LineD Line, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Line.From)?.Intersects(Line) ?? 0;
+                return WaterMod.Static.GetClosestWater(Line.From)?.Intersects(ref Line) ?? 0;
             else
-                return WaterMod.Static.Waters[ID.Value].Intersects(Line);
+                return WaterMod.Static.Waters[ID.Value].Intersects(ref Line);
         }
 
         private static void LineIntersectsWaterList(List<LineD> Lines, ICollection<int> Intersections, long? ID)
@@ -146,7 +148,8 @@ namespace Jakaria.API
             {
                 foreach (var Line in Lines)
                 {
-                    Intersections.Add(WaterMod.Static.GetClosestWater(Line.From)?.Intersects(Line) ?? 0);
+                    LineD line = Line;
+                    Intersections.Add(WaterMod.Static.GetClosestWater(Line.From)?.Intersects(ref line) ?? 0);
                 }
             }
             else
@@ -154,7 +157,8 @@ namespace Jakaria.API
                 Water Water = WaterMod.Static.Waters[ID.Value];
                 foreach (var Line in Lines)
                 {
-                    Intersections.Add(Water?.Intersects(Line) ?? 0);
+                    LineD line = Line;
+                    Intersections.Add(Water?.Intersects(ref line) ?? 0);
                 }
             }
         }
@@ -229,7 +233,7 @@ namespace Jakaria.API
         {
             if (ModAPIVersion < MinVersion)
             {
-                WaterUtils.ShowMessage("The Mod '" + ModName + "' is using an oudated Water Mod API, tell the author to update!");
+                WaterUtils.ShowMessage("The Mod '" + ModName + "' is using an oudated Water Mod API (" + ModAPIVersion + "), tell the author to update!");
                 return false;
             }
 
@@ -245,9 +249,9 @@ namespace Jakaria.API
         public static bool IsUnderwater(Vector3D Position, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position).IsUnderwater(Position);
+                return WaterMod.Static.GetClosestWater(Position).IsUnderwater(ref Position);
             else
-                return WaterMod.Static.Waters[ID.Value]?.IsUnderwater(Position) ?? false;
+                return WaterMod.Static.Waters[ID.Value]?.IsUnderwater(ref Position) ?? false;
         }
 
         public static bool HasWater(long ID)
