@@ -27,6 +27,8 @@
         public string SetViscosity = "Set the water's viscosity to '{0}'.";
         public string SetViscosityNoParse = "Couldn't parse viscosity '{0}'.";
 
+        public string RetiredCommand = "This command has been retired, see the workshop page for updated info.";
+
         public string GetRadius = "The water's radius is '{0}'.";
         public string SetRadius = "Set the water's radius to '{0}'.";
         public string SetRadiusNoParse = "Couldn't parse radius '{0}'.";
@@ -51,6 +53,7 @@
         public string Depth = "Depth: {0}m";
         public string Altitude = "Altitude: {0}m";
         public string ToggleShowDepth = "Toggled rendering of depth.";
+        public string ToggleShowAltitude = "Toggled rendering of altitude.";
 
         public string ToggleBirds = "Toggled birds at your closest planet.";
         public string ToggleFish = "Toggled fish at your closest planet.";
@@ -106,5 +109,9 @@
         public string GetWaterSettings = "The water's settings are:";
 
         public string ToggleFoam = "Toggled surface foam.";
+
+        public string GetDensity = "The fluid's density is '{0}' kg/m³.";
+        public string SetDensity = "Set the fluid's density to '{0}' kg/m³.";
+        public string SetDensityNoParse = "Couldn't parse fluid density '{0}'.";
     }
 }

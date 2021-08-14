@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Jakaria.API;
 using Sandbox.ModAPI;
 using VRage.Game.Components;
+using VRageMath;
 
 namespace Jakaria
 {
@@ -14,7 +15,7 @@ namespace Jakaria
     {
         public override void BeforeStart()
         {
-            if(WaterAPI.Registered)
+            if (WaterAPI.Registered)
             {
                 MyAPIGateway.Utilities.ShowMessage("Mod", "Joe Mama Water Registered");
             }
@@ -27,6 +28,8 @@ namespace Jakaria
                 {
                     MyAPIGateway.Utilities.ShowNotification("Camera is underwater at depth " + (int)WaterAPI.GetDepth(MyAPIGateway.Session.Camera.Position) + "m", 16);
                 }
+
+            WaterAPI.CreatePhysicsSplash(MyAPIGateway.Session.Player.GetPosition() + (MyAPIGateway.Session.Player.Character.WorldMatrix.Up), MyAPIGateway.Session.Player.Character.WorldMatrix.Forward, 0.5f, 5);
         }
     }
 }

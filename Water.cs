@@ -11,6 +11,7 @@ using System.Xml.Serialization;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Game.Models;
+using VRage.Game.VisualScripting;
 using VRage.Utils;
 using VRageMath;
 
@@ -122,6 +123,9 @@ namespace Jakaria
         [ProtoMember(67)]
         public double tideTimer = 0;
 
+        [ProtoMember(68)]
+        public float fluidDensity = 1000;
+
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
         public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.032f)
         {
@@ -141,6 +145,7 @@ namespace Jakaria
                 this.lit = settings.Lit;
                 this.fogColor = settings.FogColor;
                 this.collectionRate = settings.CollectionRate;
+                this.fluidDensity = settings.FluidDensity;
             }
             else
                 radius = planet.MinimumRadius * radiusMultiplier;
@@ -178,12 +183,26 @@ namespace Jakaria
                 noise = new FastNoiseLite(seed);
 
             if (textureId.String != texture)
-                textureId = MyStringId.GetOrCompute(texture?? "JWater");
+                textureId = MyStringId.GetOrCompute(texture ?? "JWater");
         }
 
         public void UpdateTexture()
         {
             textureId = MyStringId.GetOrCompute(texture);
+        }
+
+        /// <summary>Returns the closest point to water</summary>
+        public Vector3D GetClosestSurfacePoint(ref Vector3D position, float altitudeOffset = 0)
+        {
+            Vector3D up = Vector3D.Normalize(position - this.position);
+            return GetSurfacePositionWithWaves(this.position + ((up * (this.currentRadius + altitudeOffset))), ref up);
+        }
+
+        /// <summary>Returns the closest point to water</summary>
+        public Vector3D GetClosestSurfacePointLocal(ref Vector3D position, float altitudeOffset = 0)
+        {
+            Vector3D up = Vector3D.Normalize(position);
+            return GetSurfacePositionWithWaves(this.position + ((up * (this.currentRadius + altitudeOffset))), ref up);
         }
 
         /// <summary>Returns the closest point to water</summary>
@@ -217,7 +236,7 @@ namespace Jakaria
 
         public bool IsUnderwater(ref Vector3D position, float altitudeOffset = 0)
         {
-            return GetDepth(position) + altitudeOffset < 0;
+            return GetDepth(ref position) + altitudeOffset < 0;
         }
 
         /// <summary>Overwater = 0, ExitsWater = 1, EntersWater = 2, Underwater = 3</summary>
@@ -282,15 +301,21 @@ namespace Jakaria
         }
 
         /// <summary>Returns the depth of water a position is at, negative numbers are underwater</summary>
-        public float GetDepth(Vector3D position)
+        public float GetDepth(ref Vector3D position)
         {
-            return (float)((this.position - position).Length() - (this.position - GetClosestSurfacePoint(position)).Length());
+            return (float)((this.position - position).Length() - (this.position - GetClosestSurfacePoint(ref position)).Length());
         }
 
         /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
         public float GetDepthSquared(Vector3D position)
         {
-            return (float)((this.position - position).LengthSquared() - (this.position - GetClosestSurfacePoint(position)).LengthSquared());
+            return (float)((this.position - position).LengthSquared() - (this.position - GetClosestSurfacePoint(ref position)).LengthSquared());
+        }
+
+        /// <summary>Returns the depth of water a position is at without a square root function, negative numbers are underwater</summary>
+        public float GetDepthSquared(ref Vector3D position)
+        {
+            return (float)((position).LengthSquared() - (GetClosestSurfacePoint(ref position)).LengthSquared());
         }
 
         public float GetDepthSimple(Vector3D position)

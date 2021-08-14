@@ -63,6 +63,9 @@ namespace Jakaria
         [ProtoMember(50)]
         public bool EnableFoam = true;
 
+        [ProtoMember(55)]
+        public float FluidDensity = 1000;
+
         public WaterSettings()
         {
 

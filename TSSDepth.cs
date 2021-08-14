@@ -81,7 +81,8 @@ namespace Jakaria
 
                 frame.Add(Text);
                 m_sb.Clear();
-                m_sb.Append(water != null ? Math.Round(-water.GetDepth(Block.GetPosition()), 2).ToString() + "m" : "0m");
+                Vector3D blockPosition = Block.GetPosition();
+                m_sb.Append(water != null ? Math.Round(-water.GetDepth(ref blockPosition), 2).ToString() + "m" : "0m");
                 
                 var Text2 = new MySprite()
                 {

@@ -41,6 +41,7 @@
     <Compile Include="API\APIUsageExample.cs" />
     <Compile Include="API\WaterModAPIBackend.cs" />
     <Compile Include="API\WaterModAPI.cs" />
+    <Compile Include="API\WeaponCoreApi.cs" />
     <Compile Include="Components\WaterWheelComponent.cs" />
     <Compile Include="Components\WaterVentComponent.cs" />
     <Compile Include="Effects\COBIndicator.cs" />

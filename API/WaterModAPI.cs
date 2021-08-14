@@ -14,12 +14,15 @@ namespace Jakaria.API
 {
     //Only Include this file in your project
 
+    /// <summary>
+    /// https://github.com/jakarianstudios/SE-Water/blob/master/API/WaterModAPI.cs
+    /// </summary>
     [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
     public class WaterAPI : MySessionComponentBase
     {
         public static string ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 15;
+        public const int ModAPIVersion = 16;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -51,6 +54,7 @@ namespace Jakaria.API
 
         private static Action<Vector3D, float, bool> _CreateSplash;
         private static Action<Vector3D, float> _CreateBubble;
+        private static Action<Vector3D, Vector3D, float, int> _CreatePhysicsSplash;
 
         /// <summary>
         /// Returns true if the version is compatibile with the API Backend, this is automatically called
@@ -113,6 +117,11 @@ namespace Jakaria.API
         /// Creates a splash at the provided position
         /// </summary>
         public static void CreateSplash(Vector3D Position, float Radius, bool Audible) => _CreateSplash?.Invoke(Position, Radius, Audible);
+
+        /// <summary>
+        /// Creates a physical splash at the provided position (Particles outside of the water)
+        /// </summary>
+        public static void CreatePhysicsSplash(Vector3D Position, Vector3D Velocity, float Radius, int Count = 1) => _CreatePhysicsSplash?.Invoke(Position, Velocity, Radius, Count);
 
         /// <summary>
         /// Creates a bubble at the provided position
@@ -212,6 +221,7 @@ namespace Jakaria.API
                         _LineIntersectsWaterList = (Action<List<LineD>, ICollection<int>, long?>)ModAPIMethods["LineIntersectsWaterList"];
                         _GetDepth = (Func<Vector3D, long?, float?>)ModAPIMethods["GetDepth"];
                         _CreateSplash = (Action<Vector3D, float, bool>)ModAPIMethods["CreateSplash"];
+                        _CreatePhysicsSplash = (Action<Vector3D, Vector3D, float, int>)ModAPIMethods["CreatePhysicsSplash"];
                         _CreateBubble = (Action<Vector3D, float>)ModAPIMethods["CreateBubble"];
                         _ForceSync = (Action)ModAPIMethods["ForceSync"];
                         _RunCommand = (Action<string>)ModAPIMethods["RunCommand"];

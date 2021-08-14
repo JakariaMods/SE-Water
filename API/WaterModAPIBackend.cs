@@ -30,6 +30,7 @@ namespace Jakaria.API
             ["LineIntersectsWaterList"] = new Action<List<LineD>, ICollection<int>, long?>(LineIntersectsWaterList),
             ["GetDepth"] = new Func<Vector3D, long?, float?>(GetDepth),
             ["CreateSplash"] = new Action<Vector3D, float, bool>(CreateSplash),
+            ["CreatePhysicsSplash"] = new Action<Vector3D, Vector3D, float, int>(CreatePhysicsSplash),
             ["CreateBubble"] = new Action<Vector3D, float>(CreateBubble),
             ["ForceSync"] = new Action(ForceSync),
             ["RunCommand"] = new Action<string>(RunCommand),
@@ -46,58 +47,58 @@ namespace Jakaria.API
             ["GetTideDirection"] = new Func<long, Vector3D>(GetTideDirection),
         };
 
-        private static Vector3D GetTideDirection(long ID)
+        public static Vector3D GetTideDirection(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return Water.tideDirection;
         }
 
-        private static MyTuple<float, float> GetTideData(long ID)
+        public static MyTuple<float, float> GetTideData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return new MyTuple<float, float>(Water.tideHeight, Water.tideSpeed);
         }
 
-        private static MyTuple<float, float> GetPhysicsData(long ID)
+        public static MyTuple<float, float> GetPhysicsData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return new MyTuple<float, float>(Water.viscosity, Water.buoyancy);
         }
 
-        private static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
+        public static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return new MyTuple<Vector3D, bool, bool>(Water.fogColor, Water.transparent, Water.lit);
         }
 
-        private static MyTuple<float, float, float, int> GetWaveData(long ID)
+        public static MyTuple<float, float, float, int> GetWaveData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return new MyTuple<float, float, float, int>(Water.waveHeight, Water.waveSpeed, Water.waveScale, Water.seed);
         }
 
-        private static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
+        public static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
             return new MyTuple<Vector3D, float, float, float>(Water.position, Water.radius, Water.radius - Water.waveHeight - Water.tideHeight, Water.radius + Water.waveHeight + Water.tideHeight);
         }
 
-        private static int GetCrushDepth(long ID)
+        public static int GetCrushDepth(long ID)
         {
             return WaterMod.Static.Waters[ID].crushDepth;
         }
 
-        private static float GetBuoyancyMultiplier(Vector3D Position, MyCubeSize GridSize, long? ID = 0)
+        public static float GetBuoyancyMultiplier(Vector3D Position, MyCubeSize GridSize, long? ID = 0)
         {
             Water Water = (ID == null) ? WaterMod.Static.GetClosestWater(Position) : WaterMod.Static.Waters[ID.Value];
 
             if (GridSize == MyCubeSize.Large)
-                return (1 + (-Water.GetDepth(Position) / 5000f)) / 50f * Water.buoyancy;
+                return (1 + (-Water.GetDepth(ref Position) / 5000f)) / 50f * Water.buoyancy;
             else
-                return (1 + (-Water.GetDepth(Position) / 5000f)) / 20f * Water.buoyancy;
+                return (1 + (-Water.GetDepth(ref Position) / 5000f)) / 20f * Water.buoyancy;
         }
 
-        private static Vector3D GetUpDirection(Vector3D Position, long? ID = 0)
+        public static Vector3D GetUpDirection(Vector3D Position, long? ID = 0)
         {
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Position)?.GetUpDirection(Position) ?? Vector3D.Up;
@@ -105,7 +106,7 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].GetUpDirection(Position);
         }
 
-        private static int SphereIntersects(BoundingSphereD Sphere, long? ID = 0)
+        public static int SphereIntersects(BoundingSphereD Sphere, long? ID = 0)
         {
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(ref Sphere) ?? 0;
@@ -113,7 +114,7 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].Intersects(ref Sphere);
         }
 
-        private static void SphereIntersects(ICollection<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = 0)
+        public static void SphereIntersects(ICollection<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = 0)
         {
             if (ID == null)
             {
@@ -134,7 +135,7 @@ namespace Jakaria.API
             }
         }
 
-        private static int LineIntersectsWater(LineD Line, long? ID = 0)
+        public static int LineIntersectsWater(LineD Line, long? ID = 0)
         {
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Line.From)?.Intersects(ref Line) ?? 0;
@@ -142,7 +143,7 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].Intersects(ref Line);
         }
 
-        private static void LineIntersectsWaterList(List<LineD> Lines, ICollection<int> Intersections, long? ID)
+        public static void LineIntersectsWaterList(List<LineD> Lines, ICollection<int> Intersections, long? ID)
         {
             if (ID == null)
             {
@@ -163,7 +164,7 @@ namespace Jakaria.API
             }
         }
 
-        private static void RunCommand(string MessageText)
+        public static void RunCommand(string MessageText)
         {
             bool SendToOthers = false;
             WaterMod.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
@@ -175,25 +176,30 @@ namespace Jakaria.API
         }
 
         #region Water
-        private static void CreateBubble(Vector3D Position, float Radius)
+        public static void CreateBubble(Vector3D Position, float Radius)
         {
             WaterMod.Static.CreateBubble(Position, Radius);
         }
 
-        private static void CreateSplash(Vector3D Position, float Radius, bool Audible)
+        public static void CreateSplash(Vector3D Position, float Radius, bool Audible)
         {
             WaterMod.Static.CreateSplash(Position, Radius, Audible);
         }
 
-        private static float? GetDepth(Vector3D Position, long? ID = 0)
+        public static void CreatePhysicsSplash(Vector3D Position, Vector3D Velocity, float Radius, int Count = 1)
         {
-            if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.GetDepth(Position);
-            else
-                return WaterMod.Static.Waters[ID.Value].GetDepth(Position);
+            WaterMod.Static.CreatePhysicsSplash(Position, Velocity, Radius, Count);
         }
 
-        private static Vector3D GetClosestSurfacePoint(Vector3D Position, long? ID = 0)
+        public static float? GetDepth(Vector3D Position, long? ID = null)
+        {
+            if (ID == null)
+                return WaterMod.Static.GetClosestWater(Position)?.GetDepth(ref Position);
+            else
+                return WaterMod.Static.Waters[ID.Value].GetDepth(ref Position);
+        }
+
+        public static Vector3D GetClosestSurfacePoint(Vector3D Position, long? ID = null)
         {
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position;
@@ -201,7 +207,7 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
         }
 
-        private static void GetClosestSurfacePoint(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = 0)
+        public static void GetClosestSurfacePoint(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null)
         {
             if (ID == null)
             {
@@ -221,7 +227,7 @@ namespace Jakaria.API
             }
         }
 
-        private static void ForceSync()
+        public static void ForceSync()
         {
             if (MyAPIGateway.Session.IsServer)
                 MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterMod.Static.Waters)));
@@ -229,7 +235,7 @@ namespace Jakaria.API
                 MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterMod.Static.Waters)));
         }
 
-        private static bool VerifyVersion(int ModAPIVersion, string ModName)
+        public static bool VerifyVersion(int ModAPIVersion, string ModName)
         {
             if (ModAPIVersion < MinVersion)
             {
@@ -241,12 +247,12 @@ namespace Jakaria.API
 
         }
 
-        private static long? GetClosestWater(Vector3D Position)
+        public static long? GetClosestWater(Vector3D Position)
         {
             return WaterMod.Static.GetClosestWater(Position)?.planetID;
         }
 
-        public static bool IsUnderwater(Vector3D Position, long? ID = 0)
+        public static bool IsUnderwater(Vector3D Position, long? ID = null)
         {
             if (ID == null)
                 return WaterMod.Static.GetClosestWater(Position).IsUnderwater(ref Position);

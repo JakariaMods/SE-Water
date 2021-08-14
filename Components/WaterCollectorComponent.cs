@@ -75,7 +75,8 @@ namespace Jakaria
 
             airtight = Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position) ? true : Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position + (Vector3I)Base6Directions.Directions[(int)Block.Orientation.Up]);
 
-            float depth = water?.GetDepth(Block.PositionComp.GetPosition()) ?? 0;
+            Vector3D blockPosition = Block.PositionComp.GetPosition();
+            float depth = water?.GetDepth(ref blockPosition) ?? 0;
             underWater = depth < 0;
 
             if (water?.collectionRate > 0 && !Block.GetInventory().IsFull && underWater && !airtight)

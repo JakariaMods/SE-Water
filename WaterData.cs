@@ -13,7 +13,8 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.24";
+        public const string Version = "2.31";
+        public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
 
@@ -34,6 +35,17 @@ namespace Jakaria
         public static readonly MyStringId FoamMaterial = MyStringId.GetOrCompute("JFoam");
         public static readonly MyStringId FoamLightMaterial = MyStringId.GetOrCompute("JFoamLight");
 
+        public static readonly MyStringId[] PhysicalSplashMaterials = new MyStringId[]
+        {
+            MyStringId.GetOrCompute("JPhysicalSplash"),
+            MyStringId.GetOrCompute("JPhysicalSplashSmall"),
+        };
+
+        public static int GetPhysicalSplashMaterial(float ParticleRadius)
+        {
+            return ParticleRadius > 0.5f ? 0 : 1;
+        }
+
         public static readonly MyStringId[] FoamMaterials = new MyStringId[4]
         {
             MyStringId.GetOrCompute("JFoam"),
@@ -53,6 +65,8 @@ namespace Jakaria
         public static float DotMaxFOV = UpdateFovFrustum();
 
         public const int MinWaterSplit = 2;
+
+        public const float PI = 3.1415926f;
 
         public static float UpdateFovFrustum()
         {

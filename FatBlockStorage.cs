@@ -12,6 +12,7 @@ using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.ModAPI;
+using VRageMath;
 
 namespace Jakaria
 {
@@ -86,22 +87,26 @@ namespace Jakaria
 
                 (obj as MyCubeGrid).OnFatBlockAdded -= FatBlockStorage_OnFatBlockAdded;
                 (obj as MyCubeGrid).OnFatBlockClosed -= FatBlockStorage_OnFatBlockRemoved;
+
+                if (WaterMod.Static.WheelStorage.ContainsKey(obj.EntityId))
+                    WaterMod.Static.WheelStorage.Remove(obj.EntityId);
             }
         }
 
         private void FatBlockStorage_OnFatBlockAdded(MyCubeBlock obj)
         {
             ListReader<BlockStorage> fatBlocks;
-            Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
-            Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
+            //Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
+            //Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
+            Storage[obj.CubeGrid.EntityId] = ConstructList(obj.CubeGrid.GetFatBlocks());
         }
 
         private void FatBlockStorage_OnFatBlockRemoved(MyCubeBlock obj)
         {
             ListReader<BlockStorage> fatBlocks;
-            Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
-            Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
-
+            //Storage.TryRemove(obj.CubeGrid.EntityId, out fatBlocks);
+            //Storage.TryAdd(obj.CubeGrid.EntityId, ConstructList(obj.CubeGrid.GetFatBlocks()));
+            Storage[obj.CubeGrid.EntityId] = ConstructList(obj.CubeGrid.GetFatBlocks());
             if (WaterMod.Static.WheelStorage.ContainsKey(obj.EntityId))
                 WaterMod.Static.WheelStorage.Remove(obj.EntityId);
         }
@@ -115,7 +120,8 @@ namespace Jakaria
         public class BlockStorage
         {
             public MyCubeBlock Block;
-            public bool PreviousUnderwater = false;
+            public bool PreviousUnderwaterClient = false;
+            public bool PreviousUnderwaterServer = false;
 
             public BlockStorage(MyCubeBlock Block)
             {
