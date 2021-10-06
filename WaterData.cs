@@ -13,8 +13,8 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "2.31";
-        public const bool EarlyAccess = false;
+        public const string Version = "2.33";
+        public const bool EarlyAccess = true;
 
         public const ushort ClientHandlerID = 50270;
 
@@ -98,6 +98,7 @@ namespace Jakaria
         public static readonly MySoundPair SplashSound = new MySoundPair("JSplash");
         public static readonly MySoundPair SeagullSound = new MySoundPair("JSeagull");
         public static readonly MySoundPair SizzleSound = new MySoundPair("JSizzle");
+        public static readonly MySoundPair UnderwaterExplosionSound = new MySoundPair("JUnderwaterExplosion");
 
         public static readonly string[] DropContainerNames = new string[]
         {

@@ -92,7 +92,7 @@ namespace Jakaria
         public float collectionRate = 1f;
 
         [ProtoMember(60)]
-        public Vector3D fogColor = new Vector3D(0.1, 0.125, 0.2);
+        public Vector3D fogColor = new Vector3D(0.05, 0.18, 0.25);
 
         [ProtoIgnore(), XmlIgnore()]
         public Vector3D tideDirection;
@@ -337,7 +337,7 @@ namespace Jakaria
             text += "\n WaveHeight: " + waveHeight;
             text += "\n WaveSpeed: " + waveSpeed;
             text += "\n WaveScale: " + waveScale;
-            text += "\n Viscosity: " + viscosity;
+            //text += "\n Viscosity: " + viscosity;
             text += "\n Buoyancy: " + buoyancy;
             text += "\n Enablefish: " + enableFish;
             text += "\n Enableseagulls: " + enableSeagulls;
@@ -351,6 +351,7 @@ namespace Jakaria
             text += "\n Seed: " + seed;
             text += "\n TideHeight: " + tideHeight;
             text += "\n TideSpeed: " + tideSpeed;
+            text += "\n Density: " + fluidDensity;
 
             return text;
         }

@@ -36,8 +36,6 @@ namespace Jakaria
     [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
     class WaterMod : MySessionComponentBase
     {
-
-        IEnumerable<MyRespawnShipDefinition> RespawnShipDefinitions = MyDefinitionManagerBase.Static.Definitions.GetDefinitionsOfType<MyRespawnShipDefinition>();
         List<IMyPlayer> players = new List<IMyPlayer>();
 
         //Threading Stuff
@@ -165,7 +163,6 @@ namespace Jakaria
 
         MyPlanet closestPlanet = null;
         Water closestWater = null;
-        Vector3D closestFace;
         MyObjectBuilder_WeatherEffect closestWeather = null;
         bool previousUnderwaterState = true;
         public List<MyEntity> nearbyEntities = new List<MyEntity>();
@@ -235,7 +232,9 @@ namespace Jakaria
                 TextAPI = new HudAPIv2(TextAPIRegisteredCallback);
                 sunOccluder = CreateOccluderEntity();
                 particleOccluder = CreateOccluderEntity();
+
                 MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
+                //MyExplosions.OnExplosion += MyExplosions_OnExplosion;
                 WaterData.UpdateFovFrustum();
 
                 RecreateWater();
@@ -252,6 +251,31 @@ namespace Jakaria
             }
 
             initialized = true;
+        }
+
+        private void MyExplosions_OnExplosion(ref MyExplosionInfo explosionInfo)
+        {
+            float ExplosionRadius = (float)explosionInfo.ExplosionSphere.Radius;
+            Vector3D ExplosionPosition = explosionInfo.ExplosionSphere.Center;
+
+            if (closestWater != null)
+            {
+                float Depth = closestWater.GetDepth(ref ExplosionPosition);
+
+                if (Depth - ExplosionRadius <= 0)
+                {
+                    explosionInfo.CreateParticleEffect = false;
+
+                    if (Depth <= 0)
+                        explosionInfo.CustomSound = WaterData.UnderwaterExplosionSound;
+
+                    CreatePhysicsSplash(closestWater.GetClosestSurfacePoint(explosionInfo.ExplosionSphere.Center), -Session.GravityDirection, (float)explosionInfo.ExplosionSphere.Radius / 4, (int)explosionInfo.ExplosionSphere.Radius * 4);
+                    CreateSplash(closestWater.GetClosestSurfacePoint(explosionInfo.ExplosionSphere.Center), (float)explosionInfo.ExplosionSphere.Radius, true);
+                    //CreateBubble(closestWater.GetClosestSurfacePoint(explosionInfo.ExplosionSphere.Center), (float)explosionInfo.ExplosionSphere.Radius);
+                }
+            }
+
+            return;
         }
 
         private void TextAPIRegisteredCallback()
@@ -382,16 +406,16 @@ namespace Jakaria
                 case "whelp":
                     sendToOthers = false;
 
-                    MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://youtube.com/");
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
-                    break;
+                    MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://steamcommunity.com/sharedfiles/filedetails/?id=2574095672");
+                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.OpenGuide);
 
+                    break;
                 case "wversion":
                     sendToOthers = false;
 
                     WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
-                    break;
 
+                    break;
                 case "wlanguage":
                     sendToOthers = false;
 
@@ -725,7 +749,7 @@ namespace Jakaria
 
                         if (closestWater != null)
                         {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetViscosity.Replace("{0}", closestWater.fluidDensity.ToString()));
+                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetDensity.Replace("{0}", closestWater.fluidDensity.ToString()));
                             return;
                         }
 
@@ -1768,7 +1792,7 @@ namespace Jakaria
 
             MyAPIGateway.Multiplayer.UnregisterMessageHandler(WaterData.ClientHandlerID, ClientHandler);
             MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
-
+            //MyExplosions.OnExplosion -= MyExplosions_OnExplosion;
             if (MyAPIGateway.Session.IsServer)
             {
                 MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
@@ -2296,7 +2320,6 @@ namespace Jakaria
                     {
                         if (face?.water == null)
                             continue;
-
                         face.Draw(water.planetID == closestWater?.planetID && closestPlanet != null);
                     }
             });
@@ -2379,7 +2402,7 @@ namespace Jakaria
         {
             for (int i = 0; i < Count; i++)
             {
-                SimulatedSplashes.Add(new SimulatedSplash(Position, Velocity + MyUtils.GetRandomVector3Normalized() * 0.1f, Radius));
+                SimulatedSplashes.Add(new SimulatedSplash(Position, (Velocity + MyUtils.GetRandomVector3HemisphereNormalized(Vector3D.Normalize(Velocity)) * 0.5f) / 3, Radius));
             }
         }
 
@@ -2566,7 +2589,7 @@ namespace Jakaria
             MyCubeGrid NearestGrid = WaterUtils.GetApproximateGrid(FootPosition);
             IMySlimBlock Nearestblock = NearestGrid?.GetTargetedBlock(HeadPosition);
             bool InHottub = false;
-            bool InWater = false;
+            bool InWater;
             float Depth = water.GetDepth(ref HeadPosition);
 
             if (Nearestblock != null && Nearestblock is IMyCollector)
@@ -2592,12 +2615,12 @@ namespace Jakaria
                 {
                     GridVelocity = (NearestGrid?.Physics?.LinearVelocity ?? Vector3D.Zero);
                 }
-
+                
                 Vector3 Velocity = (-player.Physics.LinearVelocity + GridVelocity);
                 Vector3 characterforce = (Velocity * Velocity.Length()) * 0.1f * player.Physics.Mass * (water.fluidDensity / 1000f);
 
                 if ((!player.EnabledThrusts || !player.EnabledDamping) && WaterUtils.IsPlayerStateFloating(player.CurrentMovementState))
-                    characterforce += player.Physics.Mass * -player.Physics.Gravity * 1.5f * Math.Min(water.buoyancy, 1f);
+                    characterforce += player.Physics.Mass * -player.Physics.Gravity * 1.1f * Math.Min(water.buoyancy, 1f);
 
                 if (characterforce.IsValid())
                     player.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, characterforce, null, null);
@@ -2609,13 +2632,15 @@ namespace Jakaria
                     //Drowning
                     if (MyAPIGateway.Session.SessionSettings.EnableOxygen && tickTimerPlayerDamage == 0 && (!player.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
                     {
-                        player.DoDamage(3f, MyDamageType.Asphyxia, true);
+                        if (player.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
+                            player.DoDamage(3f, MyDamageType.Asphyxia, true);
                     }
 
                     //Pressure Crushing
                     if (Depth <= -water.crushDepth)
                     {
-                        player.DoDamage(1f + 1f * (-(Depth + water.crushDepth) / 300), MyDamageType.Temperature, true);
+                        if (player.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
+                            player.DoDamage(1f + 1f * (-(Depth + water.crushDepth) / 300), MyDamageType.Temperature, true);
                     }
                 }
             }
@@ -2732,7 +2757,7 @@ namespace Jakaria
                             force = litres * (1 + (-depth / 1000f)) / 20f * water.buoyancy * WaterDensityMultiplier;
 
                         //force -= Math.Abs(Vector3.Dot(grid.Physics.LinearVelocity, Vector3D.Normalize(grid.Physics.Gravity))) * (grid.Physics.Speed * grid.Physics.Mass) * 0.01;
-                        force += Vector3.Dot(Vector3D.Normalize(linearVelocity), gravityDirection) * (SqrlinearVelocity.Length() * grid.Physics.Mass) * 0.05;
+                        force += Vector3.Dot(Vector3D.Normalize(linearVelocity), gravityDirection) * (linearVelocity.Length() * grid.Physics.Mass) * 0.05;
                         Vector3 newForce = -gravityDirection * (float)force * 40f;
 
                         if (newForce.IsValid())
@@ -2742,10 +2767,10 @@ namespace Jakaria
                     //Drag
                     float physicsOptimizer = water.fluidDensity * PercentUnderwater * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS * (dragArea * 1.2f);
 
-                    Vector3 AngularForce = physicsOptimizer * (angularVelocity * angularVelocity.Length());
+                    Vector3 AngularForce = (physicsOptimizer * (angularVelocity * angularVelocity.Length())) / grid.Physics.Mass;
 
                     if (AngularForce.IsValid())
-                        grid.Physics.AngularVelocity -= (AngularForce / grid.Physics.Mass);
+                        grid.Physics.AngularVelocity -= AngularForce;
 
                     if (DragAPI.Heartbeat)
                     {
@@ -2836,7 +2861,8 @@ namespace Jakaria
                 weatherEffects.FogColorOverride = closestWater.lit ? Vector3D.Lerp(closestWater.fogColor, Vector3D.Zero, -Session.CameraDepth / closestWater.crushDepth) : closestWater.fogColor;
                 weatherEffects.FogAtmoOverride = 1;
                 weatherEffects.FogSkyboxOverride = 1;
-
+                //weatherEffects.SunColorOverride = closestWater.fogColor;
+                //weatherEffects.SunSpecularColorOverride = closestWater.fogColor;
                 weatherEffects.SunIntensityOverride = Math.Max(5 - (-Math.Min(Session.CameraDepth, -10) / 15f), 0.0001f);
             }
 
@@ -2859,13 +2885,13 @@ namespace Jakaria
                     weatherEffects.FogAtmoOverride = null;
                     weatherEffects.SunIntensityOverride = null;
                     weatherEffects.ParticleVelocityOverride = null;
+                    //weatherEffects.SunColorOverride = null;
+                    //weatherEffects.SunSpecularColorOverride = null;
                 }
             }
 
             lock (effectLock)
             {
-                float lifeRatio = 0;
-
                 foreach (var bubble in Bubbles)
                 {
                     if (bubble == null)
@@ -2936,6 +2962,7 @@ namespace Jakaria
             foreach (var Billboard in QuadBillboards)
             {
                 MyQuadD Quad = Billboard.Quad;
+                //MyTransparentGeometry.AddQuad(Billboard.Material, ref Quad,  Vector4.One, ref zeroVector);
                 MyTransparentGeometry.AddQuad(Billboard.Material, ref Quad, Billboard.Color, ref zeroVector);
             }
 
@@ -3230,7 +3257,7 @@ namespace Jakaria
                         SmallBubble bubble = SmallBubbles[i];
                         if (bubble == null || bubble.life > bubble.maxLife)
                         {
-                            bubble = new SmallBubble(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
+                            SmallBubbles[i] = new SmallBubble(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 20)));
                             continue;
                         }
                         bubble.position += -Session.GravityDirection * bubbleSpeed;
@@ -3246,7 +3273,7 @@ namespace Jakaria
                             if (seagull?.cawSound?.IsPlaying == true)
                                 continue;
 
-                            seagull = new Seagull(Session.CameraClosestPosition + (-Session.GravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -Session.GravityDirection);
+                            Seagulls[i] = new Seagull(Session.CameraClosestPosition + (-Session.GravityDirection * MyUtils.GetRandomFloat(25, 150)) + (MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(-2500, 2500)), MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(0.05f, 0.15f), -Session.GravityDirection);
                             continue;
                         }
 
@@ -3270,7 +3297,7 @@ namespace Jakaria
                                     break;
                             }
 
-                            fish = new Fish(Position, Direction * MyUtils.GetRandomFloat(0.05f, 0.11f), Session.GravityDirection);
+                            Fishes[i] = new Fish(Position, Direction * MyUtils.GetRandomFloat(0.05f, 0.11f), Session.GravityDirection);
                             continue;
                         }
 

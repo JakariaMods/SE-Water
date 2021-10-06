@@ -113,5 +113,7 @@
         public string GetDensity = "The fluid's density is '{0}' kg/m³.";
         public string SetDensity = "Set the fluid's density to '{0}' kg/m³.";
         public string SetDensityNoParse = "Couldn't parse fluid density '{0}'.";
+
+        public string OpenGuide = "Opened the steam guide through Steam Overlay.";
     }
 }
