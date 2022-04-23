@@ -8,45 +8,67 @@ using VRage.Utils;
 using VRageMath;
 using Sandbox.Game.Entities;
 using Sandbox.Game;
+using Jakaria;
+using VRageRender;
+using VRage.Game;
+using Sandbox.ModAPI;
 
 namespace Jakaria
 {
-    public class Seagull
+    public class Seagull : AnimatedBillboard
     {
-        public Vector3D Position;
-        public Vector3D Velocity;
+        Vector3D AnimationNormal;
+        MyEntity3DSoundEmitter SoundEmitter;
 
-        public Vector3 LeftVector { protected set; get; }
-        public Vector3 UpVector { protected set; get; }
+        public Seagull() { }
 
-        public int Life { set; get; } = 0;
-        public int MaxLife { protected set; get; }
-
-        public MyEntity3DSoundEmitter cawSound;
-
-        public Seagull(Vector3D Position, Vector3D Velocity, Vector3 GravityDirection, int MaxLife = 0)
+        public Seagull(Vector3D position, Vector3D velocity, Vector3D gravityDirection, int maxLife, float size)
         {
-            this.Position = Position;
-            this.Velocity = Velocity;
-            this.UpVector = Vector3.Normalize(Velocity);
-            this.LeftVector = Vector3.Normalize(Vector3.Cross(GravityDirection, Velocity));
+            Vector3 leftVector = Vector3.Normalize(velocity);
+            Vector3 forwardVector = Vector3.Cross(leftVector, gravityDirection);
 
-            if (MaxLife == 0)
-                this.MaxLife = MyUtils.GetRandomInt(1000, 2000);
-            else
-                this.MaxLife = MaxLife;
+            Velocity = velocity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+            MaxLife = maxLife;
 
-            cawSound = new MyEntity3DSoundEmitter(null);
+            //textureId = (byte)MyUtils.GetRandomInt(0, WaterData.FishMaterials.Length);
+
+            Billboard = new MyBillboard()
+            {
+                Color = Vector4.One,
+                CustomViewProjection = -1,
+                ColorIntensity = 1f,
+                Material = WaterData.SeagullMaterial,
+                UVSize = Vector2.One,
+                Position0 = position + ((leftVector + forwardVector) * size),
+                Position1 = position + leftVector * size,
+                Position2 = position,
+                Position3 = position + forwardVector * size,
+            };
+
+            MyTransparentGeometry.AddBillboard(Billboard, true);
+            InScene = true;
+
+            AnimationNormal = gravityDirection;
+
+            SoundEmitter = new MyEntity3DSoundEmitter(null);
+        }
+
+        public override void Simulate()
+        {
+            Vector3D Animation = AnimationNormal * Math.Sin(MyAPIGateway.Session.ElapsedPlayTime.TotalSeconds * 5) * 0.003;
+
+            Billboard.Position0 -= Animation;
+            Billboard.Position1 += Animation;
+            Billboard.Position2 += Animation;
+            Billboard.Position3 -= Animation;
+
+            base.Simulate();
         }
 
         public void Caw()
         {
-            if (cawSound.IsPlaying || WaterMod.Session.InsideVoxel > 15)
-                return;
-
-            cawSound.SetPosition(this.Position);
-            cawSound.PlaySound(WaterData.SeagullSound);
-            cawSound.VolumeMultiplier = WaterMod.Settings.Volume * ((25f - Math.Max(WaterMod.Session.InsideGrid - 10, 0)) / 25f);
+            SoundEmitter.SetPosition(Billboard.Position0);
+            SoundEmitter.PlaySound(WaterData.SeagullSound, true);
         }
     }
 }

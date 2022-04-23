@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<WaterConfig xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <BlockConfigs>
+  </BlockConfigs>
+  <PlanetConfigs>
+  </PlanetConfigs>
+  <CharacterConfigs>
+  </CharacterConfigs>
+</WaterConfig>

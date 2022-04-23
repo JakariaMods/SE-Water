@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Xml.Serialization;
+using Jakaria.Utils;
 using ProtoBuf;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game;
@@ -23,7 +24,7 @@ using VRage.Serialization;
 using VRage.Utils;
 using VRageMath;
 
-namespace Jakaria
+namespace Jakaria.Components
 {
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false)]
     public class WaterCollectorComponent : MyGameLogicComponent
@@ -47,87 +48,97 @@ namespace Jakaria
 
         public override void UpdateAfterSimulation10()
         {
-            if ((Block as MyEntity).IsPreview || !(Block as MyEntity).InScene || !Block.IsFunctional || Block.Transparent || Block.CubeGrid.Physics == null)
-                return;
-
-            if (inventory == null)
-                inventory = Block.GetInventory();
-
-            if (inventory == null)
-                return;
-
-            if (!isHotTub)
+            try
             {
-                if (Block.BlockDefinition.SubtypeId.Contains("Hottub"))
-                    isHotTub = true;
-
-                if (isHotTub)
-                {
-                    ((MyInventory)inventory).Constraint = new MyInventoryConstraint(MySpaceTexts.ToolTipItemFilter_AnyOre, null, true).Add(WaterData.IceItem.GetId());
-
-                    FatBlockStorage.HotTubs.Add(this);
-                    FatBlockStorage.HotTubs.ApplyAdditions();
-                }
-            }
-
-            if (Block.CubeGrid?.Physics?.Gravity != null)
-                water = WaterMod.Static.GetClosestWater(Block.PositionComp.GetPosition());
-
-            airtight = Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position) ? true : Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position + (Vector3I)Base6Directions.Directions[(int)Block.Orientation.Up]);
-
-            Vector3D blockPosition = Block.PositionComp.GetPosition();
-            float depth = water?.GetDepth(ref blockPosition) ?? 0;
-            underWater = depth < 0;
-
-            if (water?.collectionRate > 0 && !Block.GetInventory().IsFull && underWater && !airtight)
-            {
-                if (isHotTub)
-                {
-                    inventory.AddItems((int)(Math.Max(depth, 1) * 200), WaterData.IceItem);
-                }
-                else
-                {
-                    if (Block.IsWorking)
-                        if (Block.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                            inventory.AddItems((int)(200 * water.collectionRate), WaterData.IceItem);
-                        else
-                            inventory.AddItems((int)(15 * water.collectionRate), WaterData.IceItem);
-                }
-            }
-
-            if (isHotTub)
-            {
-                if (!airtight && underWater)
+                if ((Block as MyEntity).IsPreview || !(Block as MyEntity).InScene || !Block.IsFunctional || Block.Transparent || Block.CubeGrid.Physics == null)
                     return;
 
-                if (Block.CubeGrid.Physics != null && !Block.CubeGrid.Physics.IsStatic)
-                {
-                    Vector3D acccelDirection = Vector3D.Normalize(Block.CubeGrid.Physics.LinearAcceleration - (Block.CubeGrid.Physics.Gravity * 2));
+                if (inventory == null)
+                    inventory = Block.GetInventory();
 
-                    double dot = Vector3D.Dot(acccelDirection, Block.PositionComp.WorldMatrixRef.Up);
-                    //double dot = Vector3D.Dot(water.GetUpDirection(Block.PositionComp.GetPosition()), Block.PositionComp.WorldMatrixRef.Up);
-                    if (dot < .5)
+                if (inventory == null)
+                    return;
+
+                if (!isHotTub)
+                {
+                    if (Block.BlockDefinition.SubtypeId.Contains("Hottub"))
+                        isHotTub = true;
+
+                    if (isHotTub && water.Material.CollectedItem != null)
                     {
-                        if (MyAPIGateway.Session.IsServer)
+                        ((MyInventory)inventory).Constraint = new MyInventoryConstraint(MySpaceTexts.ToolTipItemFilter_AnyOre, null, true).Add(water.Material.CollectedItem.GetId());
+
+                        WaterMod.Static.HotTubs.Add(this);
+                        WaterMod.Static.HotTubs.ApplyAdditions();
+                    }
+                }
+
+                if (Block.CubeGrid?.Physics?.Gravity != null)
+                    water = WaterMod.Static.GetClosestWater(Block.PositionComp.GetPosition());
+
+                if (water != null)
+                {
+                    airtight = Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position) ? true : Block.CubeGrid.IsRoomAtPositionAirtight(Block.Position + (Vector3I)Base6Directions.Directions[(int)Block.Orientation.Up]);
+
+                    Vector3D blockPosition = Block.PositionComp.GetPosition();
+                    double depth = water?.GetDepth(ref blockPosition) ?? 0;
+                    underWater = depth < 0;
+
+                    if (water?.CollectionRate > 0 && !Block.GetInventory().IsFull && underWater && !airtight && water.Material.CollectedItem != null)
+                    {
+                        if (isHotTub)
                         {
-                            MyFixedPoint amount = (MyFixedPoint)(dot > 0 ? (1f - Math.Abs(dot)) * 25 : 25);
-                            inventory.RemoveItemsAt(0, amount, spawn: true);
+                            inventory.AddItems((int)(Math.Max(depth, 1) * 200), water.Material.CollectedItem);
+                        }
+                        else
+                        {
+                            if (Block.IsWorking)
+                                if (Block.CubeGrid.GridSizeEnum == MyCubeSize.Large)
+                                    inventory.AddItems((int)(water.Material.CollectedAmount * water.CollectionRate), water.Material.CollectedItem);
+                                else
+                                    inventory.AddItems((int)((water.Material.CollectedAmount / 5f) * water.CollectionRate), water.Material.CollectedItem);
+                        }
+                    }
+
+                    if (isHotTub)
+                    {
+                        if (!airtight && underWater)
+                            return;
+
+                        if (Block.CubeGrid.Physics != null && !Block.CubeGrid.Physics.IsStatic)
+                        {
+                            Vector3D acccelDirection = Vector3D.Normalize(Block.CubeGrid.Physics.LinearAcceleration - (Block.CubeGrid.Physics.Gravity * 2));
+
+                            double dot = Vector3D.Dot(acccelDirection, Block.PositionComp.WorldMatrixRef.Up);
+                            //double dot = Vector3D.Dot(water.GetUpDirection(Block.PositionComp.GetPosition()), Block.PositionComp.WorldMatrixRef.Up);
+                            if (dot < .5)
+                            {
+                                if (MyAPIGateway.Session.IsServer)
+                                {
+                                    MyFixedPoint amount = (MyFixedPoint)(dot > 0 ? (1f - Math.Abs(dot)) * 25 : 25);
+                                    inventory.RemoveItemsAt(0, amount, spawn: true);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            double dot = Vector3D.Dot(water.GetUpDirection(ref blockPosition), Block.PositionComp.WorldMatrixRef.Up);
+                            if (dot < .75)
+                            {
+                                if (MyAPIGateway.Session.IsServer)
+                                {
+                                    MyFixedPoint amount = (MyFixedPoint)(dot > 0 ? (1f - Math.Abs(dot)) * 25 : 25);
+
+                                    inventory.RemoveItemsAt(0, amount, spawn: true);
+                                }
+                            }
                         }
                     }
                 }
-                else
-                {
-                    double dot = Vector3D.Dot(water.GetUpDirection(Block.PositionComp.GetPosition()), Block.PositionComp.WorldMatrixRef.Up);
-                    if (dot < .75)
-                    {
-                        if (MyAPIGateway.Session.IsServer)
-                        {
-                            MyFixedPoint amount = (MyFixedPoint)(dot > 0 ? (1f - Math.Abs(dot)) * 25 : 25);
-
-                            inventory.RemoveItemsAt(0, amount, spawn: true);
-                        }
-                    }
-                }
+            }
+            catch(Exception e)
+            {
+                MyAPIGateway.Utilities.ShowNotification("Issue", 16 * 10);
             }
         }
 
@@ -135,9 +146,9 @@ namespace Jakaria
         {
             if (isHotTub)
             {
-                FatBlockStorage.HotTubs.Remove(this);
-                FatBlockStorage.HotTubs.ApplyRemovals();
+                WaterMod.Static.HotTubs.Remove(this);
+                WaterMod.Static.HotTubs.ApplyRemovals();
             }
         }
     }
-}
+}//todo rewrite again this is shit

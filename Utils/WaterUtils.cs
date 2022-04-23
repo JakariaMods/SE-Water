@@ -16,6 +16,8 @@ using VRage.Game.ModAPI;
 using VRageRender;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using Sandbox.Game.GameSystems;
+using VRage.ModAPI;
+using Jakaria.Configs;
 
 namespace Jakaria.Utils
 {
@@ -60,9 +62,20 @@ namespace Jakaria.Utils
             MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
         }
 
+        /// <summary>
+        /// Writes a message to the log with the mod prefixed
+        /// </summary>
         public static void WriteLog(string message)
         {
             MyLog.Default.WriteLine("WaterMod: " + message);
+        }
+
+        /// <summary>
+        /// Returns percentage value
+        /// </summary>
+        public static float InvLerp(float a, float b, float value)
+        {
+            return (value - a) / (b - a);
         }
 
         /// <summary>
@@ -87,9 +100,8 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Returns a random meteor material name
+        /// Gets a random meteor material name
         /// </summary>
-        /// <returns></returns>
         public static string GetRandomMeteorMaterial()
         {
             MyVoxelMaterialDefinition material = null;
@@ -114,28 +126,74 @@ namespace Jakaria.Utils
         /// <summary>
         /// Checks if a position is airtight
         /// </summary>
-        public static bool IsPositionAirtight(Vector3D position)
+        public static bool IsPositionAirtight(ref Vector3D position)
         {
-            if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
+            if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization || !MyAPIGateway.Session.SessionSettings.EnableOxygen)
                 return false;
 
             BoundingSphereD sphere = new BoundingSphereD(position, 5);
             List<MyEntity> entities = new List<MyEntity>();
             MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
-
+            
             foreach (var entity in entities)
             {
-                MyCubeGrid grid = entity as MyCubeGrid;
+                IMyCubeGrid grid = entity as IMyCubeGrid;
 
-                if (grid != null && grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(position)))
-                    return true;
+                if (grid?.GasSystem != null)
+                {
+                    Vector3I pos = grid.WorldToGridInteger(position);
+                    return grid.GasSystem.GetOxygenRoomForCubeGridPosition(ref pos) != null;
+                }
             }
+
             return false;
         }
 
-        public static bool HotTubUnderwater(Vector3D Position)
+        /// <summary>
+        /// Checks if a quad is airtight (Out of 4)
+        /// </summary>
+        public static int IsQuadAirtight(ref MyQuadD quad)
         {
-            foreach (var Tub in FatBlockStorage.HotTubs)
+            if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
+                return 0;
+
+            BoundingSphereD sphere = new BoundingSphereD((quad.Point0 + quad.Point1) / 2, 5);
+            List<MyEntity> entities = new List<MyEntity>();
+            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
+
+            foreach (var entity in entities)
+            {
+                IMyCubeGrid grid = entity as IMyCubeGrid;
+
+                if (grid?.GasSystem != null)
+                {
+                    int count = 0;
+
+                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point0)))
+                        count++;
+
+                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point1)))
+                        count++;
+
+                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point2)))
+                        count++;
+
+                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point3)))
+                        count++;
+
+                    return count;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Returns true if the position is inside of a hot tub
+        /// </summary>
+        public static bool HotTubUnderwater(ref Vector3D Position)
+        {
+            foreach (var Tub in WaterMod.Static.HotTubs)
             {
                 if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
                 {
@@ -148,9 +206,12 @@ namespace Jakaria.Utils
             return false;
         }
 
+        /// <summary>
+        /// Returns true if the position is inside of a hot tub and outputs the grid the hottub is attached to
+        /// </summary>
         public static bool HotTubUnderwater(Vector3D Position, out IMyCubeGrid grid)
         {
-            foreach (var Tub in FatBlockStorage.HotTubs)
+            foreach (var Tub in WaterMod.Static.HotTubs)
             {
                 if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
                 {
@@ -169,31 +230,9 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Checks if a position is airtight
-        /// </summary>
-        public static bool IsNearGrid(Vector3 position, ref MyCubeGrid grid)
-        {
-            if (WaterMod.Static.nearbyEntities != null)
-                foreach (var entity in WaterMod.Static.nearbyEntities)
-                {
-                    if (entity is MyCubeGrid)
-                    {
-                        if (!entity.IsPreview && (entity as MyCubeGrid).GridSizeEnum == MyCubeSize.Large && entity.Physics?.IsStatic == false)
-                            if (entity.PositionComp.WorldAABB.Contains(position) > ContainmentType.Disjoint)
-                            {
-                                grid = entity as MyCubeGrid;
-                                return true;
-                            }
-
-                    }
-                }
-            return false;
-        }
-
-        /// <summary>
         /// Returns the closest grid to the position
         /// </summary>
-        public static MyCubeGrid GetApproximateGrid(Vector3 position, MyEntityQueryType queryType = MyEntityQueryType.Both)
+        public static MyCubeGrid GetApproximateGrid(Vector3D position, MyEntityQueryType queryType = MyEntityQueryType.Both)
         {
             BoundingSphereD sphere = new BoundingSphereD(position, 1);
             List<MyEntity> entities = new List<MyEntity>();
@@ -207,7 +246,7 @@ namespace Jakaria.Utils
                 if (entity is MyCubeGrid)
                     return entity as MyCubeGrid;
             }
-            entities.Clear();
+            
             return null;
         }
 
@@ -247,6 +286,19 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
+        /// Checks if a position on a planet is underground
+        /// </summary>
+        public static double GetAltitudeSquared(MyPlanet planet, Vector3D position)
+        {
+            double altitude = (position - planet.WorldMatrix.Translation).LengthSquared();
+
+            if (altitude < planet.MinimumRadius * planet.MinimumRadius || altitude > planet.MaximumRadius * planet.MaximumRadius)
+                return altitude;
+
+            return (altitude - (planet.GetClosestSurfacePointGlobal(position) - planet.WorldMatrix.Translation).LengthSquared());
+        }
+
+        /// <summary>
         /// Checks if a planet has water
         /// </summary>
         public static bool HasWater(MyPlanet planet)
@@ -270,41 +322,57 @@ namespace Jakaria.Utils
             return state == MyCharacterMovementEnum.Falling || state == MyCharacterMovementEnum.Jump || state == MyCharacterMovementEnum.Flying;
         }
 
-        public static Vector2 MeasureString(StringBuilder text, float scale, bool useMyRenderGuiConstants = true)
+        /// <summary>
+        /// Gets the maximum depth a character can be before becoming crushed
+        /// </summary>
+        public static double GetCrushDepth(Water water, IMyCharacter character)
         {
-            if (useMyRenderGuiConstants)
-                scale *= WaterData.TSSFontScale;
-            float pxWidth = 0;
-            float maxPxWidth = 0;
-            int lines = 1;
-            for (int i = 0; i < text.Length; i++)
+            //pressure = density * gravity * height
+            CharacterConfig characterConfig;
+
+            if (character?.Definition?.Id != null && water?.Material != null && water?.planet?.Generator != null && WaterData.CharacterConfigs.TryGetValue(character.Definition.Id, out characterConfig))
             {
-                char c = text[i];
+                if (characterConfig == null)
+                    return double.MaxValue;
 
-                //  New line
-                if (c == WaterData.TSSNewLine)
-                {
-                    lines++;
-                    pxWidth = 0;
-                    continue;
-                }
-
-                //  Because new line
-                if (pxWidth > maxPxWidth) maxPxWidth = pxWidth;
+                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * (water.planet.Generator.SurfaceGravity * 9.8));
             }
 
-            return new Vector2(maxPxWidth * scale, lines * 1 * scale);
+            return double.MaxValue;
         }
 
-        public static double Clamp(double val, double min, double max)
+        /// <summary>
+        /// Calculates the amount of ticks a block will take before it recalculates buoyancy
+        /// </summary>
+        public static int CalculateUpdateFrequency(MyCubeGrid grid)
         {
-            if (val < min)
-                return min;
+            if (grid.IsStatic)
+                return 15;
 
-            if (val > max)
-                return max;
+            int blockCount = grid.BlocksCount;
 
-            return val;
+            if (grid.GridSizeEnum == MyCubeSize.Large)
+            {
+                if (blockCount < 50)
+                    return 2;
+                else if (blockCount < 150)
+                    return 3;
+                else if (blockCount < 500)
+                    return 4;
+
+                return (blockCount / 3000) + 4;
+            }
+            else
+            {
+                if (blockCount < 50)
+                    return 1;
+                else if (blockCount < 150)
+                    return 2;
+                else if (blockCount < 500)
+                    return 3;
+
+                return (blockCount / 3000) + 3;
+            }
         }
     }
 }

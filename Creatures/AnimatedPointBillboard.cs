@@ -12,28 +12,35 @@ using Jakaria;
 using VRageRender;
 using VRage.Game;
 using Sandbox.ModAPI;
+using Jakaria.Utils;
 
 namespace Jakaria
 {
-    public class SimulatedSplash : AnimatedPointBillboard
+    public class AnimatedPointBillboard : AnimatedBillboard
     {
-        public SimulatedSplash() { }
+        public Vector3D Velocity;
+        public Vector3D Position;
 
-        public SimulatedSplash(Vector3D position, Vector3D velocity, float radius, Water water)
+        public float Radius;
+        public float Angle;
+
+        public AnimatedPointBillboard() { }
+
+        public AnimatedPointBillboard(Vector3D position, Vector3D velocity, float radius, int maxLife, float angle, MyStringId material)
         {
             Position = position;
             Velocity = velocity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
-            MaxLife = 200;
+            MaxLife = maxLife;
 
             Radius = radius;
-            Angle = MyUtils.GetRandomInt(0,360);
-
+            Angle = angle;
+            
             Billboard = new MyBillboard()
             {
-                Color = WaterData.WhiteColor,
+                Color = WaterData.SmallBubbleColor,
                 CustomViewProjection = -1,
-                ColorIntensity = water.PlanetConfig.ColorIntensity,
-                Material = WaterData.PhysicalSplashMaterial,
+                ColorIntensity = 1f,
+                Material = material,
                 UVSize = Vector2.One,
                 UVOffset = Vector2.Zero,
             };
@@ -47,27 +54,11 @@ namespace Jakaria
         public override void Simulate()
         {
             Position += Velocity;
-            Velocity += WaterMod.Session.Gravity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
-
-            if (WaterMod.Session.ClosestWater != null)
-            {
-                //Optimized method for determining if the particle is underwater
-                if ((WaterMod.Session.ClosestWater.Position - Position).LengthSquared() - (WaterMod.Session.ClosestWater.Position - WaterMod.Session.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
-                {
-                    MarkedForClose = true;
-
-                    WaterMod.Static.CreateSplash(Position, Radius * 2, true);
-                }
-            }
-            else
-            {
-                MarkedForClose = true;
-            }
-
+            
             if (InScene) //Only update if the billboard is being drawn
             {
                 MyQuadD quad;
-
+                
                 MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterMod.Session.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;

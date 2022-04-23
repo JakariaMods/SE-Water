@@ -1,9 +1,6 @@
 ﻿using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using VRage;
 using VRage.Game;
 using VRage.Game.Components;
@@ -12,17 +9,18 @@ using VRageMath;
 
 namespace Jakaria.API
 {
-    //Only Include this file in your project
-
+    //See the steam guide for how to use this
+    //https://steamcommunity.com/sharedfiles/filedetails/?id=2639207010
     /// <summary>
     /// https://github.com/jakarianstudios/SE-Water/blob/master/API/WaterModAPI.cs
     /// </summary>
-    [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
-    public class WaterAPI : MySessionComponentBase
+
+    [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
+    public class WaterModAPI : MySessionComponentBase
     {
-        public static string ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
+        public static string ModName = "";
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 16;
+        public const int ModAPIVersion = 17;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -149,9 +147,10 @@ namespace Jakaria.API
         public static float GetBuoyancyMultiplier(Vector3D Position, MyCubeSize GridSize, long? ID = null) => _GetBuoyancyMultiplier?.Invoke(Position, GridSize, ID) ?? 0;
 
         /// <summary>
-        /// Gets crush depth
+        /// Gets crush damage
         /// </summary>
-        public static int GetCrushDepth(long ID) => _GetCrushDepth?.Invoke(ID) ?? 500;
+        [Obsolete]
+        public static float GetCrushDepth(long ID) => _GetCrushDepth?.Invoke(ID) ?? 500;
 
         /// <summary>
         /// Gets position, radius, minimum radius, and maximum radius- in that order.
@@ -174,7 +173,7 @@ namespace Jakaria.API
         public static MyTuple<float, float> GetTideData(long ID) => (MyTuple<float, float>)(_GetTideData?.Invoke(ID) ?? null);
 
         /// <summary>
-        /// Gets tide height and tide speed- in that order.
+        /// Gets density and buoyancy multiplier- in that order.
         /// </summary>
         public static MyTuple<float, float> GetPhysicsData(long ID) => (MyTuple<float, float>)(_GetPhysicsData?.Invoke(ID) ?? null);
 
@@ -183,14 +182,45 @@ namespace Jakaria.API
         /// </summary>
         public static Vector3D GetTideDirection(long ID) => (Vector3D)(_GetTideDirection?.Invoke(ID) ?? null);
 
-        public override void LoadData()
+        /// <summary>
+        /// Do not use. This is for the session component to register automatically
+        /// </summary>
+        public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
-            MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
+            Register();
         }
 
+        /// <summary>
+        /// Do not use. This is for the session component to register automatically
+        /// </summary>
         protected override void UnloadData()
         {
+            Unregister();
+        }
+
+        /// <summary>
+        /// Registers the mod and sets the mod name if it is not already set
+        /// </summary>
+        public void Register()
+        {
+            MyAPIGateway.Utilities.RegisterMessageHandler(ModHandlerID, ModHandler);
+
+            if (ModName == "")
+            {
+                if (MyAPIGateway.Utilities.GamePaths.ModScopeName.Contains("_"))
+                    ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName.Split('_')[1];
+                else
+                    ModName = MyAPIGateway.Utilities.GamePaths.ModScopeName;
+            }
+        }
+
+        /// <summary>
+        /// Unregisters the mod
+        /// </summary>
+        public void Unregister()
+        {
             MyAPIGateway.Utilities.UnregisterMessageHandler(ModHandlerID, ModHandler);
+            Registered = false;
         }
 
         private void ModHandler(object obj)
@@ -206,6 +236,8 @@ namespace Jakaria.API
                 _VerifyVersion = (Func<int, string, bool>)ModAPIMethods["VerifyVersion"];
 
                 Registered = VerifyVersion(ModAPIVersion, ModName);
+
+                MyLog.Default.WriteLine("Registering WaterAPI for Mod '" + ModName + "'");
 
                 if (Registered)
                 {
@@ -236,10 +268,10 @@ namespace Jakaria.API
                         _GetTideData = (Func<long, MyTuple<float, float>>)ModAPIMethods["GetTideData"];
                         _GetTideDirection = (Func<long, Vector3D>)ModAPIMethods["GetTideDirection"];
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         MyAPIGateway.Utilities.ShowMessage("WaterMod", "Mod '" + ModName + "' encountered an error when registering the Water Mod API, see log for more info.");
-                        MyLog.Default.WriteLine(e);
+                        MyLog.Default.WriteLine("WaterMod: " + e);
                     }
                 }
             }

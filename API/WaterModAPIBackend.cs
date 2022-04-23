@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using VRageMath;
 using Jakaria.Utils;
 using Sandbox.ModAPI;
 using VRage.Serialization;
 using VRage.Game;
 using VRage;
+using System.IO;
+using Jakaria.Configs;
+using Sandbox.Definitions;
+using Sandbox.Game.Entities;
 
 namespace Jakaria.API
 {
+    //Do not include this file in your project modders
     public class WaterModAPIBackend
     {
         public const int MinVersion = 14;
@@ -25,7 +27,7 @@ namespace Jakaria.API
             ["SphereIntersectsWater"] = new Func<BoundingSphereD, long?, int>(SphereIntersects),
             ["SphereIntersectsWaterList"] = new Action<List<BoundingSphereD>, ICollection<int>, long?>(SphereIntersects),
             ["GetClosestSurfacePoint"] = new Func<Vector3D, long?, Vector3D>(GetClosestSurfacePoint),
-            ["GetClosestSurfacePointList"] = new Action<List<Vector3D>, ICollection<Vector3D>, long?>(GetClosestSurfacePoint),
+            ["GetClosestSurfacePointList"] = new Action<List<Vector3D>, ICollection<Vector3D>, long?>(GetClosestSurfacePoints),
             ["LineIntersectsWater"] = new Func<LineD, long?, int>(LineIntersectsWater),
             ["LineIntersectsWaterList"] = new Action<List<LineD>, ICollection<int>, long?>(LineIntersectsWaterList),
             ["GetDepth"] = new Func<Vector3D, long?, float?>(GetDepth),
@@ -56,36 +58,36 @@ namespace Jakaria.API
         public static MyTuple<float, float> GetTideData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<float, float>(Water.tideHeight, Water.tideSpeed);
+            return new MyTuple<float, float>(Water.TideHeight, Water.TideSpeed);
         }
 
         public static MyTuple<float, float> GetPhysicsData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<float, float>(Water.viscosity, Water.buoyancy);
+            return new MyTuple<float, float>(Water.Material.Density, Water.Buoyancy);
         }
 
         public static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<Vector3D, bool, bool>(Water.fogColor, Water.transparent, Water.lit);
+            return new MyTuple<Vector3D, bool, bool>(Water.FogColor, Water.Transparent, Water.Lit);
         }
 
         public static MyTuple<float, float, float, int> GetWaveData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<float, float, float, int>(Water.waveHeight, Water.waveSpeed, Water.waveScale, Water.seed);
+            return new MyTuple<float, float, float, int>(Water.WaveHeight, Water.WaveSpeed, Water.WaveScale, 0);
         }
 
         public static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
         {
             Water Water = WaterMod.Static.Waters[ID];
-            return new MyTuple<Vector3D, float, float, float>(Water.position, Water.radius, Water.radius - Water.waveHeight - Water.tideHeight, Water.radius + Water.waveHeight + Water.tideHeight);
+            return new MyTuple<Vector3D, float, float, float>(Water.Position, Water.Radius, Water.Radius - Water.WaveHeight - Water.TideHeight, Water.Radius + Water.WaveHeight + Water.TideHeight);
         }
 
         public static int GetCrushDepth(long ID)
         {
-            return WaterMod.Static.Waters[ID].crushDepth;
+            return 0;
         }
 
         public static float GetBuoyancyMultiplier(Vector3D Position, MyCubeSize GridSize, long? ID = 0)
@@ -93,17 +95,17 @@ namespace Jakaria.API
             Water Water = (ID == null) ? WaterMod.Static.GetClosestWater(Position) : WaterMod.Static.Waters[ID.Value];
 
             if (GridSize == MyCubeSize.Large)
-                return (1 + (-Water.GetDepth(ref Position) / 5000f)) / 50f * Water.buoyancy;
+                return (float)(1 + (-Water.GetDepth(ref Position) / 5000f)) / 50f * Water.Buoyancy;
             else
-                return (1 + (-Water.GetDepth(ref Position) / 5000f)) / 20f * Water.buoyancy;
+                return (float)(1 + (-Water.GetDepth(ref Position) / 5000f)) / 20f * Water.Buoyancy;
         }
 
         public static Vector3D GetUpDirection(Vector3D Position, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.GetUpDirection(Position) ?? Vector3D.Up;
+                return WaterMod.Static.GetClosestWater(Position)?.GetUpDirection(ref Position) ?? Vector3D.Up;
             else
-                return WaterMod.Static.Waters[ID.Value].GetUpDirection(Position);
+                return WaterMod.Static.Waters[ID.Value].GetUpDirection(ref Position);
         }
 
         public static int SphereIntersects(BoundingSphereD Sphere, long? ID = 0)
@@ -170,15 +172,110 @@ namespace Jakaria.API
             WaterMod.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
         }
 
-        public static void BeforeStart()
+        public static void LoadData()
         {
             MyAPIGateway.Utilities.SendModMessage(ModHandlerID, ModAPIMethods);
+
+            WaterUtils.WriteLog("Beginning load water block configs");
+
+            try
+            {
+                foreach (var Mod in MyAPIGateway.Session.Mods)
+                {
+                    if (MyAPIGateway.Utilities.FileExistsInModLocation("Data/WaterConfig.xml", Mod))
+                    {
+
+                        TextReader Reader = MyAPIGateway.Utilities.ReadFileInModLocation("Data/WaterConfig.xml", Mod);
+                        if (Reader != null)
+                        {
+                            string xml = Reader.ReadToEnd();
+
+                            if (xml.Length > 0)
+                            {
+                                WaterConfigAPI WaterConfig = MyAPIGateway.Utilities.SerializeFromXML<WaterConfigAPI>(xml);
+                                
+                                if (WaterConfig.BlockConfigs != null)
+                                    foreach (var BlockConfig in WaterConfig.BlockConfigs)
+                                    {
+                                        if (BlockConfig.TypeId == "" && BlockConfig.SubtypeId == "")
+                                        {
+                                            WaterUtils.WriteLog("Empty block definition, skipping...");
+                                            continue;
+                                        }
+
+                                        BlockConfig.Init();
+                                        
+                                        WaterData.BlockConfigs[BlockConfig.DefinitionId] = BlockConfig;
+                                        WaterUtils.WriteLog("Loaded Block Config '" + BlockConfig.DefinitionId + "'");
+                                    }
+
+                                if (WaterConfig.PlanetConfigs != null)
+                                    foreach (var PlanetConfig in WaterConfig.PlanetConfigs)
+                                    {
+                                        if (PlanetConfig.TypeId == "" && PlanetConfig.SubtypeId == "")
+                                        {
+                                            WaterUtils.WriteLog("Empty planet definition, skipping...");
+                                            continue;
+                                        }
+
+                                        PlanetConfig.Init();
+
+                                        WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
+                                        WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
+                                    }
+
+                                if (WaterConfig.CharacterConfigs != null)
+                                    foreach (var CharacterConfig in WaterConfig.CharacterConfigs)
+                                    {
+                                        CharacterConfig.Init();
+
+                                        WaterData.CharacterConfigs[CharacterConfig.DefinitionId] = CharacterConfig;
+                                        WaterUtils.WriteLog("Loaded Character Config '" + CharacterConfig.DefinitionId + "'");
+                                    }
+
+                                if (WaterConfig.RespawnPodConfigs != null)
+                                    foreach (var RespawnPodConfig in WaterConfig.RespawnPodConfigs)
+                                    {
+                                        RespawnPodConfig.Init();
+
+                                        WaterData.RespawnPodConfigs[RespawnPodConfig.DefinitionId] = RespawnPodConfig;
+                                        WaterUtils.WriteLog("Loaded Respawn Pod Config '" + RespawnPodConfig.DefinitionId + "'");
+                                    }
+
+                                if (WaterConfig.WaterTextures != null)
+                                    foreach (var Texture in WaterConfig.WaterTextures)
+                                    {
+                                        WaterData.WaterTextures.Add(Texture);
+                                        WaterUtils.WriteLog("Loaded Water Texture '" + Texture + "'");
+                                    }
+
+                                if (WaterConfig.MaterialConfigs != null)
+                                    foreach (var Material in WaterConfig.MaterialConfigs)
+                                    {
+                                        Material.Init();
+
+                                        WaterData.MaterialConfigs[Material.SubtypeId] = Material;
+                                        WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
+                                    }
+
+                                Reader.Dispose();
+                            }
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                WaterUtils.WriteLog(e.ToString());
+            }
+
+            WaterUtils.WriteLog("Finished loading water block configs");
         }
 
         #region Water
         public static void CreateBubble(Vector3D Position, float Radius)
         {
-            WaterMod.Static.CreateBubble(Position, Radius);
+            WaterMod.Static.CreateBubble(ref Position, Radius);
         }
 
         public static void CreateSplash(Vector3D Position, float Radius, bool Audible)
@@ -194,9 +291,9 @@ namespace Jakaria.API
         public static float? GetDepth(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.GetDepth(ref Position);
+                return (float?)WaterMod.Static.GetClosestWater(Position)?.GetDepth(ref Position);
             else
-                return WaterMod.Static.Waters[ID.Value].GetDepth(ref Position);
+                return (float?)WaterMod.Static.Waters[ID.Value].GetDepth(ref Position);
         }
 
         public static Vector3D GetClosestSurfacePoint(Vector3D Position, long? ID = null)
@@ -207,7 +304,7 @@ namespace Jakaria.API
                 return WaterMod.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
         }
 
-        public static void GetClosestSurfacePoint(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null)
+        public static void GetClosestSurfacePoints(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null)
         {
             if (ID == null)
             {
@@ -231,8 +328,6 @@ namespace Jakaria.API
         {
             if (MyAPIGateway.Session.IsServer)
                 MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterMod.Static.Waters)));
-            else
-                MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterMod.Static.Waters)));
         }
 
         public static bool VerifyVersion(int ModAPIVersion, string ModName)
@@ -244,18 +339,17 @@ namespace Jakaria.API
             }
 
             return true;
-
         }
 
         public static long? GetClosestWater(Vector3D Position)
         {
-            return WaterMod.Static.GetClosestWater(Position)?.planetID;
+            return WaterMod.Static.GetClosestWater(Position)?.PlanetID;
         }
 
         public static bool IsUnderwater(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position).IsUnderwater(ref Position);
+                return WaterMod.Static.GetClosestWater(Position)?.IsUnderwater(ref Position) ?? false;
             else
                 return WaterMod.Static.Waters[ID.Value]?.IsUnderwater(ref Position) ?? false;
         }

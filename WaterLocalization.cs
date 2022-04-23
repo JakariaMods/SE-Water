@@ -13,6 +13,7 @@ namespace Jakaria
             {"french", new Language()
             {
                 EnglishName = "french",
+                NativeName = "Français",
 
                 WaterModVersion = "Water Mod V{0} de Jakaria.",
                 TranslationAuthor = "Jakaria",
@@ -61,6 +62,7 @@ namespace Jakaria
             {"polish", new Language()
             {
                 EnglishName = "polish",
+                NativeName = "Polski",
 
                 WaterModVersion = "Water Mod V{0} od Jakaria.",
                 TranslationAuthor = "ŁukaszLutek",
@@ -109,6 +111,7 @@ namespace Jakaria
             {"german", new Language()
             {
                 EnglishName = "german",
+                NativeName = "Deutsch",
 
                 WaterModVersion = "Water Mod V{0} by Jakaria.",
                 TranslationAuthor = "Voss",
@@ -157,6 +160,7 @@ namespace Jakaria
             {"pirate", new Language()
             {
                 EnglishName = "pirate",
+                NativeName = "Pirate",
 
                 WaterModVersion = "Water Mod V{0} plundered from Jakaria.",
                 TranslationAuthor = "Mad Cap'n LL",
@@ -205,6 +209,7 @@ namespace Jakaria
             {"russian", new Language()
             {
                 EnglishName = "russian",
+                NativeName = "Русский язык",
 
                 WaterModVersion = "Water Mod V{0} по Jakaria.",
                 TranslationAuthor = "Google Translate",

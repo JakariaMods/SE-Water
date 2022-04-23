@@ -9,34 +9,54 @@ using VRageMath;
 using Sandbox.Game.Entities;
 using Sandbox.Game;
 using Jakaria;
+using VRageRender;
+using VRage.Game;
+using Sandbox.ModAPI;
 
 namespace Jakaria
 {
-    public class Fish
+    public class Fish : AnimatedBillboard
     {
-        public Vector3D Position;
-        public Vector3D Velocity;
+        Vector3D AnimationNormal;
 
-        public Vector3 LeftVector { protected set; get; }
-        public Vector3 UpVector { protected set; get; }
+        public Fish() { }
 
-        public int Life { set; get; } = 0;
-        public int MaxLife { protected set; get; }
-
-        public byte textureId;
-
-        public Fish(Vector3D Position, Vector3D Velocity, Vector3 GravityDirection, int MaxLife = 0)
+        public Fish(Vector3D position, Vector3D velocity, Vector3D gravityDirection, int maxLife, float size)
         {
-            this.Position = Position;
-            this.Velocity = Velocity;
-            textureId = (byte)MyUtils.GetRandomInt(0, WaterData.FishMaterials.Length);
-            this.LeftVector = Vector3.Normalize(Velocity);
-            this.UpVector = Vector3.Normalize(-GravityDirection);
+            Vector3 leftVector = Vector3.Normalize(velocity);
+            Velocity = velocity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+            MaxLife = maxLife;
 
-            if (MaxLife == 0)
-                this.MaxLife = MyUtils.GetRandomInt(1000, 2000);
-            else
-                this.MaxLife = MaxLife;
+            Billboard = new MyBillboard()
+            {
+                Color = Vector4.One,
+                CustomViewProjection = -1,
+                ColorIntensity = 1f,
+                Material = WaterData.FishMaterial,
+                UVSize = WaterData.FishUVSize,
+                UVOffset = new Vector2(WaterData.FishUVSize.X * MyUtils.GetRandomInt(0, 4), WaterData.FishUVSize.Y * MyUtils.GetRandomInt(0, 2)),
+                Position0 = position + leftVector * size,
+                Position1 = position,
+                Position2 = position + gravityDirection * size,
+                Position3 = position + ((leftVector + gravityDirection) * size),
+            };
+
+            MyTransparentGeometry.AddBillboard(Billboard, true);
+            InScene = true;
+
+            AnimationNormal = Vector3D.Cross(leftVector, gravityDirection);
+        }
+
+        public override void Simulate()
+        {
+            Vector3D Animation = AnimationNormal * Math.Sin(MyAPIGateway.Session.ElapsedPlayTime.TotalSeconds * 5) * 0.003;
+            
+            Billboard.Position0 -= Animation;
+            Billboard.Position1 += Animation;
+            Billboard.Position2 += Animation;
+            Billboard.Position3 -= Animation;
+
+            base.Simulate();
         }
     }
 }
