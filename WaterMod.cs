@@ -170,6 +170,11 @@ namespace Jakaria
                 Static = this;
         }
 
+        public override void BeforeStart()
+        {
+            WaterModAPIBackend.BeforeStart();
+        }
+
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version + (WaterData.EarlyAccess ? "EA" : "")));

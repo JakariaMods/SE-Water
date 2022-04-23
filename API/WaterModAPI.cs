@@ -20,7 +20,7 @@ namespace Jakaria.API
     {
         public static string ModName = "";
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 17;
+        public const int ModAPIVersion = 18;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -185,7 +185,7 @@ namespace Jakaria.API
         /// <summary>
         /// Do not use. This is for the session component to register automatically
         /// </summary>
-        public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
+        public override void LoadData()
         {
             Register();
         }

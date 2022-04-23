@@ -172,10 +172,13 @@ namespace Jakaria.API
             WaterMod.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
         }
 
-        public static void LoadData()
+        public static void BeforeStart()
         {
             MyAPIGateway.Utilities.SendModMessage(ModHandlerID, ModAPIMethods);
+        }
 
+        public static void LoadData()
+        {
             WaterUtils.WriteLog("Beginning load water block configs");
 
             try
