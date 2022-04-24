@@ -10,6 +10,7 @@ using System.IO;
 using Jakaria.Configs;
 using Sandbox.Definitions;
 using Sandbox.Game.Entities;
+using Jakaria.Components;
 
 namespace Jakaria.API
 {
@@ -51,37 +52,37 @@ namespace Jakaria.API
 
         public static Vector3D GetTideDirection(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return Water.tideDirection;
         }
 
         public static MyTuple<float, float> GetTideData(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return new MyTuple<float, float>(Water.TideHeight, Water.TideSpeed);
         }
 
         public static MyTuple<float, float> GetPhysicsData(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return new MyTuple<float, float>(Water.Material.Density, Water.Buoyancy);
         }
 
         public static MyTuple<Vector3D, bool, bool> GetRenderData(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return new MyTuple<Vector3D, bool, bool>(Water.FogColor, Water.Transparent, Water.Lit);
         }
 
         public static MyTuple<float, float, float, int> GetWaveData(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return new MyTuple<float, float, float, int>(Water.WaveHeight, Water.WaveSpeed, Water.WaveScale, 0);
         }
 
         public static MyTuple<Vector3D, float, float, float> GetPhysicalData(long ID)
         {
-            Water Water = WaterMod.Static.Waters[ID];
+            Water Water = WaterModComponent.Static.Waters[ID];
             return new MyTuple<Vector3D, float, float, float>(Water.Position, Water.Radius, Water.Radius - Water.WaveHeight - Water.TideHeight, Water.Radius + Water.WaveHeight + Water.TideHeight);
         }
 
@@ -92,7 +93,7 @@ namespace Jakaria.API
 
         public static float GetBuoyancyMultiplier(Vector3D Position, MyCubeSize GridSize, long? ID = 0)
         {
-            Water Water = (ID == null) ? WaterMod.Static.GetClosestWater(Position) : WaterMod.Static.Waters[ID.Value];
+            Water Water = (ID == null) ? WaterModComponent.Static.GetClosestWater(Position) : WaterModComponent.Static.Waters[ID.Value];
 
             if (GridSize == MyCubeSize.Large)
                 return (float)(1 + (-Water.GetDepth(ref Position) / 5000f)) / 50f * Water.Buoyancy;
@@ -103,17 +104,17 @@ namespace Jakaria.API
         public static Vector3D GetUpDirection(Vector3D Position, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.GetUpDirection(ref Position) ?? Vector3D.Up;
+                return WaterModComponent.Static.GetClosestWater(Position)?.GetUpDirection(ref Position) ?? Vector3D.Up;
             else
-                return WaterMod.Static.Waters[ID.Value].GetUpDirection(ref Position);
+                return WaterModComponent.Static.Waters[ID.Value].GetUpDirection(ref Position);
         }
 
         public static int SphereIntersects(BoundingSphereD Sphere, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(ref Sphere) ?? 0;
+                return WaterModComponent.Static.GetClosestWater(Sphere.Center)?.Intersects(ref Sphere) ?? 0;
             else
-                return WaterMod.Static.Waters[ID.Value].Intersects(ref Sphere);
+                return WaterModComponent.Static.Waters[ID.Value].Intersects(ref Sphere);
         }
 
         public static void SphereIntersects(ICollection<BoundingSphereD> Spheres, ICollection<int> Intersections, long? ID = 0)
@@ -123,12 +124,12 @@ namespace Jakaria.API
                 foreach (var Sphere in Spheres)
                 {
                     BoundingSphereD sphere = Sphere;
-                    Intersections.Add(WaterMod.Static.GetClosestWater(Sphere.Center)?.Intersects(ref sphere) ?? 0);
+                    Intersections.Add(WaterModComponent.Static.GetClosestWater(Sphere.Center)?.Intersects(ref sphere) ?? 0);
                 }
             }
             else
             {
-                Water Water = WaterMod.Static.Waters[ID.Value];
+                Water Water = WaterModComponent.Static.Waters[ID.Value];
                 foreach (var Sphere in Spheres)
                 {
                     BoundingSphereD sphere = Sphere;
@@ -140,9 +141,9 @@ namespace Jakaria.API
         public static int LineIntersectsWater(LineD Line, long? ID = 0)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Line.From)?.Intersects(ref Line) ?? 0;
+                return WaterModComponent.Static.GetClosestWater(Line.From)?.Intersects(ref Line) ?? 0;
             else
-                return WaterMod.Static.Waters[ID.Value].Intersects(ref Line);
+                return WaterModComponent.Static.Waters[ID.Value].Intersects(ref Line);
         }
 
         public static void LineIntersectsWaterList(List<LineD> Lines, ICollection<int> Intersections, long? ID)
@@ -152,12 +153,12 @@ namespace Jakaria.API
                 foreach (var Line in Lines)
                 {
                     LineD line = Line;
-                    Intersections.Add(WaterMod.Static.GetClosestWater(Line.From)?.Intersects(ref line) ?? 0);
+                    Intersections.Add(WaterModComponent.Static.GetClosestWater(Line.From)?.Intersects(ref line) ?? 0);
                 }
             }
             else
             {
-                Water Water = WaterMod.Static.Waters[ID.Value];
+                Water Water = WaterModComponent.Static.Waters[ID.Value];
                 foreach (var Line in Lines)
                 {
                     LineD line = Line;
@@ -169,7 +170,7 @@ namespace Jakaria.API
         public static void RunCommand(string MessageText)
         {
             bool SendToOthers = false;
-            WaterMod.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
+            WaterModComponent.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
         }
 
         public static void BeforeStart()
@@ -278,33 +279,33 @@ namespace Jakaria.API
         #region Water
         public static void CreateBubble(Vector3D Position, float Radius)
         {
-            WaterMod.Static.CreateBubble(ref Position, Radius);
+            WaterModComponent.Static.CreateBubble(ref Position, Radius);
         }
 
         public static void CreateSplash(Vector3D Position, float Radius, bool Audible)
         {
-            WaterMod.Static.CreateSplash(Position, Radius, Audible);
+            WaterModComponent.Static.CreateSplash(Position, Radius, Audible);
         }
 
         public static void CreatePhysicsSplash(Vector3D Position, Vector3D Velocity, float Radius, int Count = 1)
         {
-            WaterMod.Static.CreatePhysicsSplash(Position, Velocity, Radius, Count);
+            WaterModComponent.Static.CreatePhysicsSplash(Position, Velocity, Radius, Count);
         }
 
         public static float? GetDepth(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return (float?)WaterMod.Static.GetClosestWater(Position)?.GetDepth(ref Position);
+                return (float?)WaterModComponent.Static.GetClosestWater(Position)?.GetDepth(ref Position);
             else
-                return (float?)WaterMod.Static.Waters[ID.Value].GetDepth(ref Position);
+                return (float?)WaterModComponent.Static.Waters[ID.Value].GetDepth(ref Position);
         }
 
         public static Vector3D GetClosestSurfacePoint(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position;
+                return WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position;
             else
-                return WaterMod.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
+                return WaterModComponent.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
         }
 
         public static void GetClosestSurfacePoints(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null)
@@ -313,12 +314,12 @@ namespace Jakaria.API
             {
                 foreach (var Position in Positions)
                 {
-                    Points.Add(WaterMod.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position);
+                    Points.Add(WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position);
                 }
             }
             else
             {
-                Water Water = WaterMod.Static.Waters[ID.Value];
+                Water Water = WaterModComponent.Static.Waters[ID.Value];
 
                 foreach (var Position in Positions)
                 {
@@ -330,7 +331,7 @@ namespace Jakaria.API
         public static void ForceSync()
         {
             if (MyAPIGateway.Session.IsServer)
-                MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterMod.Static.Waters)));
+                MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterModComponent.Static.Waters)));
         }
 
         public static bool VerifyVersion(int ModAPIVersion, string ModName)
@@ -346,20 +347,20 @@ namespace Jakaria.API
 
         public static long? GetClosestWater(Vector3D Position)
         {
-            return WaterMod.Static.GetClosestWater(Position)?.PlanetID;
+            return WaterModComponent.Static.GetClosestWater(Position)?.PlanetID;
         }
 
         public static bool IsUnderwater(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return WaterMod.Static.GetClosestWater(Position)?.IsUnderwater(ref Position) ?? false;
+                return WaterModComponent.Static.GetClosestWater(Position)?.IsUnderwater(ref Position) ?? false;
             else
-                return WaterMod.Static.Waters[ID.Value]?.IsUnderwater(ref Position) ?? false;
+                return WaterModComponent.Static.Waters[ID.Value]?.IsUnderwater(ref Position) ?? false;
         }
 
         public static bool HasWater(long ID)
         {
-            return WaterMod.Static.Waters.ContainsKey(ID);
+            return WaterModComponent.Static.Waters.ContainsKey(ID);
         }
         #endregion
     }

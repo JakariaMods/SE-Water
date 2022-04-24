@@ -13,7 +13,7 @@ using VRageRender;
 using VRage.Game;
 using Sandbox.ModAPI;
 using Jakaria.Utils;
-
+using Jakaria.Components;
 namespace Jakaria
 {
     public class AnimatedPointBillboard : AnimatedBillboard
@@ -59,7 +59,7 @@ namespace Jakaria
             {
                 MyQuadD quad;
                 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterMod.Session.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterModComponent.Session.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;

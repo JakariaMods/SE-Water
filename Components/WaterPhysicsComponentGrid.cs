@@ -347,8 +347,6 @@ namespace Jakaria.Components
             {
                 if (SimulateEffects || MyAPIGateway.Session.IsServer)
                 {
-                    position = Entity.PositionComp.WorldVolume.Center;
-
                     if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || (!SimulatePhysics && Vector3.IsZero(Entity.Physics.Gravity)) || Entity.Physics.Mass == 0)
                         return;
 
@@ -399,16 +397,16 @@ namespace Jakaria.Components
                                                         }
                                                     }
 
-                                                    WaterMod.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
+                                                    WaterModComponent.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                                 }
                                             }
 
                                             if (FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
                                             {
-                                                WaterMod.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, ClosestWater.CrushDamage * recalculateFrequency));
+                                                WaterModComponent.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, ClosestWater.CrushDamage * recalculateFrequency));
 
                                                 if (SimulateEffects && MyUtils.GetRandomInt(0, 200) == 0)
-                                                    WaterMod.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
+                                                    WaterModComponent.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                             }
 
                                             if (SimulatePhysics)
@@ -475,13 +473,13 @@ namespace Jakaria.Components
 
                                                         if (ClosestWater.Material.DrawSplashes && SimulateEffects && BlockVerticalSpeed > 5)
                                                         {
-                                                            lock (WaterMod.Static.effectLock)
-                                                                WaterMod.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
+                                                            lock (WaterModComponent.Static.effectLock)
+                                                                WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
                                                         }
 
                                                         if (BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / WaterDensityMultiplier)
                                                         {
-                                                            WaterMod.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, 50 * (BlockVerticalSpeed) * WaterDensityMultiplier));
+                                                            WaterModComponent.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, 50 * (BlockVerticalSpeed) * WaterDensityMultiplier));
                                                         }
                                                     }
                                                 }
@@ -516,10 +514,10 @@ namespace Jakaria.Components
                                                         if (BlockVerticalVelocity.LengthSquared() < 25)
                                                             return;
 
-                                                        lock (WaterMod.Static.effectLock)
+                                                        lock (WaterModComponent.Static.effectLock)
                                                         {
-                                                            WaterMod.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (speed / 5f)));
-                                                            WaterMod.Static.SimulatedSplashes.Add(new SimulatedSplash(pointWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
+                                                            WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (speed / 5f)));
+                                                            WaterModComponent.Static.SimulatedSplashes.Add(new SimulatedSplash(pointWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
                                                         }
                                                     }
                                                 }
@@ -597,9 +595,9 @@ namespace Jakaria.Components
                                 if (VelocityDamper.IsValid() && !Vector3.IsZero(VelocityDamper, 1e-4f))
                                     IGrid.Physics.LinearVelocity -= VelocityDamper;
 
-                                if (WaterMod.Static.DragAPI.Heartbeat)
+                                if (WaterModComponent.Static.DragAPI.Heartbeat)
                                 {
-                                    var api = WaterMod.Static.dragAPIGetter.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
+                                    var api = WaterModComponent.Static.dragAPIGetter.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
 
                                     if (api != null)
                                     {
@@ -705,10 +703,10 @@ namespace Jakaria.Components
 
                     MyQuadD quad = new MyQuadD()
                     {
-                        Point0 = ClosestWater.GetClosestSurfacePoint(position + ((WaterMod.Session.GravityAxisA - WaterMod.Session.GravityAxisB) * radius)),
-                        Point1 = ClosestWater.GetClosestSurfacePoint(position + ((WaterMod.Session.GravityAxisA + WaterMod.Session.GravityAxisB) * radius)),
-                        Point2 = ClosestWater.GetClosestSurfacePoint(position + ((-WaterMod.Session.GravityAxisA + WaterMod.Session.GravityAxisB) * radius)),
-                        Point3 = ClosestWater.GetClosestSurfacePoint(position + ((-WaterMod.Session.GravityAxisA - WaterMod.Session.GravityAxisB) * radius)),
+                        Point0 = ClosestWater.GetClosestSurfacePoint(position + ((WaterModComponent.Session.GravityAxisA - WaterModComponent.Session.GravityAxisB) * radius)),
+                        Point1 = ClosestWater.GetClosestSurfacePoint(position + ((WaterModComponent.Session.GravityAxisA + WaterModComponent.Session.GravityAxisB) * radius)),
+                        Point2 = ClosestWater.GetClosestSurfacePoint(position + ((-WaterModComponent.Session.GravityAxisA + WaterModComponent.Session.GravityAxisB) * radius)),
+                        Point3 = ClosestWater.GetClosestSurfacePoint(position + ((-WaterModComponent.Session.GravityAxisA - WaterModComponent.Session.GravityAxisB) * radius)),
                     };
 
                     //ClosestWater.CreateWave(ClosestWater.GetClosestSurfacePointSimple(Position), Velocity, Math.Sqrt(MaxRadius), 1);
@@ -731,7 +729,7 @@ namespace Jakaria.Components
                 }
             }
 
-            if (WaterMod.Settings.ShowCenterOfBuoyancy)
+            if (WaterModComponent.Settings.ShowCenterOfBuoyancy)
             {
                 if (COBIndicators == null)
                 {
@@ -756,7 +754,7 @@ namespace Jakaria.Components
                 {
                     MyBillboard Billboard;
                     Vector3D SideVector;
-                    Vector3D CameraNormal = MyUtils.Normalize(WaterMod.Session.CameraPosition - CenterOfBuoyancy);
+                    Vector3D CameraNormal = MyUtils.Normalize(WaterModComponent.Session.CameraPosition - CenterOfBuoyancy);
                     Vector3D Direction;
                     Vector3D Offset;
 

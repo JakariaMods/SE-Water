@@ -8,7 +8,7 @@
         public string WaterModVersion = "Water Mod V{0} by Jakaria.";
         public string TranslationAuthor = "Jakaria";
 
-        public string NoPlanetWater = "This planet does not have public string UIWater";
+        public string NoPlanetWater = "This planet does not have water";
         public string NoPlanet = "No nearby planet found.";
 
         public string SetLanguage = "Set the language to '{0}'.";

@@ -20,8 +20,8 @@ namespace Jakaria.Components
         float DragOptimizer = 0;
         double MaxRadius;
 
-        //FloatingObject Stuff
         MyFloatingObject FloatingObject;
+        bool Airtight;
 
         /// <summary>
         /// Initalize the component
@@ -46,6 +46,8 @@ namespace Jakaria.Components
             {
                 WaterDensityMultiplier = ClosestWater.Material.Density / 1000f;
                 MaxRadius = Entity.PositionComp.LocalVolume.Radius;
+
+                Airtight = WaterUtils.IsPositionAirtight(ref position);
             }
         }
 
@@ -63,21 +65,16 @@ namespace Jakaria.Components
             {
                 if (SimulateEffects || MyAPIGateway.Session.IsServer)
                 {
-                    position = Entity.PositionComp.WorldVolume.Center;
-
                     if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || (!SimulatePhysics && Vector3.IsZero(Entity.Physics.Gravity)) && Entity.Physics.Mass == 0)
                         return;
 
-                    if (FluidDepth < 0 && (!WaterUtils.IsPositionAirtight(ref position)))
+                    if (!Airtight && FluidDepth < 0)
                     {
                         if (FloatingObject.Item.Content?.SubtypeId != null && FloatingObject.Item.Content.SubtypeId == ClosestWater.Material.CollectedItem.SubtypeId)
                         {
                             Entity.Close();
                         }
-                    }
 
-                    if (FluidDepth < MaxRadius && (!WaterUtils.IsPositionAirtight(ref position)))
-                    {
                         nextRecalculate--;
                         if (NeedsRecalculateBuoyancy || nextRecalculate <= 0)
                         {
@@ -121,16 +118,16 @@ namespace Jakaria.Components
 
                         if (BuoyancyForce.IsValid())
                             Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, BuoyancyForce, null, null);
-                    }
 
-                    //Simple Splash Effects
-                    if (ClosestWater.Material.DrawSplashes && SimulateEffects)//&& (EntityType == MyEntityType.Entity || EntityType == MyEntityType.FloatingObject))
-                    {
-                        if (FluidDepth < 0)
+                        //Simple Splash Effects
+                        if (ClosestWater.Material.DrawSplashes && SimulateEffects)
                         {
-                            if (SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && verticalSpeed > 2f)
+                            if (FluidDepth < 0)
                             {
-                                WaterMod.Static.CreateSplash(position, Math.Min(speed, 2f), true);
+                                if (SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && verticalSpeed > 2f)
+                                {
+                                    WaterModComponent.Static.CreateSplash(position, Math.Min(speed, 2f), true);
+                                }
                             }
                         }
                     }

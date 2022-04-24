@@ -68,13 +68,13 @@ namespace Jakaria.Components
                     {
                         ((MyInventory)inventory).Constraint = new MyInventoryConstraint(MySpaceTexts.ToolTipItemFilter_AnyOre, null, true).Add(water.Material.CollectedItem.GetId());
 
-                        WaterMod.Static.HotTubs.Add(this);
-                        WaterMod.Static.HotTubs.ApplyAdditions();
+                        WaterModComponent.Static.HotTubs.Add(this);
+                        WaterModComponent.Static.HotTubs.ApplyAdditions();
                     }
                 }
 
                 if (Block.CubeGrid?.Physics?.Gravity != null)
-                    water = WaterMod.Static.GetClosestWater(Block.PositionComp.GetPosition());
+                    water = WaterModComponent.Static.GetClosestWater(Block.PositionComp.GetPosition());
 
                 if (water != null)
                 {
@@ -146,8 +146,8 @@ namespace Jakaria.Components
         {
             if (isHotTub)
             {
-                WaterMod.Static.HotTubs.Remove(this);
-                WaterMod.Static.HotTubs.ApplyRemovals();
+                WaterModComponent.Static.HotTubs.Remove(this);
+                WaterModComponent.Static.HotTubs.ApplyRemovals();
             }
         }
     }

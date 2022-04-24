@@ -61,27 +61,30 @@ namespace Jakaria.Components
                 else
                     Airtight = false;
 
-                //Drowning
-                if (!Airtight && FluidDepth < 0 && !PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
+                if (!Airtight && FluidDepth < 0)
                 {
-                    if ((Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
+                    //Drowning
+                    if (!PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
                     {
-                        if (MyAPIGateway.Session.IsServer)
-                            Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+                        if ((Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
+                        {
+                            if (MyAPIGateway.Session.IsServer)
+                                Character.DoDamage(3f, MyDamageType.Asphyxia, true);
+
+                            if (SimulateEffects)
+                                WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+                        }
+                    }
+
+                    //Pressure Crushing
+                    if (FluidPressure > PlayerConfig.MaximumPressure)
+                    {
+                        if (MyAPIGateway.Session.IsServer && Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
+                            Character.DoDamage(ClosestWater.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
 
                         if (SimulateEffects)
-                            WaterMod.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+                            WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
                     }
-                }
-
-                //Pressure Crushing
-                if (FluidPressure > PlayerConfig.MaximumPressure)
-                {
-                    if (MyAPIGateway.Session.IsServer && Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
-                        Character.DoDamage(ClosestWater.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
-
-                    if (SimulateEffects)
-                        WaterMod.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
                 }
             }
         }
@@ -113,7 +116,7 @@ namespace Jakaria.Components
                     {
                         if (ClosestWater.Material.DrawSplashes && SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && verticalSpeed > 2f) //Splash effect
                         {
-                            WaterMod.Static.CreateSplash(position, Math.Min(speed, 2f), true);
+                            WaterModComponent.Static.CreateSplash(position, Math.Min(speed, 2f), true);
                         }
 
                         Vector3 GridVelocity = Vector3.Zero;

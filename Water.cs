@@ -19,6 +19,7 @@ using Jakaria.Configs;
 using Jakaria.Utils;
 using Sandbox.ModAPI;
 using VRage.Game;
+using VRageRender;
 
 namespace Jakaria
 {
@@ -134,6 +135,9 @@ namespace Jakaria
 
         [ProtoIgnore, XmlIgnore]
         public MaterialConfig Material;
+
+        [ProtoIgnore, XmlIgnore]
+        public List<MyBillboard> BillboardCache = new List<MyBillboard>();
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
         public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.032f)

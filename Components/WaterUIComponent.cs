@@ -14,7 +14,7 @@ using VRage.Serialization;
 using VRageMath;
 using VRage.Utils;
 
-namespace Jakaria
+namespace Jakaria.Components
 {
     [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
     class WaterUIComponent : MySessionComponentBase
@@ -92,33 +92,33 @@ namespace Jakaria
         {
             if (!MyAPIGateway.Utilities.IsDedicated && Heartbeat)
             {
-                depthMeter.Visible = WaterMod.Settings.ShowDepth && (WaterMod.Session.CameraDepth < 0 || (WaterMod.Settings.ShowAltitude && ((MyAPIGateway.Session.Player?.Controller?.ControlledEntity is IMyCharacter) == false && WaterMod.Session.CameraDepth < 100)));
+                depthMeter.Visible = WaterModComponent.Settings.ShowDepth && (WaterModComponent.Session.CameraDepth < 0 || (WaterModComponent.Settings.ShowAltitude && ((MyAPIGateway.Session.Player?.Controller?.ControlledEntity is IMyCharacter) == false && WaterModComponent.Session.CameraDepth < 100)));
 
-                if (WaterMod.Session.CameraDepth > 128)
+                if (WaterModComponent.Session.CameraDepth > 128)
                 {
                     depthMeter.Visible = false;
                 }
 
-                if (WaterMod.Session.ClosestWater != null && WaterMod.Session.ClosestPlanet != null && MyAPIGateway.Session.Player?.Character != null)
+                if (WaterModComponent.Session.ClosestWater != null && WaterModComponent.Session.ClosestPlanet != null && MyAPIGateway.Session.Player?.Character != null)
                 {
                     if (TextAPI.Heartbeat && depthMeter.Visible)
                     {
-                        double crushDepth = WaterUtils.GetCrushDepth(WaterMod.Session.ClosestWater, MyAPIGateway.Session.Player.Character);
+                        double crushDepth = WaterUtils.GetCrushDepth(WaterModComponent.Session.ClosestWater, MyAPIGateway.Session.Player.Character);
                         string message;
-                        if (WaterMod.Session.CameraDepth < -WaterMod.Session.ClosestWater.WaveHeight * 2)
-                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-WaterMod.Session.ClosestWater.GetDepth(ref WaterMod.Session.CameraPosition)).ToString());
-                        else if (WaterMod.Session.CameraDepth < 0)
-                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-WaterMod.Session.CameraDepth).ToString());
+                        if (WaterModComponent.Session.CameraDepth < -WaterModComponent.Session.ClosestWater.WaveHeight * 2)
+                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-WaterModComponent.Session.ClosestWater.GetDepth(ref WaterModComponent.Session.CameraPosition)).ToString());
+                        else if (WaterModComponent.Session.CameraDepth < 0)
+                            message = WaterLocalization.CurrentLanguage.Depth.Replace("{0}", Math.Round(-WaterModComponent.Session.CameraDepth).ToString());
                         else
-                            message = WaterLocalization.CurrentLanguage.Altitude.Replace("{0}", Math.Round(WaterMod.Session.CameraDepth).ToString());
+                            message = WaterLocalization.CurrentLanguage.Altitude.Replace("{0}", Math.Round(WaterModComponent.Session.CameraDepth).ToString());
 
-                        if (WaterMod.Session.CameraDepth < -crushDepth)
+                        if (WaterModComponent.Session.CameraDepth < -crushDepth)
                             message = "- " + message + " -";
 
                         depthMeter.Message = new StringBuilder("\n\n\n" + message);
 
-                        if (!WaterMod.Session.CameraAirtight)
-                            depthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, (float)MathHelper.Clamp(-WaterMod.Session.CameraDepth / crushDepth, 0f, 1f)), Color.Red, (float)-(WaterMod.Session.CameraDepth + (crushDepth - 100)) / 100);
+                        if (!WaterModComponent.Session.CameraAirtight)
+                            depthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, (float)MathHelper.Clamp(-WaterModComponent.Session.CameraDepth / crushDepth, 0f, 1f)), Color.Red, (float)-(WaterModComponent.Session.CameraDepth + (crushDepth - 100)) / 100);
                         else
                             depthMeter.InitialColor = Color.Lerp(depthMeter.InitialColor, Color.White, 0.25f);
 
@@ -174,12 +174,12 @@ namespace Jakaria
             clientMenuRoot = new HudAPIv2.MenuRootCategory(WaterLocalization.ModChatName + " " + WaterData.Version, HudAPIv2.MenuRootCategory.MenuFlag.PlayerMenu, "Water Mod Client Settings");
 
             //languageSelector = new HudAPIv2.MenuSliderInput(String.Format(WaterLocalization.CurrentLanguage.UILanguage, WaterLocalization.CurrentLanguage.NativeName), clientMenuRoot, 0, "Adjust slider to modify value", OnLanguageSelectorSubmit, LanguageSelectorToValue);
-            qualitySlider = new HudAPIv2.MenuSliderInput(String.Format(WaterLocalization.CurrentLanguage.UIQuality, WaterMod.Settings.Quality), clientMenuRoot, 0.5f, "Adjust slider to modify value", OnSetQualitySlider, QualitySliderToValue);
-            volumeSlider = new HudAPIv2.MenuSliderInput(String.Format(WaterLocalization.CurrentLanguage.UIVolume, WaterMod.Settings.Volume), clientMenuRoot, 1f, "Adjust slider to modify value", OnSetVolumeSlider);
-            showCenterOfBuoyancy = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, WaterMod.Settings.ShowCenterOfBuoyancy), clientMenuRoot, ToggleShowCenterOfBuoyancy);
-            showDepth = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowDepth, WaterMod.Settings.ShowDepth), clientMenuRoot, ToggleShowDepth);
-            showAltitude = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, WaterMod.Settings.ShowAltitude), clientMenuRoot, ToggleShowAltitude);
-            showDebug = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowDebug, WaterMod.Settings.ShowDebug), clientMenuRoot, ToggleShowDebug);
+            qualitySlider = new HudAPIv2.MenuSliderInput(String.Format(WaterLocalization.CurrentLanguage.UIQuality, WaterModComponent.Settings.Quality), clientMenuRoot, 0.5f, "Adjust slider to modify value", OnSetQualitySlider, QualitySliderToValue);
+            volumeSlider = new HudAPIv2.MenuSliderInput(String.Format(WaterLocalization.CurrentLanguage.UIVolume, WaterModComponent.Settings.Volume), clientMenuRoot, 1f, "Adjust slider to modify value", OnSetVolumeSlider);
+            showCenterOfBuoyancy = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, WaterModComponent.Settings.ShowCenterOfBuoyancy), clientMenuRoot, ToggleShowCenterOfBuoyancy);
+            showDepth = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowDepth, WaterModComponent.Settings.ShowDepth), clientMenuRoot, ToggleShowDepth);
+            showAltitude = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, WaterModComponent.Settings.ShowAltitude), clientMenuRoot, ToggleShowAltitude);
+            showDebug = new HudAPIv2.MenuItem(String.Format(WaterLocalization.CurrentLanguage.UIShowDebug, WaterModComponent.Settings.ShowDebug), clientMenuRoot, ToggleShowDebug);
         }
 
         #region Server/Admin Settings
@@ -189,63 +189,63 @@ namespace Jakaria
             if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.SpaceMaster)
                 return;
 
-            WaterMod.Settings.ShowFog = !WaterMod.Settings.ShowFog;
+            WaterModComponent.Settings.ShowFog = !WaterModComponent.Settings.ShowFog;
             RefreshAdminValues();
         }
 
         private void RefreshClientValues()
         {
-            qualitySlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIQuality, WaterMod.Settings.Quality);
-            volumeSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIVolume, WaterMod.Settings.Volume);
-            showDebug.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowDebug, WaterMod.Settings.ShowDebug);
-            showDepth.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowDepth, WaterMod.Settings.ShowDepth);
-            showCenterOfBuoyancy.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, WaterMod.Settings.ShowCenterOfBuoyancy);
-            showAltitude.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, WaterMod.Settings.ShowAltitude);
+            qualitySlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIQuality, WaterModComponent.Settings.Quality);
+            volumeSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIVolume, WaterModComponent.Settings.Volume);
+            showDebug.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowDebug, WaterModComponent.Settings.ShowDebug);
+            showDepth.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowDepth, WaterModComponent.Settings.ShowDepth);
+            showCenterOfBuoyancy.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, WaterModComponent.Settings.ShowCenterOfBuoyancy);
+            showAltitude.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, WaterModComponent.Settings.ShowAltitude);
         }
 
         private void RefreshAdminValues()
         {
-            showFog.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowFog, WaterMod.Settings.ShowFog);
-            waveHeight.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveHeight, WaterMod.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA);
-            waveScale.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveScale, WaterMod.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA);
-            waveSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveSpeed, WaterMod.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA);
-            currentScale.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentScale, WaterMod.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA);
-            currentSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentSpeed, WaterMod.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA);
-            tideHeight.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTideHeight, WaterMod.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA);
-            tideSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTideSpeed, WaterMod.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA);
-            enableFish.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFish, WaterMod.Session.ClosestWater?.EnableFish.ToString() ?? NO_DATA);
-            enableFoam.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFoam, WaterMod.Session.ClosestWater?.EnableFoam.ToString() ?? NO_DATA);
-            enableSeagulls.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableSeagulls, WaterMod.Session.ClosestWater?.EnableSeagulls.ToString() ?? NO_DATA);
-            lit.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterLit, WaterMod.Session.ClosestWater?.Lit.ToString() ?? NO_DATA);
-            transparent.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTransparent, WaterMod.Session.ClosestWater?.Transparent.ToString() ?? NO_DATA);
-            textureInput.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTexture, WaterMod.Session.ClosestWater?.Texture.ToString() ?? NO_DATA);
-            buoyancySlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterBuoyancy, WaterMod.Session.ClosestWater?.Buoyancy.ToString() ?? NO_DATA);
-            CollectionRateSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCollectionRate, WaterMod.Session.ClosestWater?.CollectionRate.ToString() ?? NO_DATA);
-            CrushDamageSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCrushDamage, WaterMod.Session.ClosestWater?.CrushDamage.ToString() ?? NO_DATA);
-            materialIdInput.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterMaterialId, WaterMod.Session.ClosestWater?.MaterialId.ToString() ?? NO_DATA);
-            playerDrag.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterPlayerDrag, WaterMod.Session.ClosestWater?.PlayerDrag.ToString() ?? NO_DATA);
+            showFog.Text = String.Format(WaterLocalization.CurrentLanguage.UIShowFog, WaterModComponent.Settings.ShowFog);
+            waveHeight.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveHeight, WaterModComponent.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA);
+            waveScale.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveScale, WaterModComponent.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA);
+            waveSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterWaveSpeed, WaterModComponent.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA);
+            currentScale.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentScale, WaterModComponent.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA);
+            currentSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentSpeed, WaterModComponent.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA);
+            tideHeight.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTideHeight, WaterModComponent.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA);
+            tideSpeed.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTideSpeed, WaterModComponent.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA);
+            enableFish.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFish, WaterModComponent.Session.ClosestWater?.EnableFish.ToString() ?? NO_DATA);
+            enableFoam.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFoam, WaterModComponent.Session.ClosestWater?.EnableFoam.ToString() ?? NO_DATA);
+            enableSeagulls.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterEnableSeagulls, WaterModComponent.Session.ClosestWater?.EnableSeagulls.ToString() ?? NO_DATA);
+            lit.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterLit, WaterModComponent.Session.ClosestWater?.Lit.ToString() ?? NO_DATA);
+            transparent.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTransparent, WaterModComponent.Session.ClosestWater?.Transparent.ToString() ?? NO_DATA);
+            textureInput.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterTexture, WaterModComponent.Session.ClosestWater?.Texture.ToString() ?? NO_DATA);
+            buoyancySlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterBuoyancy, WaterModComponent.Session.ClosestWater?.Buoyancy.ToString() ?? NO_DATA);
+            CollectionRateSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCollectionRate, WaterModComponent.Session.ClosestWater?.CollectionRate.ToString() ?? NO_DATA);
+            CrushDamageSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterCrushDamage, WaterModComponent.Session.ClosestWater?.CrushDamage.ToString() ?? NO_DATA);
+            materialIdInput.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterMaterialId, WaterModComponent.Session.ClosestWater?.MaterialId.ToString() ?? NO_DATA);
+            playerDrag.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterPlayerDrag, WaterModComponent.Session.ClosestWater?.PlayerDrag.ToString() ?? NO_DATA);
 
-            radiusSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterRadius, (WaterMod.Session.ClosestWater?.Radius / WaterMod.Session.ClosestPlanet.MinimumRadius).ToString() ?? NO_DATA);
+            radiusSlider.Text = String.Format(WaterLocalization.CurrentLanguage.UIWaterRadius, (WaterModComponent.Session.ClosestWater?.Radius / WaterModComponent.Session.ClosestPlanet.MinimumRadius).ToString() ?? NO_DATA);
 
-            if (WaterMod.Session.ClosestWater != null)
+            if (WaterModComponent.Session.ClosestWater != null)
             {
-                waveHeight.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater.WaveHeight), WaterMod.Session.ClosestWater.WaveHeight);
-                waveScale.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater.WaveScale), WaterMod.Session.ClosestWater.WaveScale);
-                waveSpeed.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater.WaveSpeed), WaterMod.Session.ClosestWater.WaveSpeed);
+                waveHeight.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterModComponent.Session.ClosestWater.WaveHeight), WaterModComponent.Session.ClosestWater.WaveHeight);
+                waveScale.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterModComponent.Session.ClosestWater.WaveScale), WaterModComponent.Session.ClosestWater.WaveScale);
+                waveSpeed.InputDialogTitle = String.Format(String.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterModComponent.Session.ClosestWater.WaveSpeed), WaterModComponent.Session.ClosestWater.WaveSpeed);
 
-                fogColorSelector.InitialColor = WaterMod.Session.ClosestWater.FogColor;
-                radiusSlider.InitialPercent = RadiusValueToSlider(WaterMod.Session.ClosestWater.Radius / WaterMod.Session.ClosestPlanet.MinimumRadius);
+                fogColorSelector.InitialColor = WaterModComponent.Session.ClosestWater.FogColor;
+                radiusSlider.InitialPercent = RadiusValueToSlider(WaterModComponent.Session.ClosestWater.Radius / WaterModComponent.Session.ClosestPlanet.MinimumRadius);
             }
         }
 
         private void OnSubmitTexture(string obj)
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
                 if (WaterData.WaterTextures.Contains(obj))
                 {
-                    WaterMod.Session.ClosestWater.Texture = obj;
-                    WaterMod.Static.SyncToServer(true);
+                    WaterModComponent.Session.ClosestWater.Texture = obj;
+                    WaterModComponent.Static.SyncToServer(true);
                     RefreshAdminValues();
                 }
             }
@@ -263,33 +263,33 @@ namespace Jakaria
 
         private void OnSubmitRadius(float percentage)
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.Radius = (float)RadiusSliderToValue(percentage) * WaterMod.Session.ClosestPlanet.MinimumRadius;
+                WaterModComponent.Session.ClosestWater.Radius = (float)RadiusSliderToValue(percentage) * WaterModComponent.Session.ClosestPlanet.MinimumRadius;
                 MyAPIGateway.Utilities.ShowMessage("set radsius", "seram");
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitPlayerDrag()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.PlayerDrag = !WaterMod.Session.ClosestWater.PlayerDrag;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.PlayerDrag = !WaterModComponent.Session.ClosestWater.PlayerDrag;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitMaterial(string obj)
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
                 if (WaterData.MaterialConfigs.ContainsKey(obj))
                 {
-                    WaterMod.Session.ClosestWater.MaterialId = obj;
-                    WaterMod.Static.SyncToServer(false);
+                    WaterModComponent.Session.ClosestWater.MaterialId = obj;
+                    WaterModComponent.Static.SyncToServer(false);
                     RefreshAdminValues();
                 }
             }
@@ -298,10 +298,10 @@ namespace Jakaria
         private void OnSubmitCrushDamage(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.CrushDamage = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.CrushDamage = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -309,10 +309,10 @@ namespace Jakaria
         private void OnSubmitCollectorRate(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.CollectionRate = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.CollectionRate = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -320,70 +320,70 @@ namespace Jakaria
         private void OnSubmitBuoyancy(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.Buoyancy = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.Buoyancy = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitEnableTransparency()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.Transparent = !WaterMod.Session.ClosestWater.Transparent;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.Transparent = !WaterModComponent.Session.ClosestWater.Transparent;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitEnableLighting()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.Lit = !WaterMod.Session.ClosestWater.Lit;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.Lit = !WaterModComponent.Session.ClosestWater.Lit;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitFogColor(Color color)
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.FogColor = color;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.FogColor = color;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitEnableSeagulls()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.EnableSeagulls = !WaterMod.Session.ClosestWater.EnableSeagulls;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.EnableSeagulls = !WaterModComponent.Session.ClosestWater.EnableSeagulls;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitEnableFoam()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.EnableFoam = !WaterMod.Session.ClosestWater.EnableFoam;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.EnableFoam = !WaterModComponent.Session.ClosestWater.EnableFoam;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
 
         private void OnSubmitEnableFish()
         {
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                WaterMod.Session.ClosestWater.EnableSeagulls = !WaterMod.Session.ClosestWater.EnableFish;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.EnableSeagulls = !WaterModComponent.Session.ClosestWater.EnableFish;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -391,10 +391,10 @@ namespace Jakaria
         private void OnSubmitTideSpeed(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.TideSpeed = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.TideSpeed = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -402,10 +402,10 @@ namespace Jakaria
         private void OnSubmtTideHeight(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.TideHeight = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.TideHeight = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -413,10 +413,10 @@ namespace Jakaria
         private void OnSubmitCurrentSpeed(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.CurrentSpeed = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.CurrentSpeed = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -424,10 +424,10 @@ namespace Jakaria
         private void OnSubmitCurrentScale(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.CurrentScale = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.CurrentScale = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -435,10 +435,10 @@ namespace Jakaria
         private void OnSubmitWaveSpeed(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.WaveSpeed = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.WaveSpeed = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -446,10 +446,10 @@ namespace Jakaria
         private void OnSubmitWaveScale(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.WaveScale = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.WaveScale = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -457,10 +457,10 @@ namespace Jakaria
         private void OnSubmitWaveHeight(string obj)
         {
             float value;
-            if (WaterMod.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            if (WaterModComponent.Session.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
             {
-                WaterMod.Session.ClosestWater.WaveHeight = value;
-                WaterMod.Static.SyncToServer(false);
+                WaterModComponent.Session.ClosestWater.WaveHeight = value;
+                WaterModComponent.Static.SyncToServer(false);
                 RefreshAdminValues();
             }
         }
@@ -487,41 +487,41 @@ namespace Jakaria
 
         private void OnSetQualitySlider(float percentage)
         {
-            WaterMod.Settings.Quality = (float)QualitySliderToValue(percentage);
-            WaterMod.Static.SaveSettings();
+            WaterModComponent.Settings.Quality = (float)QualitySliderToValue(percentage);
+            WaterModComponent.Static.SaveSettings();
             RefreshClientValues();
         }
 
         private void OnSetVolumeSlider(float value)
         {
-            WaterMod.Settings.Volume = value;
-            WaterMod.Static.SaveSettings();
+            WaterModComponent.Settings.Volume = value;
+            WaterModComponent.Static.SaveSettings();
             RefreshClientValues();
         }
 
         private void ToggleShowCenterOfBuoyancy()
         {
-            WaterMod.Settings.ShowCenterOfBuoyancy = !WaterMod.Settings.ShowCenterOfBuoyancy;
+            WaterModComponent.Settings.ShowCenterOfBuoyancy = !WaterModComponent.Settings.ShowCenterOfBuoyancy;
             RefreshClientValues();
         }
 
         private void ToggleShowDepth()
         {
-            WaterMod.Settings.ShowDepth = !WaterMod.Settings.ShowDepth;
-            WaterMod.Static.SaveSettings();
+            WaterModComponent.Settings.ShowDepth = !WaterModComponent.Settings.ShowDepth;
+            WaterModComponent.Static.SaveSettings();
             RefreshClientValues();
         }
 
         private void ToggleShowAltitude()
         {
-            WaterMod.Settings.ShowAltitude = !WaterMod.Settings.ShowAltitude;
-            WaterMod.Static.SaveSettings();
+            WaterModComponent.Settings.ShowAltitude = !WaterModComponent.Settings.ShowAltitude;
+            WaterModComponent.Static.SaveSettings();
             RefreshClientValues();
         }
 
         private void ToggleShowDebug()
         {
-            WaterMod.Settings.ShowDebug = !WaterMod.Settings.ShowDebug;
+            WaterModComponent.Settings.ShowDebug = !WaterModComponent.Settings.ShowDebug;
             RefreshClientValues();
         }
 

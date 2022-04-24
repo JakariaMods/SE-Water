@@ -79,8 +79,8 @@ namespace Jakaria.Components
 
         public override void OnAddedToContainer()
         {
-            WaterMod.Static.UpdateAfter1 += UpdateAfter1;
-            WaterMod.Static.UpdateAfter60 += UpdateAfter60;
+            WaterModComponent.Static.UpdateAfter1 += UpdateAfter1;
+            WaterModComponent.Static.UpdateAfter60 += UpdateAfter60;
             Entity.OnPhysicsChanged += Entity_OnPhysicsChanged;
 
             UpdateClosestWater();
@@ -88,8 +88,8 @@ namespace Jakaria.Components
 
         public override void OnBeforeRemovedFromContainer()
         {
-            WaterMod.Static.UpdateAfter1 -= UpdateAfter1;
-            WaterMod.Static.UpdateAfter60 -= UpdateAfter60;
+            WaterModComponent.Static.UpdateAfter1 -= UpdateAfter1;
+            WaterModComponent.Static.UpdateAfter60 -= UpdateAfter60;
             Entity.OnPhysicsChanged -= Entity_OnPhysicsChanged;
         }
 
@@ -97,7 +97,7 @@ namespace Jakaria.Components
         {
             UpdateClosestWater();
 
-            if (!MyAPIGateway.Utilities.IsDedicated && Vector3D.DistanceSquared(position, WaterMod.Session.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
+            if (!MyAPIGateway.Utilities.IsDedicated && Vector3D.DistanceSquared(position, WaterModComponent.Session.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
             {
                 SimulateEffects = true;
             }
@@ -149,7 +149,7 @@ namespace Jakaria.Components
         /// </summary>
         protected void UpdateClosestWater()
         {
-            ClosestWater = WaterMod.Static.GetClosestWater(position);
+            ClosestWater = WaterModComponent.Static.GetClosestWater(position);
         }
 
         /// <summary>

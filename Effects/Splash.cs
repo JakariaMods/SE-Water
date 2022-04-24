@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VRage.Utils;
 using VRageMath;
-
+using Jakaria.Components;
 namespace Jakaria
 {
     public class Splash
@@ -30,12 +30,12 @@ namespace Jakaria
                 splashSound = new MyEntity3DSoundEmitter(null);
                 splashSound.SetPosition(position);
 
-                if(WaterMod.Session.CameraUnderwater)
+                if(WaterModComponent.Session.CameraUnderwater)
                     splashSound.PlaySound(WaterData.UnderwaterSplashSound);
                 else
                     splashSound.PlaySound(WaterData.SplashSound);
 
-                splashSound.CustomVolume = Volume * WaterMod.Settings.Volume * ((25f - Math.Max(WaterMod.Session.InsideGrid - 10, 0)) / 25f);
+                splashSound.CustomVolume = Volume * WaterModComponent.Settings.Volume * ((25f - Math.Max(WaterModComponent.Session.InsideGrid - 10, 0)) / 25f);
             }
         }
     }

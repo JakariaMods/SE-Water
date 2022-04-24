@@ -18,6 +18,7 @@ using VRage.Game.ModAPI.Ingame.Utilities;
 using Sandbox.Game.GameSystems;
 using VRage.ModAPI;
 using Jakaria.Configs;
+using Jakaria.Components;
 
 namespace Jakaria.Utils
 {
@@ -193,7 +194,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static bool HotTubUnderwater(ref Vector3D Position)
         {
-            foreach (var Tub in WaterMod.Static.HotTubs)
+            foreach (var Tub in WaterModComponent.Static.HotTubs)
             {
                 if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
                 {
@@ -211,7 +212,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static bool HotTubUnderwater(Vector3D Position, out IMyCubeGrid grid)
         {
-            foreach (var Tub in WaterMod.Static.HotTubs)
+            foreach (var Tub in WaterModComponent.Static.HotTubs)
             {
                 if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
                 {
@@ -303,7 +304,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static bool HasWater(MyPlanet planet)
         {
-            return WaterMod.Static.Waters.ContainsKey(planet.EntityId);
+            return WaterModComponent.Static.Waters.ContainsKey(planet.EntityId);
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ using Jakaria;
 using VRageRender;
 using VRage.Game;
 using Sandbox.ModAPI;
-
+using Jakaria.Components;
 namespace Jakaria
 {
     public class SimulatedSplash : AnimatedPointBillboard
@@ -47,16 +47,16 @@ namespace Jakaria
         public override void Simulate()
         {
             Position += Velocity;
-            Velocity += WaterMod.Session.Gravity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+            Velocity += WaterModComponent.Session.Gravity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
 
-            if (WaterMod.Session.ClosestWater != null)
+            if (WaterModComponent.Session.ClosestWater != null)
             {
                 //Optimized method for determining if the particle is underwater
-                if ((WaterMod.Session.ClosestWater.Position - Position).LengthSquared() - (WaterMod.Session.ClosestWater.Position - WaterMod.Session.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
+                if ((WaterModComponent.Session.ClosestWater.Position - Position).LengthSquared() - (WaterModComponent.Session.ClosestWater.Position - WaterModComponent.Session.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
                 {
                     MarkedForClose = true;
 
-                    WaterMod.Static.CreateSplash(Position, Radius * 2, true);
+                    WaterModComponent.Static.CreateSplash(Position, Radius * 2, true);
                 }
             }
             else
@@ -68,7 +68,7 @@ namespace Jakaria
             {
                 MyQuadD quad;
 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterMod.Session.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterModComponent.Session.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;

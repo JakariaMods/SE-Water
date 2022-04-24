@@ -13,6 +13,7 @@ using Sandbox.Game.Entities;
 using Jakaria.API;
 using VRageRender;
 using VRage.Game.ModAPI;
+using Jakaria.Components;
 
 namespace Jakaria
 {
@@ -91,7 +92,7 @@ namespace Jakaria
 
         public void GenerateChildren()
         {
-            if (DetailLevel < WaterData.MinWaterSplitDepth || (Radius > WaterData.MinWaterSplitRadius && (Face.Water.Position + (Vector3D.Normalize(Position + (-Face.AxisA + -Face.AxisB) * Radius) * Face.Water.Radius) - WaterMod.Session.CameraPosition).AbsMax() < Radius * (3f + (WaterMod.Settings.Quality * 2))))
+            if (DetailLevel < WaterData.MinWaterSplitDepth || (Radius > WaterData.MinWaterSplitRadius && (Face.Water.Position + (Vector3D.Normalize(Position + (-Face.AxisA + -Face.AxisB) * Radius) * Face.Water.Radius) - WaterModComponent.Session.CameraPosition).AbsMax() < Radius * (3f + (WaterModComponent.Settings.Quality * 2))))
             {
                 double halfRadius = Radius / 2.0;
                 int detailPlusOne = DetailLevel + 1;
@@ -127,7 +128,7 @@ namespace Jakaria
                     child.Draw(closestToCamera);
                 }
             }
-            else if (Radius < 8 || (WaterMod.Session.CameraAltitude > 10000 && MyAPIGateway.Session.Camera.WorldToScreen(ref Sphere.Center).AbsMax() > 1) || (closestToCamera && MyAPIGateway.Session.Camera.IsInFrustum(ref Sphere))) //Camera Frustum only works around 20km
+            else if (Radius < 8 || (WaterModComponent.Session.CameraAltitude > 10000 && MyAPIGateway.Session.Camera.WorldToScreen(ref Sphere.Center).AbsMax() > 1) || (closestToCamera && MyAPIGateway.Session.Camera.IsInFrustum(ref Sphere))) //Camera Frustum only works around 20km
             {
                 Vector3D normal1 = Vector3D.Normalize(Position + ((-Face.AxisA + -Face.AxisB) * Radius));
 
@@ -136,7 +137,7 @@ namespace Jakaria
                     Point0 = Face.Water.GetClosestSurfacePointFromNormal(ref normal1),
                 };
 
-                if (closestToCamera && Vector3D.DistanceSquared(quad.Point0, WaterMod.Session.CameraPosition) > WaterMod.Session.DistanceToHorizon * WaterMod.Session.DistanceToHorizon)
+                if (closestToCamera && Vector3D.DistanceSquared(quad.Point0, WaterModComponent.Session.CameraPosition) > WaterModComponent.Session.DistanceToHorizon * WaterModComponent.Session.DistanceToHorizon)
                     return;
 
                 Vector3D normal2 = Vector3D.Normalize(Position + ((Face.AxisA + Face.AxisB) * Radius));
@@ -149,7 +150,7 @@ namespace Jakaria
 
                 Vector3 quadNormal = Vector3.Normalize(Vector3.Cross(quad.Point2 - quad.Point0, quad.Point1 - quad.Point0));
 
-                if (WaterMod.Settings.ShowDebug)
+                if (WaterModComponent.Settings.ShowDebug)
                 {
                     float length = (float)Radius;
                     float radius = length * 0.01f;
@@ -163,25 +164,25 @@ namespace Jakaria
                     MyTransparentGeometry.AddLineBillboard(WaterData.BlankMaterial, WaterData.RedColor, quad.Point0, quadNormal, length, radius);
                 }
 
-                double ScaleOffset = Math.Min(Math.Pow(WaterMod.Session.CameraDepth / 2000, Face.Water.PlanetConfig.DistantRadiusScaler), Face.Water.Radius * Face.Water.PlanetConfig.DistantRadiusOffset);
-                float SoftnessOffset = Math.Min((float)Math.Pow(WaterMod.Session.CameraDepth / 2000, Face.Water.PlanetConfig.DistantSoftnessScaler), Face.Water.Radius * Face.Water.PlanetConfig.DistantSoftnessOffset) * Face.Water.PlanetConfig.DistantSoftnessMultiplier;
+                double ScaleOffset = Math.Min(Math.Pow(WaterModComponent.Session.CameraDepth / 2000, Face.Water.PlanetConfig.DistantRadiusScaler), Face.Water.Radius * Face.Water.PlanetConfig.DistantRadiusOffset);
+                float SoftnessOffset = Math.Min((float)Math.Pow(WaterModComponent.Session.CameraDepth / 2000, Face.Water.PlanetConfig.DistantSoftnessScaler), Face.Water.Radius * Face.Water.PlanetConfig.DistantSoftnessOffset) * Face.Water.PlanetConfig.DistantSoftnessMultiplier;
 
                 quad.Point0 += normal1 * ScaleOffset;
                 quad.Point1 += normal3 * ScaleOffset;
                 quad.Point2 += normal2 * ScaleOffset;
                 quad.Point3 += normal4 * ScaleOffset;
 
-                Vector3 halfVector = Vector3.Normalize((WaterMod.Session.SunDirection + Vector3.Normalize(WaterMod.Session.CameraPosition - ((quad.Point0 + quad.Point1) / 2))) / 2);
-                float dot = Face.Water.Lit ? Vector3.Dot(quadNormal, WaterMod.Session.SunDirection) : 1;
+                Vector3 halfVector = Vector3.Normalize((WaterModComponent.Session.SunDirection + Vector3.Normalize(WaterModComponent.Session.CameraPosition - ((quad.Point0 + quad.Point1) / 2))) / 2);
+                float dot = Face.Water.Lit ? Vector3.Dot(quadNormal, WaterModComponent.Session.SunDirection) : 1;
                 float ColorIntensity = Face.Water.Lit ? Math.Max(dot, Face.Water.PlanetConfig.AmbientColorIntensity) * Face.Water.PlanetConfig.ColorIntensity : Face.Water.PlanetConfig.ColorIntensity;
                 float Specularity = dot > 0 ? Math.Max((float)Math.Pow(Vector3.Dot(quadNormal, halfVector), Face.Water.PlanetConfig.Specularity), 0) * Face.Water.PlanetConfig.SpecularIntensity : 0;
 
                 MyBillboard tempBillboard;
 
                 //Sea foam
-                if (!WaterMod.Session.CameraUnderwater)
+                if (!WaterModComponent.Session.CameraUnderwater)
                 {
-                    if (Face.Water.EnableFoam && Radius < 256 * WaterMod.Settings.Quality)
+                    if (Face.Water.EnableFoam && Radius < 256 * WaterModComponent.Settings.Quality)
                     {
                         Vector3D noisePosition = (quad.Point0 + Face.Water.WaveTimer) * Face.Water.WaveScale;
 
@@ -196,7 +197,7 @@ namespace Jakaria
                                 UVOffset = new Vector2(TextureId / 4f, 0.5f),
                             };
 
-                        if (Radius < 256 * WaterMod.Settings.Quality)
+                        if (Radius < 256 * WaterModComponent.Settings.Quality)
                         {
                             if (intensity > 0.2f)
                             {
@@ -216,7 +217,7 @@ namespace Jakaria
 
                                 seaFoamBillboard.Color = WaterData.WhiteColor * intensity;
                                 seaFoamBillboard.ColorIntensity = ColorIntensity + Specularity;
-                                WaterMod.Static.BillboardCache.Add(seaFoamBillboard);
+                                Face.Water.BillboardCache.Add(seaFoamBillboard);
                             }
                             else
                             {
@@ -227,7 +228,7 @@ namespace Jakaria
 
                                 seaFoamLightBillboard.Color = WaterData.WhiteColor * (1f - intensity);
                                 seaFoamLightBillboard.ColorIntensity = ColorIntensity + Specularity;
-                                WaterMod.Static.BillboardCache.Add(seaFoamLightBillboard);
+                                Face.Water.BillboardCache.Add(seaFoamLightBillboard);
                             }
                         }
                     }
@@ -257,7 +258,7 @@ namespace Jakaria
                 if (Altitude < -Radius * 2) //I'm already calculating this so might as well use it
                     return;
 
-                if (WaterMod.Session.CameraUnderwater)
+                if (WaterModComponent.Session.CameraUnderwater)
                 {
                     tempBillboard.Color = WaterData.WaterUnderwaterColor;
                 }
@@ -276,7 +277,7 @@ namespace Jakaria
                     tempBillboard.Color = WaterData.WhiteColor;
                 }
 
-                if (WaterMod.Session.CameraUnderwater)
+                if (WaterModComponent.Session.CameraUnderwater)
                     tempBillboard.ColorIntensity = ColorIntensity;
                 else
                     tempBillboard.ColorIntensity = ColorIntensity + Specularity;
@@ -287,7 +288,7 @@ namespace Jakaria
                 tempBillboard.Position3 = quad.Point3;
                 billboardCount++;
 
-                if (!WaterMod.Session.CameraUnderwater && closestToCamera)
+                if (!WaterModComponent.Session.CameraUnderwater && closestToCamera)
                 {
                     Vector3D Seperator = normal1 * WaterData.WaterVisibility;
 
@@ -306,7 +307,7 @@ namespace Jakaria
 
                 for (int i = 0; i < billboardCount; i++)
                 {
-                    WaterMod.Static.BillboardCache.Add(surfaceBillboards[i]);
+                    Face.Water.BillboardCache.Add(surfaceBillboards[i]);
                 }
             }
         }
