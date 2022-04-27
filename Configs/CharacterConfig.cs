@@ -23,6 +23,12 @@ namespace Jakaria.Configs
         [ProtoMember(15), XmlAttribute("MaximumPressure")]
         public float MaximumPressure = -1;
 
+        [ProtoMember(20), XmlAttribute("Breath")]
+        public int Breath = 10;
+
+        [ProtoMember(25), XmlAttribute("DrowningDamage")]
+        public int DrowningDamage = 15;
+
         public CharacterConfig(string typeId, string subtypeId)
         {
             TypeId = typeId;

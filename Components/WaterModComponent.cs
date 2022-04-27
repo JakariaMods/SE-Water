@@ -51,7 +51,7 @@ namespace Jakaria.Components
         public Fish[] Fishes = new Fish[32];
 
         List<AnimatedPointBillboard> Bubbles = new List<AnimatedPointBillboard>();
-        AnimatedPointBillboard[] AmbientBubbles = new AnimatedPointBillboard[256];
+        AnimatedPointBillboard[] AmbientBubbles = new AnimatedPointBillboard[128];
 
         public ConcurrentStack<QuadBillboard> QuadBillboards = new ConcurrentStack<QuadBillboard>();
         public List<MyBillboard> BillboardCache = new List<MyBillboard>();
@@ -2267,6 +2267,11 @@ namespace Jakaria.Components
             if (entity is IMyCharacter && !entity.Components.Has<WaterPhysicsComponentCharacter>())
             {
                 entity.Components.Add(new WaterPhysicsComponentCharacter());
+            }
+
+            if (entity is IMyInventoryBag && !entity.Components.Has<WaterPhysicsComponentInventoryBag>())
+            {
+                entity.Components.Add(new WaterPhysicsComponentInventoryBag());
             }
 
             if (entity is IMyFloatingObject && !entity.Components.Has<WaterPhysicsComponentFloatingObject>())

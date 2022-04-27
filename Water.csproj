@@ -42,6 +42,7 @@
     <Compile Include="API\WaterModAPIBackend.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="API\WeaponCoreApi.cs" />
+    <Compile Include="Components\WaterPhysicsComponentInventoryBag.cs" />
     <Compile Include="Components\WaterPhysicsComponentFloatingObject.cs" />
     <Compile Include="Components\WaterPhysicsComponentCharacter.cs" />
     <Compile Include="Components\WaterPhysicsComponentGrid.cs" />
@@ -76,11 +77,11 @@
     <Compile Include="WaterData.cs" />
     <Compile Include="WaterFace.cs" />
     <Compile Include="WaterLocalization.cs" />
-    <Compile Include="WaterMod.cs" />
+    <Compile Include="Components\WaterModComponent.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Components\WaterCollectorComponent.cs" />
     <Compile Include="Utils\WaterUtils.cs" />
-    <Compile Include="WaterUIComponent.cs" />
+    <Compile Include="Components\WaterUIComponent.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="HavokWrapper">

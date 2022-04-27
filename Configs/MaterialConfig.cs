@@ -35,18 +35,18 @@ namespace Jakaria.Configs
         [ProtoMember(21)]
         public int CollectedAmount = 50;
 
+        [ProtoMember(25)]
+        public float MaxSurfaceFluctuation = 5f;
+
+        [ProtoMember(25)]
+        public float SurfaceFluctuationAngleSpeed = 2f;
+
+        [ProtoMember(30)]
+        public float SurfaceFluctuationSpeed = 0.5f;
+
         public override void Init()
         {
-            try
-            {
-                CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = CollectedItemSubtypeId };
-            }
-            catch(Exception e)
-            {
-                CollectedItem = null;
-                WaterUtils.WriteLog(e.ToString());
-            }
-
+            CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = CollectedItemSubtypeId };
             Viscosity = Math.Min(Viscosity, 1f);
 
             base.Init();

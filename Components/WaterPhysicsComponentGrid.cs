@@ -29,6 +29,7 @@ using VRageMath;
 using VRageRender;
 using Jakaria.Configs;
 using System.Threading;
+using SpaceEngineers.Game.Weapons.Guns;
 
 namespace Jakaria.Components
 {
@@ -48,11 +49,6 @@ namespace Jakaria.Components
         /// True if the grid has a valid GasSystem Component
         /// </summary>
         public bool CanRecalculateAirtightness { get; protected set; } = false;
-
-        /// <summary>
-        /// Used only on grids. If set true it will recalculate the volume of every block next frame.
-        /// </summary>
-        public bool NeedsRecalculateVolume;
 
         private readonly object BuoyancyLock = new object();
         private float WaterDensityMultiplier;
@@ -131,7 +127,6 @@ namespace Jakaria.Components
         {
             if (value)
             {
-                NeedsRecalculateVolume = true;
                 if (UseAirtightness)
                     NeedsRecalculateAirtightness = true;
             }
@@ -202,7 +197,7 @@ namespace Jakaria.Components
             if (AirtightBlocks != null && !AirtightBlocks.Contains(block.Position))
             {
                 BlockConfig config = WaterData.BlockConfigs[block.BlockDefinition.Id];
-                BlockVolumesRaw[block.Position] = new BlockVolumeData(block.Position, config, block);
+                BlockVolumeData data = BlockVolumesRaw[block.Position] = new BlockVolumeData(block.Position, config, block);
                 BlockVolumes = BlockVolumesRaw.Values.ToArray();
                 NeedsRecalculateBuoyancy = true;
                 recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
@@ -263,15 +258,16 @@ namespace Jakaria.Components
         /// </summary>
         private void RecalculateAirtightness()
         {
+            AirtightBlocks.Clear();
+
             if (IGrid.GasSystem != null && !IGrid.GasSystem.IsProcessingData)
             {
-                AirtightBlocks = new List<Vector3I>();
                 List<IMyOxygenRoom> Rooms = new List<IMyOxygenRoom>();
                 if (IGrid.GasSystem.GetRooms(Rooms))
                 {
                     foreach (var Room in Rooms)
                     {
-                        if (Room.IsAirtight)
+                        if (Room.IsAirtight && Room.BlockCount > 0)
                         {
                             AirtightBlocks.AddRange(Room.Blocks);
                         }
@@ -280,30 +276,6 @@ namespace Jakaria.Components
             }
 
             NeedsRecalculateAirtightness = false;
-        }
-
-        /// <summary>
-        /// Called to recalculate the entirety of block volumes
-        /// </summary>
-        private void RecalculateVolume()
-        {
-            if (BlockVolumesRaw == null)
-                BlockVolumesRaw = new Dictionary<Vector3I, BlockVolumeData>();
-            else
-                BlockVolumesRaw.Clear();
-
-            List<IMySlimBlock> Blocks = new List<IMySlimBlock>();
-            IGrid.GetBlocks(Blocks);
-
-            foreach (var block in Blocks)
-            {
-                BlockConfig config = WaterData.BlockConfigs[block.BlockDefinition.Id];
-                BlockVolumesRaw[block.Position] = new BlockVolumeData(block.Position, config, block);
-            }
-
-            NeedsRecalculateVolume = false;
-            BlockVolumes = BlockVolumesRaw.Values.ToArray();
-            recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
         }
 
         /// <summary>
@@ -316,11 +288,11 @@ namespace Jakaria.Components
             if (!MyAPIGateway.Session.IsServer)
                 Grid.ForceDisablePrediction = !SimulateEffects && PercentUnderwater > 0;
 
-            WaterDensityMultiplier = ClosestWater == null ? 0 : ClosestWater.Material.Density / 1000f;
-
             //Recalculate Pressure, Density
             if (ClosestWater != null && Entity.Physics != null)
             {
+                WaterDensityMultiplier = ClosestWater.Material.Density / 1000f;
+
                 if (UseAirtightness)
                 {
                     if (!CanRecalculateAirtightness && IGrid.GasSystem != null)
@@ -349,10 +321,6 @@ namespace Jakaria.Components
                 {
                     if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || (!SimulatePhysics && Vector3.IsZero(Entity.Physics.Gravity)) || Entity.Physics.Mass == 0)
                         return;
-
-                    //Grid Physics
-                    if (NeedsRecalculateVolume)
-                        RecalculateVolume();
 
                     if (NeedsRecalculateAirtightness)
                         RecalculateAirtightness();
@@ -461,7 +429,15 @@ namespace Jakaria.Components
                                                                 }
                                                             }
                                                             else if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
+                                                            {
+                                                                BlockVolume.CorrectState = (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled;
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
+                                                            }
+                                                        }
+                                                        else if(BlockVolume.CorrectState != null)
+                                                        {
+                                                            (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = BlockVolume.CorrectState.Value;
+                                                            BlockVolume.CorrectState = null;
                                                         }
                                                     }
 
@@ -502,7 +478,15 @@ namespace Jakaria.Components
                                                                 }
                                                             }
                                                             else if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
+                                                            {
+                                                                BlockVolume.CorrectState = (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled;
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
+                                                            }
+                                                        }
+                                                        else if(BlockVolume.CorrectState != null)
+                                                        {
+                                                            (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = BlockVolume.CorrectState.Value;
+                                                            BlockVolume.CorrectState = null;
                                                         }
                                                     }
 
@@ -561,7 +545,7 @@ namespace Jakaria.Components
 
                                     MaxRadius = Math.Max(MaxRadius, Grid.GridSizeHalf * Grid.GridSizeHalf);
 
-                                    DragOptimizer = 0.5f * ClosestWater.Material.Density * ((float)MaxRadius);
+                                    DragOptimizer = 0.5f * ClosestWater.Material.Density * ((float)MaxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
                                 }
                                 else
                                 {
@@ -606,7 +590,7 @@ namespace Jakaria.Components
                                 }
                                 else
                                 {
-                                    DragForce = -DragOptimizer * (velocity * speed) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS * PercentUnderwater;
+                                    DragForce = -DragOptimizer * (velocity * speed) * PercentUnderwater;
 
                                     //Linear Drag
                                     if (DragForce.IsValid() && !Vector3.IsZero(DragForce, 1e-4f))
@@ -814,6 +798,7 @@ namespace Jakaria.Components
             public BlockConfig Config;
             public bool CurrentlyUnderwater;
             public bool PreviousUnderwater;
+            public bool? CorrectState;
             public IMySlimBlock Block;
             public Vector3I Key;
             public double Volume;

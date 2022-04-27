@@ -258,6 +258,7 @@ namespace Jakaria
                 if (Altitude < -Radius * 2) //I'm already calculating this so might as well use it
                     return;
 
+                tempBillboard.SoftParticleDistanceScale = 0.5f + SoftnessOffset;
                 if (WaterModComponent.Session.CameraUnderwater)
                 {
                     tempBillboard.Color = WaterData.WaterUnderwaterColor;
@@ -265,10 +266,9 @@ namespace Jakaria
                 else if (Face.Water.Transparent)
                 {
                     //tempBillboard.SoftParticleDistanceScale = (float)MathHelper.Lerp(2f, WaterData.WaterVisibility, Math.Min((WaterUtils.IsQuadAirtight(ref quad) / 4f) * (3f / Radius), 1));
+
                     if (Radius < 32)
                         tempBillboard.SoftParticleDistanceScale = (float)MathHelper.Lerp(2f, WaterData.WaterVisibility, Math.Min(8f / Radius, 1));
-                    else
-                        tempBillboard.SoftParticleDistanceScale = 0.5f + SoftnessOffset;
 
                     tempBillboard.Color = Vector4.Lerp(WaterData.WaterShallowColor, WaterData.WaterDeepColor, (float)(Math.Min((Altitude / WaterData.WaterVisibility) * Math.Min(Radius / 32f, 1), 1.0)));
                 }

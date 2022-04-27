@@ -16,7 +16,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.1";
+        public const string Version = "3.2";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
@@ -191,7 +191,6 @@ namespace Jakaria
         /// </summary>
         public const float AirtightnessCoefficientSmall = 1.0f;
 
-        public const float BuoyancyCoefficientObject = 0.1f;
         public const float CharacterDragCoefficient = 0.075f;
 
         public const float MinVolumeLarge = 2;

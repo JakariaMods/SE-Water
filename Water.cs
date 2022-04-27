@@ -223,11 +223,12 @@ namespace Jakaria
         {
             TextureID = MyStringId.GetOrCompute(Texture);
             if (PlanetConfig == null && planet != null)
+            {
                 if (!WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out PlanetConfig))
                 {
                     PlanetConfig = WaterData.PlanetConfigs[planet.Generator.Id] = new PlanetConfig(planet.Generator.Id);
-                    WaterUtils.ShowMessage("Had to add new material " + MaterialId);
                 }
+            }
         }
 
         public void UpdateMaterial()
@@ -244,13 +245,18 @@ namespace Jakaria
         public Vector3D GetClosestSurfacePoint(Vector3D position, double altitudeOffset = 0)
         {
             Vector3D up = Vector3D.Normalize(position - this.Position);
+
             return ApplyWavesToSurfaceVector(this.Position + (up * (this.Radius + altitudeOffset)), ref up);
         }
 
         /// <summary>Returns the closest point using a provided normal</summary>
         public Vector3D GetClosestSurfacePointFromNormal(ref Vector3D up, double altitudeOffset = 0)
         {
-            return ApplyWavesToSurfaceVector(this.Position + ((up * (Radius + altitudeOffset))), ref up);
+            Vector3D position = this.Position + ((up * (Radius + altitudeOffset)));
+            
+            //Horizontal Fluctuation
+            position += WaterUtils.GetPerpendicularVector(up, noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationAngleSpeed) * WaterData.TWOPI) * noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationSpeed) * Material.MaxSurfaceFluctuation;
+            return ApplyWavesToSurfaceVector(position, ref up);
         }
 
         /// <summary>Returns the closest point to water</summary>
@@ -262,7 +268,7 @@ namespace Jakaria
         public Vector3D ApplyWavesToSurfaceVector(Vector3D position, ref Vector3D up)
         {
             double height = 0;
-
+            
             if (WaveHeight > 0)
                 height += noise.GetNoise((position + this.WaveTimer) * this.WaveScale) * this.WaveHeight;
 

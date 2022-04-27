@@ -18,10 +18,11 @@ namespace Jakaria.Components
         bool Airtight;
         MyCubeGrid NearestGrid;
 
-        //Character Stuff
+        int Breath;
         IMyCharacter Character;
         CharacterConfig PlayerConfig;
         Vector3D CharacterHeadPosition;
+        bool HeadUnderwater;
 
         /// <summary>
         /// Initalize the component
@@ -55,24 +56,32 @@ namespace Jakaria.Components
 
             if (PlayerConfig != null)
             {
+                HeadUnderwater = ClosestWater.IsUnderwater(ref CharacterHeadPosition);
+
                 MyCharacterOxygenComponent OxygenComponent;
                 if (NearestGrid != null)
                     Airtight = NearestGrid.IsRoomAtPositionAirtight(NearestGrid.WorldToGridInteger(CharacterHeadPosition));
                 else
                     Airtight = false;
 
-                if (!Airtight && FluidDepth < 0)
+                if (Airtight || !HeadUnderwater)
+                {
+                    Breath = PlayerConfig.Breath;
+                }
+                else if (HeadUnderwater)
                 {
                     //Drowning
                     if (!PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
                     {
-                        if ((Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
+                        Breath = Math.Max(Breath - 1, 0);
+
+                        if (SimulateEffects)
+                            WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+
+                        if (Breath <= 0 && (Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
                         {
                             if (MyAPIGateway.Session.IsServer)
-                                Character.DoDamage(3f, MyDamageType.Asphyxia, true);
-
-                            if (SimulateEffects)
-                                WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+                                Character.DoDamage(PlayerConfig.DrowningDamage, MyDamageType.Asphyxia, true);
                         }
                     }
 
@@ -133,7 +142,7 @@ namespace Jakaria.Components
 
                             PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / MaxRadius, 1), 0);
                             velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
-                            DragForce = ClosestWater.PlayerDrag ? ((ClosestWater.Material.Density * (velocity * speed)) / 2f) * (((MyCharacterDefinition)Character.Definition).CharacterHeadSize * Character.PositionComp.LocalVolume.Radius) * WaterData.CharacterDragCoefficient : Vector3.Zero;
+                            DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (velocity * speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
 
                             //Buoyancy
                             if ((!Character.EnabledThrusts || !Character.EnabledDamping))

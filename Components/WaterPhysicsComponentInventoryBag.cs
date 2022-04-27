@@ -13,14 +13,14 @@ using VRageMath;
 
 namespace Jakaria.Components
 {
-    public class WaterPhysicsComponentFloatingObject : WaterPhysicsComponentBase
+    public class WaterPhysicsComponentInventoryBag : WaterPhysicsComponentBase
     {
         private float WaterDensityMultiplier;
 
         float DragOptimizer = 0;
         double MaxRadius;
 
-        MyFloatingObject FloatingObject;
+        IMyInventoryBag InventoryBag;
         bool Airtight;
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace Jakaria.Components
 
             NeedsRecalculateBuoyancy = true;
 
-            FloatingObject = Entity as MyFloatingObject;
+            InventoryBag = Entity as IMyInventoryBag;
         }
 
         /// <summary>
@@ -70,15 +70,6 @@ namespace Jakaria.Components
 
                     if (!Airtight && FluidDepth < 0)
                     {
-                        if (FloatingObject.Item.Content?.SubtypeId != null && ClosestWater.Material?.CollectedItem?.SubtypeId != null)
-                        {
-                            if (FloatingObject.Item.Content.SubtypeId == ClosestWater.Material.CollectedItem.SubtypeId)
-                            {
-                                Entity.Close();
-                                return;
-                            }
-                        }
-
                         nextRecalculate--;
                         if (NeedsRecalculateBuoyancy || nextRecalculate <= 0)
                         {
@@ -87,14 +78,6 @@ namespace Jakaria.Components
                             PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / MaxRadius, 1), 0);
                             BuoyancyForce = -Entity.Physics.Gravity * ClosestWater.Material.Density * (WaterData.SphereVolumeOptimizer * (float)(MaxRadius * MaxRadius)) * PercentUnderwater * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS * ClosestWater.Buoyancy;
                             DragOptimizer = 0.5f * ClosestWater.Material.Density * (float)(MaxRadius * MaxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
-
-                            if (Entity is MyMeteor)
-                            {
-                                MyVisualScriptLogicProvider.CreateExplosion(position, 2, 0);
-                                MyFloatingObjects.Spawn(new MyPhysicalInventoryItem(500 * (MyFixedPoint)MyUtils.GetRandomFloat(1f, 3f), MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_Ore>(WaterUtils.GetRandomMeteorMaterial())), Entity.WorldMatrix, null, null);
-                                Entity.Close();
-                                return;
-                            }
                         }
 
                         if (speed > 0.1f)
