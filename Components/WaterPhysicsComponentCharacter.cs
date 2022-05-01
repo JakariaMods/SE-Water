@@ -54,7 +54,7 @@ namespace Jakaria.Components
             MaxRadius = Character.PositionComp.LocalVolume.Radius;
             NearestGrid = WaterUtils.GetApproximateGrid(position);
 
-            if (PlayerConfig != null)
+            if (PlayerConfig != null && ClosestWater != null)
             {
                 HeadUnderwater = ClosestWater.IsUnderwater(ref CharacterHeadPosition);
 

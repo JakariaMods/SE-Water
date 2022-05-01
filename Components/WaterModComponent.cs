@@ -329,7 +329,6 @@ namespace Jakaria.Components
 
                     Vector3D surfacePoint = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(explosionInfo.ExplosionSphere.Center);
 
-
                     //CreatePhysicsSplash(surfacePoint, -Session.GravityDirection * 120 * SurfaceRatio, Math.Max(ExplosionRadius / 4, 2f), SurfaceRatio, (int)(explosionInfo.ExplosionSphere.Radius * 2 * SurfaceRatio));
                     CreateSplash(surfacePoint, ExplosionRadius * SurfaceRatio, true);
                 }
@@ -2861,7 +2860,7 @@ namespace Jakaria.Components
                     weatherEffects.FogDensityOverride = (float)(0.06 + (0.00125 * (1.0 + (-Session.CameraDepth / 100))));
                 else
                     weatherEffects.FogDensityOverride = 0.001f;
-
+                
                 //TODO
                 /*if (Session.CameraAirtight)
                     weatherEffects.SunSpecularColorOverride = null;
@@ -2952,11 +2951,11 @@ namespace Jakaria.Components
                 if (Session.CameraAboveWater && Session.CameraDepth < 250)
                 {
                     //Above Water
-                    MyVisualScriptLogicProvider.MusicSetDynamicMusic(false);
+                    MyVisualScriptLogicProvider.MusicSetDynamicMusicLocal(false);
 
                     if (musicCategory != "Calm")
                     {
-                        MyVisualScriptLogicProvider.MusicPlayMusicCategory("Calm");
+                        MyVisualScriptLogicProvider.MusicPlayMusicCategoryLocal("Calm");
 
                         musicCategory = "Calm";
                     }
@@ -2967,11 +2966,11 @@ namespace Jakaria.Components
                     if (Session.CameraDepth < -WaterModComponent.Session.ClosestWater.CrushDamage)
                     {
                         //In crush depth
-                        MyVisualScriptLogicProvider.MusicSetDynamicMusic(false);
+                        MyVisualScriptLogicProvider.MusicSetDynamicMusicLocal(false);
 
                         if (musicCategory != "Mystery")
                         {
-                            MyVisualScriptLogicProvider.MusicPlayMusicCategory("Mystery");
+                            MyVisualScriptLogicProvider.MusicPlayMusicCategoryLocal("Mystery");
 
                             musicCategory = "Mystery";
                         }
@@ -2979,11 +2978,11 @@ namespace Jakaria.Components
                     else
                     {
                         //Just Underwater
-                        MyVisualScriptLogicProvider.MusicSetDynamicMusic(false);
+                        MyVisualScriptLogicProvider.MusicSetDynamicMusicLocal(false);
 
                         if (musicCategory != "Space")
                         {
-                            MyVisualScriptLogicProvider.MusicPlayMusicCategory("Space");
+                            MyVisualScriptLogicProvider.MusicPlayMusicCategoryLocal("Space");
 
                             musicCategory = "Space";
                         }
