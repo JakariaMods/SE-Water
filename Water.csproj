@@ -71,6 +71,7 @@
     <Compile Include="TSSScripts\TSSPressure.cs" />
     <Compile Include="Utils\PressurizationUtils.cs" />
     <Compile Include="Utils\QuadBillboard.cs" />
+    <Compile Include="Utils\SphereTree.cs" />
     <Compile Include="Water.cs" />
     <Compile Include="TSSScripts\TSSDepth.cs" />
     <Compile Include="Utils\Quadtree.cs" />

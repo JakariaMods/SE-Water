@@ -1,35 +1,20 @@
 ﻿using Draygo.Drag.API;
-using Jakaria.API;
+using Jakaria.Configs;
 using Jakaria.Utils;
-using Sandbox.Common.ObjectBuilders;
-using Sandbox.Definitions;
-using Sandbox.Game;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Blocks;
-using Sandbox.Game.Entities.Character.Components;
-using Sandbox.Game.GameSystems;
 using Sandbox.ModAPI;
-using SpaceEngineers.Game.Entities.Blocks;
 using SpaceEngineers.Game.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using VRage;
-using VRage.Collections;
 using VRage.Game;
 using VRage.Game.Components;
-using VRage.Game.Entity;
 using VRage.Game.ModAPI;
-using VRage.ModAPI;
-using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
 using VRageRender;
-using Jakaria.Configs;
-using System.Threading;
-using SpaceEngineers.Game.Weapons.Guns;
 
 namespace Jakaria.Components
 {
@@ -194,13 +179,80 @@ namespace Jakaria.Components
         /// </summary>
         private void IGrid_OnBlockAdded(IMySlimBlock block)
         {
-            if (AirtightBlocks != null && !AirtightBlocks.Contains(block.Position))
+            if (AirtightBlocks == null || !AirtightBlocks.Contains(block.Position))
             {
                 BlockConfig config = WaterData.BlockConfigs[block.BlockDefinition.Id];
                 BlockVolumeData data = BlockVolumesRaw[block.Position] = new BlockVolumeData(block.Position, config, block);
                 BlockVolumes = BlockVolumesRaw.Values.ToArray();
                 NeedsRecalculateBuoyancy = true;
                 recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
+
+                Vector3D blockPosition = Grid.GridIntegerToWorld(block.Position);
+                data.CurrentlyUnderwater = ClosestWater?.IsUnderwater(ref blockPosition) ?? false;
+
+                if (block.FatBlock != null)
+                {
+                    var functionalBlock = block.FatBlock as IMyFunctionalBlock;
+                    if (functionalBlock != null)
+                    {
+                        if (data.CurrentlyUnderwater)
+                        {
+                            if (!data.Config.FunctionalUnderWater || (FluidPressure > data.Config.MaxFunctionalPressure))
+                            {
+                                if (functionalBlock is IMyThrust)
+                                {
+                                    if (data.Config.FunctionalUnderWater)
+                                    {
+                                        (functionalBlock as IMyThrust).ThrustMultiplier = 1;
+                                    }
+                                    else
+                                    {
+                                        (functionalBlock as IMyThrust).ThrustMultiplier = 0;
+                                        (functionalBlock as MyThrust).CurrentStrength = 0;
+                                    }
+                                }
+                                else if (functionalBlock.Enabled)
+                                {
+                                    data.CorrectState = functionalBlock.Enabled;
+                                    functionalBlock.Enabled = false;
+                                }
+                            }
+                            else if (data.CorrectState != null)
+                            {
+                                functionalBlock.Enabled = data.CorrectState.Value;
+                                data.CorrectState = null;
+                            }
+                        }
+                        else
+                        {
+                            if (!data.Config.FunctionalAboveWater)
+                            {
+                                if (functionalBlock is IMyThrust)
+                                {
+                                    if (data.Config.FunctionalAboveWater)
+                                    {
+                                        (functionalBlock as IMyThrust).ThrustMultiplier = 1;
+                                    }
+                                    else
+                                    {
+                                        (functionalBlock as IMyThrust).ThrustMultiplier = 0;
+                                        (functionalBlock as MyThrust).CurrentStrength = 0;
+                                    }
+                                }
+                                else if (functionalBlock.Enabled)
+                                {
+                                    data.CorrectState = functionalBlock.Enabled;
+                                    functionalBlock.Enabled = false;
+                                }
+                            }
+                            else if (data.CorrectState != null)
+                            {
+                                functionalBlock.Enabled = data.CorrectState.Value;
+                                data.CorrectState = null;
+                            }
+                        }
+                    }
+                }
             }
 
             if (block.FatBlock != null)
@@ -367,6 +419,29 @@ namespace Jakaria.Components
 
                                                     WaterModComponent.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                                 }
+
+                                                if (ClosestWater.Material.DrawWakes && Wakes != null && Math.Abs(pointDepth) < Grid.GridSizeHalf)
+                                                {
+                                                    Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(pointWorldPosition);
+                                                    Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref gravityDirection);
+                                                    Vector3 BlockHorizontalVelocity = BlockVelocity - BlockVerticalVelocity;
+                                                    float BlockHorizontalSpeed = BlockHorizontalVelocity.LengthSquared();
+
+                                                    if (BlockHorizontalSpeed > 100 && MyUtils.GetRandomInt(6 * recalculateFrequency) == 0)
+                                                    {
+                                                        double radius = Math.Max(Grid.GridSize * 2, 4);
+
+                                                        MyQuadD quad = new MyQuadD()
+                                                        {
+                                                            Point0 = ClosestWater.GetClosestSurfacePoint(pointWorldPosition + ((WaterModComponent.Session.GravityAxisA - WaterModComponent.Session.GravityAxisB) * radius)),
+                                                            Point1 = ClosestWater.GetClosestSurfacePoint(pointWorldPosition + ((WaterModComponent.Session.GravityAxisA + WaterModComponent.Session.GravityAxisB) * radius)),
+                                                            Point2 = ClosestWater.GetClosestSurfacePoint(pointWorldPosition + ((-WaterModComponent.Session.GravityAxisA + WaterModComponent.Session.GravityAxisB) * radius)),
+                                                            Point3 = ClosestWater.GetClosestSurfacePoint(pointWorldPosition + ((-WaterModComponent.Session.GravityAxisA - WaterModComponent.Session.GravityAxisB) * radius)),
+                                                        };
+
+                                                        Wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0.5f), quad, BlockHorizontalVelocity, Math.Min(60 * (recalculateFrequency + 1) - ((int)BlockHorizontalSpeed * 2) + ((int)MaxRadius * 4), 60), true, true, WaterData.WakeColor, WaterModComponent.Session.AmbientColorIntensity));
+                                                    }
+                                                }
                                             }
 
                                             if (FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
@@ -381,7 +456,7 @@ namespace Jakaria.Components
                                             {
                                                 double radius = (pointWorldPosition - Grid.Physics.CenterOfMassWorld).LengthSquared();
                                                 MaxRadius = Math.Max(MaxRadius, radius); //For Calculating Drag
-                                                    double pointDisplacement = BlockVolume.Volume * Math.Max(Math.Min(-pointDepth / Grid.GridSizeHalf, 1) * BlockVolume.Block.BuildLevelRatio, 0);
+                                                double pointDisplacement = BlockVolume.Volume * Math.Max(Math.Min(-pointDepth / Grid.GridSizeHalf, 1) * BlockVolume.Block.BuildLevelRatio, 0);
 
                                                 if (BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.MarkedForClose)
                                                 {
@@ -399,8 +474,8 @@ namespace Jakaria.Components
                                         }
                                         else
                                         {
-                                                //Not in water
-                                            }
+                                            //Not in water
+                                        }
 
                                         BlockVolume.CurrentlyUnderwater = pointUnderwater;
 
@@ -411,7 +486,7 @@ namespace Jakaria.Components
                                             if (SimulatePhysics)
                                             {
                                                 if (pointUnderwater) //Enters water Enter Water
-                                                    {
+                                                {
                                                     if (BlockVolume.Block.FatBlock != null && (BlockVolume.Block.FatBlock is IMyFunctionalBlock))
                                                     {
                                                         if (!BlockVolume.Config.FunctionalUnderWater || (FluidPressure > BlockVolume.Config.MaxFunctionalPressure))
@@ -434,7 +509,7 @@ namespace Jakaria.Components
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
                                                             }
                                                         }
-                                                        else if(BlockVolume.CorrectState != null)
+                                                        else if (BlockVolume.CorrectState != null)
                                                         {
                                                             (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = BlockVolume.CorrectState.Value;
                                                             BlockVolume.CorrectState = null;
@@ -445,12 +520,17 @@ namespace Jakaria.Components
                                                     {
                                                         Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(pointWorldPosition);
                                                         Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref gravityDirection);
+
                                                         float BlockVerticalSpeed = BlockVerticalVelocity.Length();
 
-                                                        if (ClosestWater.Material.DrawSplashes && SimulateEffects && BlockVerticalSpeed > 5)
+
+                                                        if (SimulateEffects)
                                                         {
-                                                            lock (WaterModComponent.Static.effectLock)
-                                                                WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
+                                                            if (ClosestWater.Material.DrawSplashes && BlockVerticalSpeed > 5)
+                                                            {
+                                                                lock (WaterModComponent.Static.effectLock)
+                                                                    WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
+                                                            }
                                                         }
 
                                                         if (BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / WaterDensityMultiplier)
@@ -460,7 +540,7 @@ namespace Jakaria.Components
                                                     }
                                                 }
                                                 else //Exits Water Exit Water
-                                                    {
+                                                {
                                                     if (BlockVolume.Block.FatBlock != null && (BlockVolume.Block.FatBlock is IMyFunctionalBlock))
                                                     {
                                                         if (!BlockVolume.Config.FunctionalAboveWater)
@@ -483,7 +563,7 @@ namespace Jakaria.Components
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
                                                             }
                                                         }
-                                                        else if(BlockVolume.CorrectState != null)
+                                                        else if (BlockVolume.CorrectState != null)
                                                         {
                                                             (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = BlockVolume.CorrectState.Value;
                                                             BlockVolume.CorrectState = null;
@@ -641,9 +721,9 @@ namespace Jakaria.Components
                 }
             }
 
-            for (int i = 0; i < 6; i++)
+            foreach (var direction in Base6Directions.IntDirections)
             {
-                Vector3I tempPosition = block.Position + WaterData.DirectionsI[i];
+                Vector3I tempPosition = block.Position + direction;
 
                 if (!AirtightAtAll && AirtightBlocks?.Contains(tempPosition) == true)
                 {
@@ -694,7 +774,7 @@ namespace Jakaria.Components
                     };
 
                     //ClosestWater.CreateWave(ClosestWater.GetClosestSurfacePointSimple(Position), Velocity, Math.Sqrt(MaxRadius), 1);
-                    Wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0.5f), quad, velocity - verticalVelocity, Math.Min(40 * (recalculateFrequency + 1) - ((int)speed * 2) + ((int)MaxRadius * 4), 400), true, true, WaterData.WhiteColor, ClosestWater.PlanetConfig.ColorIntensity * (float)Math.Min(0.5f, speed / 8f)));
+                    //Wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0.5f), quad, velocity - verticalVelocity, Math.Min(40 * (recalculateFrequency + 1) - ((int)speed * 2) + ((int)MaxRadius * 4), 400), true, true, WaterData.WhiteColor, ClosestWater.PlanetConfig.ColorIntensity * (float)Math.Min(0.5f, speed / 8f)));
                 }
             }
 

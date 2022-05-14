@@ -1,31 +1,22 @@
-﻿using Jakaria.API;
-using Sandbox.Game.Entities;
-using Sandbox.ModAPI;
+﻿using Sandbox.Game.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 using Jakaria.Configs;
-using VRage.Game.ModAPI;
+using VRageRender;
 
 namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.3";
+        public const string Version = "3.4";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
 
         //Materials
-        public static readonly MyStringId WaterMaterial = MyStringId.GetOrCompute("JWater");
-        public static readonly MyStringId LavaMaterial = MyStringId.GetOrCompute("JLava");
-        public static readonly MyStringId WaterCircleMaterial = MyStringId.GetOrCompute("JWater2");
-        public static readonly MyStringId DebugMaterial = MyStringId.GetOrCompute("JDebug");
         public static readonly MyStringId BlankMaterial = MyStringId.GetOrCompute("Square");
         public static readonly MyStringId SplashMaterial = MyStringId.GetOrCompute("JSplash");
         public static readonly MyStringId BubblesMaterial = MyStringId.GetOrCompute("JBubbles");
@@ -33,7 +24,6 @@ namespace Jakaria
         public static readonly MyStringId IconMaterial = MyStringId.GetOrCompute("RedDot");
         public static readonly MyStringId FireflyMaterial = MyStringId.GetOrCompute("Firefly");
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
-        public static readonly MyStringId HotTubMaterial = MyStringId.GetOrCompute("JHotTub");
         public static readonly MyStringId GodRayMaterial = MyStringId.GetOrCompute("JGodRay");
         public static readonly MyStringId FoamMaterial = MyStringId.GetOrCompute("JFoam");
         public static readonly MyStringId FishMaterial = MyStringId.GetOrCompute("JFish");
@@ -52,7 +42,7 @@ namespace Jakaria
             };
 
         public const int MinWaterSplitDepth = 3; //The minimum depth the water can be. It will split if it's less
-        public const int MinWaterSplitRadius = 2; //The minimum radius the water can be. It will not split if it's less
+        public const int MinWaterSplitRadius = 3; //The minimum radius the water can be. It will not split if it's less
 
         //Sounds
         public static readonly MySoundPair EnvironmentUnderwaterSound = new MySoundPair("JUnderwater");
@@ -98,49 +88,20 @@ namespace Jakaria
         public static readonly Vector4 WaterDeepColor = new Vector4(1, 1, 1, 0.98f);
         public static readonly Vector4 WaterUnderwaterColor = new Vector4(1, 1, 1, 0.75f);
         public static readonly Vector4 WaterFadeColor = new Vector4(1, 1, 1, 0.8f);
-        public static readonly Vector4 WakeColor = new Vector4(0.5f, 0.5f, 0.5f, 0.1f);
+        public static readonly Vector4 WakeColor = new Vector4(0.5f, 0.5f, 0.5f, 0.5f);
         public static readonly Vector4 SmallBubbleColor = new Vector4(0.15f, 0.2f, 0.25f, 0.2f);
         public static readonly Vector4 BlackColor = new Vector4(0, 0, 0, 1);
         public static readonly Vector4 RedColor = new Vector4(1, 0, 0, 1);
         public static readonly Vector4 GreenColor = new Vector4(0, 1, 0, 1);
         public static readonly Vector4 BlueColor = new Vector4(0, 0, 1, 1);
 
-        //public static readonly MyObjectBuilder_Ore IceItem = new MyObjectBuilder_Ore() { SubtypeName = "Ice" };
-
-        public static readonly Vector3D[] Directions = new Vector3D[]
-        {
-            Vector3D.Up,
-            Vector3D.Down,
-            Vector3D.Left,
-            Vector3D.Right,
-            Vector3D.Backward,
-            Vector3D.Forward,
-        };
-
-        public static readonly Vector3I[] DirectionsI = new Vector3I[]
-        {
-            Vector3I.Up,
-            Vector3I.Down,
-            Vector3I.Left,
-            Vector3I.Right,
-            Vector3I.Backward,
-            Vector3I.Forward,
-        };
-
-        public const float TSSFontScale = 28.8f / 37f;
-        public const char TSSNewLine = '\n';
-
-        public const float PI = 3.1415926f;
-
-        public const double TWOPI = 6.28318530717958647692528676655900576839433879875021164194988918461563281257241799725606965068423413596429617302656461329418768921910116446345071881625696;
-
         /// <summary>
-        /// Hashset for the blocks that should not work in water
+        /// Collection of extended block definition data
         /// </summary>
         public static Dictionary<MyDefinitionId, BlockConfig> BlockConfigs = new Dictionary<MyDefinitionId, BlockConfig>();
 
         /// <summary>
-        /// Dictionary for planet default water settings
+        /// Dictionary for planet default water settings including how it should treat LOD.
         /// </summary>
         public static Dictionary<MyDefinitionId, PlanetConfig> PlanetConfigs = new Dictionary<MyDefinitionId, PlanetConfig>();
 
@@ -157,13 +118,7 @@ namespace Jakaria
         /// <summary>
         /// Dictionary for respawn pod water settings
         /// </summary>
-        public static Dictionary<string, MaterialConfig> MaterialConfigs = new Dictionary<string, MaterialConfig>()
-        {
-            {
-                "Water",
-                new MaterialConfig()
-            }
-        };
+        public static Dictionary<string, MaterialConfig> MaterialConfigs = new Dictionary<string, MaterialConfig>();
 
         /// <summary>
         /// Hashset of available water textures
@@ -202,7 +157,7 @@ namespace Jakaria
 
         public const float SphereVolumeOptimizer = (4.0f / 3.0f) * MathHelper.Pi;
 
-        public const float WaterVisibility = 15f;
+        public const float WaterVisibility = 5f;
 
         /// <summary>
         /// Text that will show in the PSA
@@ -234,5 +189,7 @@ namespace Jakaria
 
         public const float MaxWakeDistance = 10;
         public const float MaxWakeRadius = 20;
+
+        public const MyBillboard.BlendTypeEnum BlendType = MyBillboard.BlendTypeEnum.Standard;
     }
 }

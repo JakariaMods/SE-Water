@@ -122,7 +122,14 @@ namespace Jakaria
         public double TideTimer = 0;
 
         [ProtoMember(70), XmlElement("material")]
-        public string MaterialId = "Water";
+        public string MaterialId
+        {
+            get { return _materialId; }
+            set { _materialId = value; UpdateMaterial(); }
+        }
+
+        [ProtoIgnore]
+        private string _materialId = WaterSettings.Default.Material;
 
         [ProtoMember(75), XmlElement("currentSpeed")]
         public float CurrentSpeed = WaterSettings.Default.CurrentSpeed;
@@ -134,7 +141,23 @@ namespace Jakaria
         public PlanetConfig PlanetConfig;
 
         [ProtoIgnore, XmlIgnore]
-        public MaterialConfig Material;
+        public MaterialConfig Material
+        {
+            get
+            {
+                if (_material == null)
+                    UpdateMaterial();
+
+                return _material;
+            }
+            set
+            {
+                _material = value;
+            }
+        }
+
+        [ProtoIgnore, XmlIgnore]
+        private MaterialConfig _material;
 
         [ProtoIgnore, XmlIgnore]
         public List<MyBillboard> BillboardCache = new List<MyBillboard>();
@@ -173,12 +196,11 @@ namespace Jakaria
             Position = planet.PositionComp.GetPosition();
 
             this.planet = planet;
-
-            waterFaces = new WaterFace[WaterData.Directions.Length];
-            for (int i = 0; i < WaterData.Directions.Length; i++)
+            
+            waterFaces = new WaterFace[Base6Directions.Directions.Length];
+            for (int i = 0; i < Base6Directions.Directions.Length; i++)
             {
-                waterFaces[i] = new WaterFace(this, WaterData.Directions[i]);
-
+                waterFaces[i] = new WaterFace(this, Base6Directions.Directions[i]);
             }
 
             Init();
@@ -198,7 +220,9 @@ namespace Jakaria
             if (planet != null)
             {
                 if (!WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out PlanetConfig))
+                {
                     PlanetConfig = WaterData.PlanetConfigs[planet.Generator.Id] = new PlanetConfig(planet.Generator.Id);
+                }
             }
 
             if (Material == null)
@@ -227,17 +251,22 @@ namespace Jakaria
                 if (!WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out PlanetConfig))
                 {
                     PlanetConfig = WaterData.PlanetConfigs[planet.Generator.Id] = new PlanetConfig(planet.Generator.Id);
+                    PlanetConfig.Init();
                 }
             }
         }
 
         public void UpdateMaterial()
         {
-            if (!WaterData.MaterialConfigs.TryGetValue(MaterialId, out Material))
+            MaterialConfig material;
+            if (WaterData.MaterialConfigs.TryGetValue(MaterialId, out material))
+            {
+                Material = material;
+            }
+            else
             {
                 //Couldn't find this material for some reason, compensate by setting it to water (default)
                 MaterialId = "Water";
-                Material = WaterData.MaterialConfigs[MaterialId];
             }
         }
 
@@ -255,7 +284,7 @@ namespace Jakaria
             Vector3D position = this.Position + ((up * (Radius + altitudeOffset)));
             
             //Horizontal Fluctuation
-            position += WaterUtils.GetPerpendicularVector(up, noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationAngleSpeed) * WaterData.TWOPI) * noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationSpeed) * Material.MaxSurfaceFluctuation;
+            position += WaterUtils.GetPerpendicularVector(up, noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationAngleSpeed) * MathHelperD.TwoPi) * noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationSpeed) * Material.MaxSurfaceFluctuation;
             return ApplyWavesToSurfaceVector(position, ref up);
         }
 
@@ -294,7 +323,7 @@ namespace Jakaria
 
             float n = (float)noise.GetNoise((up * Radius) * this.CurrentScale);
 
-            return WaterUtils.GetPerpendicularVector(up, n * WaterData.TWOPI) * this.CurrentSpeed;
+            return WaterUtils.GetPerpendicularVector(up, n * MathHelperD.TwoPi) * this.CurrentSpeed;
         }
 
         public Vector3 GetFluidVelocity(Vector3D up)
@@ -379,7 +408,6 @@ namespace Jakaria
         public double GetDepthSquared(ref Vector3D position)
         {
             return ((this.Position - position).LengthSquared() - (this.Position - GetClosestSurfacePoint(position)).LengthSquared());
-            //return GetClosestSurfacePoint(position).Length() - position.Length();
         }
 
         /// <summary>Returns the up direction at a position</summary>

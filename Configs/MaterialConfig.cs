@@ -1,13 +1,7 @@
-﻿using Jakaria.Utils;
-using ProtoBuf;
+﻿using ProtoBuf;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 using VRage.Game;
-using VRage.ObjectBuilders;
 
 namespace Jakaria.Configs
 {
@@ -26,7 +20,10 @@ namespace Jakaria.Configs
         [ProtoMember(15)]
         public bool DrawBubbles = true;
 
-        [ProtoMember(20), XmlElement("CollectedItem")]
+        [ProtoMember(20)]
+        public bool DrawWakes = true;
+
+        [ProtoMember(25), XmlElement("CollectedItem")]
         public string CollectedItemSubtypeId;
 
         [ProtoIgnore(), XmlIgnore()]
@@ -35,14 +32,20 @@ namespace Jakaria.Configs
         [ProtoMember(21)]
         public int CollectedAmount = 50;
 
-        [ProtoMember(25)]
-        public float MaxSurfaceFluctuation = 5f;
+        [ProtoMember(30)]
+        public float MaxSurfaceFluctuation = 3f;
 
-        [ProtoMember(25)]
+        [ProtoMember(31)]
         public float SurfaceFluctuationAngleSpeed = 2f;
 
-        [ProtoMember(30)]
+        [ProtoMember(32)]
         public float SurfaceFluctuationSpeed = 0.5f;
+
+        [ProtoMember(35)]
+        public float Reflectivity = 0.8f;
+
+        [ProtoMember(35)]
+        public float UnderwaterReflectivity = 0.2f;
 
         public override void Init()
         {

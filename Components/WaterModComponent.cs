@@ -16,17 +16,11 @@ using System.IO;
 using Draygo.Drag.API;
 using System.Collections.Concurrent;
 using System.Linq;
-using Draygo.API;
-using System.Text;
-using VRage.Collections;
 using VRage;
-using Sandbox.Game.Entities.Character.Components;
-using VRage.ObjectBuilders;
 using Jakaria.Utils;
 using Jakaria.API;
 using VRage.Serialization;
 using Sandbox.Definitions;
-using CollisionLayers = Sandbox.Engine.Physics.MyPhysics.CollisionLayers;
 using WeaponCore.Api;
 using ProtoBuf;
 using VRageRender;
@@ -61,8 +55,6 @@ namespace Jakaria.Components
         public Action UpdateAfter1;
         public Action UpdateAfter60;
 
-        FastNoiseLite GeneralNoise = new FastNoiseLite();
-        double GeneralNoiseTimer = 0;
         Vector3D zeroVector = Vector3D.Zero;
 
         //Draygo
@@ -111,7 +103,6 @@ namespace Jakaria.Components
             public static double CameraDepth = 0;
             public static bool CameraAirtight = false;
             public static bool CameraUnderwater = false;
-            public static bool CameraHottub = false;
             public static int InsideGrid = 0;
             public static int InsideVoxel = 0;
             public static Vector3D CameraPosition = Vector3.Zero;
@@ -131,9 +122,9 @@ namespace Jakaria.Components
             public static double CameraAltitude = 0;
             public static MyPlanet ClosestPlanet = null;
             public static Water ClosestWater = null;
+            public static float AmbientColorIntensity = 0;
         }
 
-        public ConcurrentCachingList<WaterCollectorComponent> HotTubs = new ConcurrentCachingList<WaterCollectorComponent>();
         MyObjectBuilder_WeatherEffect closestWeather = null;
         bool previousUnderwaterState = true;
         bool initialized = false;
@@ -471,7 +462,9 @@ namespace Jakaria.Components
                         float quality;
                         if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out quality))
                         {
-                            quality = MathHelper.Clamp(quality, 0.4f, 3f);
+                            if(!WaterModComponent.Settings.ShowDebug)
+                                quality = MathHelper.Clamp(quality, 0.4f, 3f);
+
                             Settings.Quality = quality;
 
                             RecreateWater();
@@ -1627,9 +1620,8 @@ namespace Jakaria.Components
                             if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
                             {
                                 water.MaterialId = args[1];
-                                water.UpdateMaterial();
 
-                                //SyncToServer(true);
+                                SyncToServer(true);
                                 WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetMaterial.Replace("{0}", water.Material.SubtypeId.ToString()));
                                 return;
                             }
@@ -2344,7 +2336,6 @@ namespace Jakaria.Components
         /// </summary>
         public override void UpdateAfterSimulation()
         {
-            GeneralNoiseTimer += 0.01;
             tickTimerSecond--;
             if (tickTimerSecond <= 0)
             {
@@ -2431,24 +2422,23 @@ namespace Jakaria.Components
         {
             Session.LastLODBuildPosition = Session.CameraPosition;
 
-            if (WaterModComponent.Session.ClosestPlanet != null)
+            if (Waters != null)
             {
-                Session.CameraAltitude = WaterModComponent.Session.ClosestPlanet != null ? WaterUtils.GetAltitude(WaterModComponent.Session.ClosestPlanet, Session.CameraPosition) : double.MaxValue;
-            }
-            foreach (var water in Waters.Values)
-            {
-                if (water.waterFaces == null)
+                foreach (var water in Waters.Values)
                 {
-                    water.waterFaces = new WaterFace[WaterData.Directions.Length];
-                }
+                    if (water.waterFaces == null)
+                    {
+                        
+                        water.waterFaces = new WaterFace[Base6Directions.Directions.Length];
+                    }
 
-                for (int i = 0; i < water.waterFaces.Length; i++)
-                {
-                    if (water.waterFaces[i] == null)
-                        water.waterFaces[i] = new WaterFace(water, WaterData.Directions[i]);
+                    for (int i = 0; i < water.waterFaces.Length; i++)
+                    {
+                        if (water.waterFaces[i] == null)
+                            water.waterFaces[i] = new WaterFace(water, Base6Directions.Directions[i]);
 
-                    //water.waterFaces[i].ConstructTree();
-                    water.waterFaces[i].Tree = null;
+                        water.waterFaces[i].ConstructTree(WaterData.MinWaterSplitDepth);
+                    }
                 }
             }
         }
@@ -2464,55 +2454,6 @@ namespace Jakaria.Components
                 {
                     Water.Value.BillboardCache?.Clear();
                 }
-
-            //Hot Tubs
-            foreach (var Tub in WaterModComponent.Static.HotTubs)
-            {
-                if (Tub == null)
-                    continue;
-                //todo reimplement drawing
-                if (Tub.underWater && !Tub.airtight)
-                    continue;
-
-                MatrixD Matrix = Tub.Block.PositionComp.WorldMatrixRef;
-                Vector4 Color = WaterData.WaterColor * MyMath.Clamp(Vector3.Dot((Vector3)Matrix.Up, Session.SunDirection) + 0.1f, 0.05f, 1f);
-
-                Color.W = WaterData.WaterColor.W;
-
-                if (Session.CameraHottub)
-                    Color *= 0.5f;
-
-                float GridSize = Tub.Block.CubeGrid.GridSize;
-                Vector3D Min = Tub.Block.Min;
-                Vector3D Max = Tub.Block.Max;
-                double RightSize = Math.Abs(Max.X - Min.X);
-                double ForwardSize = Math.Abs(Max.Z - Min.Z);
-                float HeightOffset = -(GridSize / 2) + (((float)Tub.inventory.CurrentVolume / (float)Tub.inventory.MaxVolume) * (GridSize / 2));
-
-                Vector3D Corner = Tub.Block.PositionComp.GetPosition() - (Matrix.Right * (RightSize * GridSize - 0.1)) - (Matrix.Forward * (ForwardSize * GridSize - 0.1));
-                Vector3D Right = ((Matrix.Right * (RightSize * GridSize - 0.2)) / 3) * 2;
-                Vector3D Forward = ((Matrix.Forward * (ForwardSize * GridSize - 0.2)) / 3) * 2;
-                Vector3D Up = Matrix.Up;
-
-                MyQuadD Quad = new MyQuadD();
-                for (int z = 0; z < RightSize * 3; z++)
-                {
-                    for (int x = 0; x < ForwardSize * 3; x++)
-                    {
-                        Quad.Point0 = Corner + (((z * Right) + (x * Forward)));
-                        Quad.Point1 = Corner + (((z * Right) + ((x + 1) * Forward)));
-                        Quad.Point2 = Corner + ((((z + 1) * Right) + ((x + 1) * Forward)));
-                        Quad.Point3 = Corner + ((((z + 1) * Right) + (x * Forward)));
-
-                        Quad.Point0 += (((GeneralNoise.GetNoise((Quad.Point0.X + GeneralNoiseTimer) * 50, (Quad.Point0.Y + GeneralNoiseTimer) * 50, (Quad.Point0.Z + GeneralNoiseTimer) * 50) * 0.03) + HeightOffset) * Up);
-                        Quad.Point1 += (((GeneralNoise.GetNoise((Quad.Point1.X + GeneralNoiseTimer) * 50, (Quad.Point1.Y + GeneralNoiseTimer) * 50, (Quad.Point1.Z + GeneralNoiseTimer) * 50) * 0.03) + HeightOffset) * Up);
-                        Quad.Point2 += (((GeneralNoise.GetNoise((Quad.Point2.X + GeneralNoiseTimer) * 50, (Quad.Point2.Y + GeneralNoiseTimer) * 50, (Quad.Point2.Z + GeneralNoiseTimer) * 50) * 0.03) + HeightOffset) * Up);
-                        Quad.Point3 += (((GeneralNoise.GetNoise((Quad.Point3.X + GeneralNoiseTimer) * 50, (Quad.Point3.Y + GeneralNoiseTimer) * 50, (Quad.Point3.Z + GeneralNoiseTimer) * 50) * 0.03) + HeightOffset) * Up);
-
-                        QuadBillboards.Push(new QuadBillboard(WaterData.HotTubMaterial, ref Quad, ref Color));
-                    }
-                }
-            }
 
             if (Waters != null)
             {
@@ -2710,6 +2651,13 @@ namespace Jakaria.Components
             {
                 Session.DistanceToHorizon = Session.CameraUnderwater ? 250 : (float)Math.Max(Math.Sqrt((Math.Pow(Math.Max(Session.CameraDepth, 50) + WaterModComponent.Session.ClosestWater.Radius, 2)) - (WaterModComponent.Session.ClosestWater.Radius * WaterModComponent.Session.ClosestWater.Radius)), 500);
 
+                //float dot = _face.Water.Lit ? Vector3.Dot(quadNormal, WaterModComponent.Session.SunDirection) : 1;
+                //float ColorIntensity = _face.Water.Lit ? Math.Max(dot, _face.Water.PlanetConfig.AmbientColorIntensity) * _face.Water.PlanetConfig.ColorIntensity : _face.Water.PlanetConfig.ColorIntensity;
+                if (Session.ClosestWater.PlanetConfig != null)
+                    Session.AmbientColorIntensity = Math.Max(Vector3.Dot(-Session.GravityDirection, WaterModComponent.Session.SunDirection), Session.ClosestWater.PlanetConfig.AmbientColorIntensity) * Session.ClosestWater.PlanetConfig.ColorIntensity;
+                else
+                    Session.AmbientColorIntensity = 1f;
+
                 if (sunOccluder != null)
                 {
                     sunOccluder.Render.Visible = Session.CameraUnderwater || (WaterModComponent.Session.ClosestWater.Intersects(Session.CameraPosition, Session.CameraPosition + (Session.SunDirection * 100)) != 0);
@@ -2729,8 +2677,7 @@ namespace Jakaria.Components
                 bool previousUnderwater = Session.CameraUnderwater;
 
                 Session.CameraDepth = WaterModComponent.Session.ClosestWater.GetDepth(ref Session.CameraPosition);
-                Session.CameraHottub = WaterUtils.HotTubUnderwater(ref Session.CameraPosition);
-                Session.CameraUnderwater = Session.CameraDepth <= 0 || Session.CameraHottub;
+                Session.CameraUnderwater = Session.CameraDepth <= 0;
 
                 if (previousUnderwater != Session.CameraUnderwater)
                 {
@@ -2843,9 +2790,6 @@ namespace Jakaria.Components
                         }
                     }
                 }
-
-                if (Session.CameraHottub)
-                    Session.CameraAirtight = false;
             }
             else
             {
@@ -2918,7 +2862,6 @@ namespace Jakaria.Components
                 if (Vector3D.RectangularDistance(Session.LastLODBuildPosition, Session.CameraPosition) > 15)
                 {
                     RebuildLOD();
-                    DrawAfterSimulation();
                 }
             }
         }
@@ -3262,13 +3205,19 @@ namespace Jakaria.Components
 
         public void SyncToServer(bool rebuildLOD)
         {
+            if (Waters == null)
+                return;
+
             if (MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
             {
-                MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterModComponent.Static.Waters)));
-
-                if (rebuildLOD)
-                    RebuildLOD();
+                if (MyAPIGateway.Session.IsServer)
+                    SyncClients();
+                else
+                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(WaterModComponent.Static.Waters)));
             }
+
+            if (rebuildLOD)
+                RebuildLOD();
         }
 
         /// <summary>
@@ -3295,7 +3244,6 @@ namespace Jakaria.Components
             if (!MyAPIGateway.Utilities.IsDedicated)
             {
                 RecreateWater();
-                RebuildLOD();
             }
             if (MyAPIGateway.Session.IsServer)
                 SyncClients();

@@ -1,24 +1,18 @@
-﻿using System;
+﻿using Jakaria.Components;
+using Jakaria.Configs;
+using Sandbox.Definitions;
+using Sandbox.Game;
+using Sandbox.Game.Entities;
+using Sandbox.ModAPI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using VRageMath;
-using Sandbox.Game.Entities;
-using Sandbox.Game;
-using Sandbox.ModAPI;
-using VRage.Utils;
-using Sandbox.Definitions;
 using VRage.Game;
 using VRage.Game.Entity;
-using System.Diagnostics;
 using VRage.Game.ModAPI;
-using VRageRender;
-using VRage.Game.ModAPI.Ingame.Utilities;
-using Sandbox.Game.GameSystems;
-using VRage.ModAPI;
-using Jakaria.Configs;
-using Jakaria.Components;
+using VRage.Utils;
+using VRageMath;
 
 namespace Jakaria.Utils
 {
@@ -190,47 +184,6 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Returns true if the position is inside of a hot tub
-        /// </summary>
-        public static bool HotTubUnderwater(ref Vector3D Position)
-        {
-            foreach (var Tub in WaterModComponent.Static.HotTubs)
-            {
-                if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
-                {
-                    float HeightOffset = -(Tub.Block.CubeGrid.GridSize / 2) + (((float)Tub.inventory.CurrentVolume / (float)Tub.inventory.MaxVolume) * (Tub.Block.CubeGrid.GridSize / 2)) + 0.1f;
-
-                    if (Vector3D.Dot(Tub.Block.PositionComp.WorldMatrixRef.Up, Vector3D.Normalize(Position - (Tub.Block.PositionComp.GetPosition() + (Tub.Block.PositionComp.WorldMatrixRef.Up * HeightOffset)))) < 0)
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Returns true if the position is inside of a hot tub and outputs the grid the hottub is attached to
-        /// </summary>
-        public static bool HotTubUnderwater(Vector3D Position, out IMyCubeGrid grid)
-        {
-            foreach (var Tub in WaterModComponent.Static.HotTubs)
-            {
-                if (Tub.Block.PositionComp.WorldAABB.Contains(Position) > 0)
-                {
-                    float HeightOffset = -(Tub.Block.CubeGrid.GridSize / 2) + (((float)Tub.inventory.CurrentVolume / (float)Tub.inventory.MaxVolume) * (Tub.Block.CubeGrid.GridSize / 2)) + 0.1f;
-
-                    if (Vector3D.Dot(Tub.Block.PositionComp.WorldMatrixRef.Up, Vector3D.Normalize(Position - (Tub.Block.PositionComp.GetPosition() + (Tub.Block.PositionComp.WorldMatrixRef.Up * HeightOffset)))) < 0)
-                    {
-                        grid = Tub.Block.CubeGrid;
-                        return true;
-                    }
-
-                }
-            }
-            grid = null;
-            return false;
-        }
-
-        /// <summary>
         /// Returns the closest grid to the position
         /// </summary>
         public static MyCubeGrid GetApproximateGrid(Vector3D position, MyEntityQueryType queryType = MyEntityQueryType.Both)
@@ -278,6 +231,9 @@ namespace Jakaria.Utils
         /// </summary>
         public static double GetAltitude(MyPlanet planet, Vector3D position, double altitudeOffset = 0)
         {
+            if (planet == null)
+                return 0;
+
             double altitude = (position - planet.WorldMatrix.Translation).Length() + altitudeOffset;
 
             if (altitude < planet.MinimumRadius || altitude > planet.MaximumRadius)

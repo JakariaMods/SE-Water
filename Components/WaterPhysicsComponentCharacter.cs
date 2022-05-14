@@ -75,7 +75,7 @@ namespace Jakaria.Components
                     {
                         Breath = Math.Max(Breath - 1, 0);
 
-                        if (SimulateEffects)
+                        if (SimulateEffects && ClosestWater.Material.DrawBubbles)
                             WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
 
                         if (Breath <= 0 && (Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
@@ -91,7 +91,7 @@ namespace Jakaria.Components
                         if (MyAPIGateway.Session.IsServer && Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
                             Character.DoDamage(ClosestWater.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
 
-                        if (SimulateEffects)
+                        if (SimulateEffects && ClosestWater.Material.DrawBubbles)
                             WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
                     }
                 }
