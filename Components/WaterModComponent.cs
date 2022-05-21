@@ -34,21 +34,16 @@ namespace Jakaria.Components
     {
         List<IMyPlayer> players = new List<IMyPlayer>();
 
-        //Water Effects
-        //public List<Water> waters = new List<Water>();
         public Dictionary<long, Water> Waters = new Dictionary<long, Water>();
-        //public Dictionary<long, MyTuple<float, float>> WheelStorage = new Dictionary<long, MyTuple<float, float>>();
-
-        //public Dictionary<Vector3I, float> Wakes = new Dictionary<Vector3I, float>();
         public List<Splash> SurfaceSplashes = new List<Splash>(128);
-        Seagull[] Seagulls = new Seagull[16];
-        public Fish[] Fishes = new Fish[32];
+        Seagull[] Seagulls = new Seagull[8];
+        public Fish[] Fishes = new Fish[24];
 
         List<AnimatedPointBillboard> Bubbles = new List<AnimatedPointBillboard>();
         AnimatedPointBillboard[] AmbientBubbles = new AnimatedPointBillboard[128];
 
         public ConcurrentStack<QuadBillboard> QuadBillboards = new ConcurrentStack<QuadBillboard>();
-        public List<MyBillboard> BillboardCache = new List<MyBillboard>();
+        //public List<MyBillboard> BillboardCache = new List<MyBillboard>();
         public List<SimulatedSplash> SimulatedSplashes = new List<SimulatedSplash>();
         public ConcurrentStack<MyTuple<IMySlimBlock, float>> DamageQueue = new ConcurrentStack<MyTuple<IMySlimBlock, float>>();
 
@@ -64,66 +59,7 @@ namespace Jakaria.Components
 
         public Object effectLock = new Object();
 
-        [ProtoContract]
-        public static class Settings
-        {
-            [ProtoMember(1)]
-            public static float Quality = 1.5f;
-
-            [ProtoMember(2)]
-            public static bool ShowHud = true;
-
-            [ProtoMember(3)]
-            public static bool ShowCenterOfBuoyancy = false;
-
-            [ProtoMember(4)]
-            public static bool ShowDepth = true;
-
-            [ProtoMember(5)]
-            public static bool ShowFog = true;
-
-            [ProtoMember(6)]
-            public static bool ShowDebug = false;
-
-            [ProtoMember(7)]
-            public static float Volume = 1f;
-
-            [ProtoMember(8)]
-            public static bool ShowAltitude = true;
-        }
-
-        /// <summary>
-        /// Clientside variables
-        /// </summary>
-        public static class Session
-        {
-            public static bool CameraAboveWater = false;
-            public static Vector3D CameraClosestPosition = Vector3D.Zero;
-            public static bool CameraUnderground = false;
-            public static double CameraDepth = 0;
-            public static bool CameraAirtight = false;
-            public static bool CameraUnderwater = false;
-            public static int InsideGrid = 0;
-            public static int InsideVoxel = 0;
-            public static Vector3D CameraPosition = Vector3.Zero;
-            public static Vector3D CameraRotation = Vector3.Zero;
-            public static Vector3 SunDirection = Vector3.Zero;
-            public static float SessionTimer = 0;
-            /// <summary>
-            /// Direction vector that points DOWN towards surface
-            /// </summary>
-            public static Vector3D GravityDirection = Vector3.Zero;
-            public static Vector3D CameraClosestWaterPosition = Vector3D.Zero;
-            public static Vector3D Gravity = Vector3.Zero;
-            public static Vector3D GravityAxisA = Vector3D.Zero;
-            public static Vector3D GravityAxisB = Vector3D.Zero;
-            public static Vector3D LastLODBuildPosition = Vector3D.MaxValue;
-            public static float DistanceToHorizon = 0;
-            public static double CameraAltitude = 0;
-            public static MyPlanet ClosestPlanet = null;
-            public static Water ClosestWater = null;
-            public static float AmbientColorIntensity = 0;
-        }
+        public WaterClientSettings Settings = new WaterClientSettings();
 
         MyObjectBuilder_WeatherEffect closestWeather = null;
         bool previousUnderwaterState = true;
@@ -133,7 +69,7 @@ namespace Jakaria.Components
         MyEntity sunOccluder;
         MyEntity particleOccluder;
 
-        private WaterUIComponent uiComponent;
+        public WaterSession Session = new WaterSession();
 
         //Timers
         int tickTimer = 0;
@@ -159,6 +95,8 @@ namespace Jakaria.Components
         {
             if (Static == null)
                 Static = this;
+            else
+                WaterUtils.WriteLog($"There should not be two {nameof(WaterModComponent)}s");
         }
 
         public override void BeforeStart()
@@ -210,7 +148,6 @@ namespace Jakaria.Components
                 sunOccluder = CreateOccluderEntity();
                 particleOccluder = CreateOccluderEntity();
 
-                MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
                 MyExplosions.OnExplosion += MyExplosions_OnExplosion;
 
                 RecreateWater();
@@ -267,19 +204,17 @@ namespace Jakaria.Components
                 WaterUtils.ShowMessage("Oxygen/Airtightness is disabled, Airtightness flotation will not work.");
             }
 
-            uiComponent = WaterUIComponent.Static;
-
             initialized = true;
         }
 
         private void MyExplosions_OnExplosion(ref MyExplosionInfo explosionInfo)
         {
-            if (!MyAPIGateway.Utilities.IsDedicated && WaterModComponent.Session.ClosestWater != null && explosionInfo.ExplosionType != MyExplosionTypeEnum.GRID_DEFORMATION && explosionInfo.ExplosionType != MyExplosionTypeEnum.GRID_DESTRUCTION)
+            if (!MyAPIGateway.Utilities.IsDedicated && Session.ClosestWater != null && explosionInfo.ExplosionType != MyExplosionTypeEnum.GRID_DEFORMATION && explosionInfo.ExplosionType != MyExplosionTypeEnum.GRID_DESTRUCTION)
             {
                 float ExplosionRadius = (float)explosionInfo.ExplosionSphere.Radius;
                 Vector3D ExplosionPosition = explosionInfo.ExplosionSphere.Center;
 
-                double Depth = WaterModComponent.Session.ClosestWater.GetDepth(ref ExplosionPosition);
+                double Depth = Session.ClosestWater.GetDepth(ref ExplosionPosition);
 
                 if (Depth - ExplosionRadius <= 0)
                 {
@@ -308,7 +243,7 @@ namespace Jakaria.Components
                             explosionInfo.PlaySound = true;
                         }
 
-                        if (Depth + ExplosionRadius <= 0 && WaterModComponent.Session.ClosestWater.Material.DrawBubbles)
+                        if (Depth + ExplosionRadius <= 0 && Session.ClosestWater.Material.DrawBubbles)
                             CreateBubble(ref ExplosionPosition, ExplosionRadius / 4 * SurfaceRatio);
                     }
                     else
@@ -318,7 +253,7 @@ namespace Jakaria.Components
                         explosionInfo.PlaySound = true;
                     }
 
-                    Vector3D surfacePoint = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(explosionInfo.ExplosionSphere.Center);
+                    Vector3D surfacePoint = Session.ClosestWater.GetClosestSurfacePointGlobal(explosionInfo.ExplosionSphere.Center);
 
                     //CreatePhysicsSplash(surfacePoint, -Session.GravityDirection * 120 * SurfaceRatio, Math.Max(ExplosionRadius / 4, 2f), SurfaceRatio, (int)(explosionInfo.ExplosionSphere.Radius * 2 * SurfaceRatio));
                     CreateSplash(surfacePoint, ExplosionRadius * SurfaceRatio, true);
@@ -377,8 +312,8 @@ namespace Jakaria.Components
                             {
                                 if (weather.Voxel == "WATERMODDATA")
                                 {
-                                    WaterSettings settings;
-                                    settings = MyAPIGateway.Utilities.SerializeFromXML<WaterSettings>(weather.Weathers?[0]?.Name);
+                                    Jakaria.WaterSettings settings;
+                                    settings = MyAPIGateway.Utilities.SerializeFromXML<Jakaria.WaterSettings>(weather.Weathers?[0]?.Name);
 
                                     Waters[planet.EntityId] = new Water(planet, settings);
                                     SyncClients();
@@ -391,1482 +326,6 @@ namespace Jakaria.Components
                 }
             }
         }
-
-        #region Commands
-
-        /// <summary>
-        /// Commands
-        /// </summary>
-        public void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
-        {
-            if (!messageText.StartsWith("/") || messageText.Length == 0)
-                return;
-
-            string[] args = messageText.TrimStart('/').Split(' ');
-
-            if (args.Length == 0)
-                return;
-
-            switch (args[0])
-            {
-                case "whelp":
-                    sendToOthers = false;
-
-                    MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://steamcommunity.com/sharedfiles/filedetails/?id=2574095672");
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.OpenGuide);
-                    break;
-                case "wdiscord":
-                    sendToOthers = false;
-
-                    MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://steamcommunity.com/linkfilter/?url=https://discord.gg/GrPK8cB");
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.OpenDiscord);
-                    break;
-                case "wversion":
-                    sendToOthers = false;
-
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.WaterModVersion.Replace("{0}", WaterData.Version));
-
-                    break;
-                case "wlanguage":
-                    sendToOthers = false;
-
-                    //Set Language
-                    if (args.Length == 2)
-                    {
-                        Language language;
-
-                        if (WaterLocalization.Languages.TryGetValue(WaterUtils.ValidateCommandData(args[1]), out language))
-                        {
-                            WaterLocalization.CurrentLanguage = language;
-
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetLanguage.Replace("{0}", args[1]).Replace("{1}", WaterLocalization.CurrentLanguage.TranslationAuthor));
-                            SaveSettings();
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetLanguageNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wquality":
-                    sendToOthers = false;
-
-                    //Get Quality
-                    if (args.Length == 1)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetQuality.Replace("{0}", Settings.Quality.ToString()));
-                    }
-
-                    //Set Quality
-                    if (args.Length == 2)
-                    {
-                        float quality;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out quality))
-                        {
-                            if(!WaterModComponent.Settings.ShowDebug)
-                                quality = MathHelper.Clamp(quality, 0.4f, 3f);
-
-                            Settings.Quality = quality;
-
-                            RecreateWater();
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetQuality.Replace("{0}", Settings.Quality.ToString()));
-                            SaveSettings();
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetQualityNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wvolume":
-                    sendToOthers = false;
-
-                    //Get Volume
-                    if (args.Length == 1)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetVolume.Replace("{0}", Settings.Volume.ToString()));
-                    }
-
-                    //Set Volume
-                    if (args.Length == 2)
-                    {
-                        float volume;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out volume))
-                        {
-                            volume = MathHelper.Clamp(volume, 0f, 1f);
-                            Settings.Volume = volume;
-
-                            RecreateWater();
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetVolume.Replace("{0}", Settings.Volume.ToString()));
-                            SaveSettings();
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetVolumeNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wcob":
-                    sendToOthers = false;
-
-                    //Toggle Center of Buoyancy Debug
-                    if (args.Length == 1)
-                    {
-                        Settings.ShowCenterOfBuoyancy = !Settings.ShowCenterOfBuoyancy;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleRenderCOB);
-                    }
-                    break;
-
-                case "wdebug":
-                    sendToOthers = false;
-
-                    //Toggle Debug Mode
-                    if (args.Length == 1)
-                    {
-                        Settings.ShowDebug = !Settings.ShowDebug;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleDebug);
-                    }
-                    break;
-
-                case "wdepth":
-                    sendToOthers = false;
-
-                    //Toggle Show Depth
-                    if (uiComponent.Heartbeat)
-                    {
-                        Settings.ShowDepth = !Settings.ShowDepth;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleShowDepth);
-                        SaveSettings();
-                    }
-                    else
-                    {
-                        Settings.ShowDepth = false;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextAPI);
-                    }
-
-                    break;
-
-                case "waltitude":
-                    sendToOthers = false;
-
-                    //Toggle Show Depth
-                    if (uiComponent.Heartbeat)
-                    {
-                        Settings.ShowAltitude = !Settings.ShowAltitude;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleShowAltitude);
-                        SaveSettings();
-                    }
-                    else
-                    {
-                        Settings.ShowAltitude = false;
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextAPI);
-                    }
-
-                    break;
-            }
-
-            //SpaceMaster level and up
-            switch (args[0])
-            {
-                //Toggle fog
-                case "wfog":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.SpaceMaster)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    Settings.ShowFog = !Settings.ShowFog;
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFog);
-
-                    break;
-
-                //Toggle birds on a planet
-                case "wbird":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet != null)
-                    {
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.EnableSeagulls = !water.EnableSeagulls;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleBirds);
-                                return;
-                            }
-                        }
-
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    else
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-
-                    break;
-
-                //Toggle fish on a planet
-                case "wfish":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet != null)
-                    {
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.EnableFish = !water.EnableFish;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFish);
-                                return;
-                            }
-                        }
-
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    else
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-
-                    break;
-
-                //Toggle surface foam on a planet
-                case "wfoam":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet != null)
-                    {
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.EnableFoam = !water.EnableFoam;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFoam);
-                                return;
-                            }
-                        }
-
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    else
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-
-                    break;
-
-                case "wbuoyancy":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Buoyancy
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetBuoyancy.Replace("{0}", WaterModComponent.Session.ClosestWater.Buoyancy.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Buoyancy
-                    if (args.Length == 2)
-                    {
-                        float buoyancy;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out buoyancy))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.Buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetBuoyancy.Replace("{0}", water.Buoyancy.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetBuoyancyNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wviscosity":
-                    sendToOthers = false;
-
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetViscosity.Replace("{0}", (WaterModComponent.Session.ClosestWater.Material.Viscosity).ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    else
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.RetiredCommand);
-                    break;
-
-                case "wdensity":
-                    sendToOthers = false;
-
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetDensity.Replace("{0}", (WaterModComponent.Session.ClosestWater.Material.Density).ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    else
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.RetiredCommand);
-
-                    break;
-                case "wrradius":
-                    sendToOthers = false;
-
-                    //Get Relative Radius
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetRelativeRadius.Replace("{0}", ((Vector3D.Distance(WaterModComponent.Session.CameraPosition, WaterModComponent.Session.ClosestPlanet.PositionComp.GetPosition()) - WaterSettings.Default.TideHeight) / WaterModComponent.Session.ClosestPlanet.MinimumRadius).ToString("0.00000")));
-
-                    break;
-                case "wradius":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Radius
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetRadius.Replace("{0}", (WaterModComponent.Session.ClosestWater.Radius / WaterModComponent.Session.ClosestPlanet.MinimumRadius).ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Radius
-                    if (args.Length == 2)
-                    {
-                        float radius;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
-                        {
-                            radius = MathHelper.Clamp(radius, 0.95f, 1.75f);
-
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-
-                                    water.Radius = radius * WaterModComponent.Session.ClosestPlanet.MinimumRadius;
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetRadius.Replace("{0}", (water.Radius / WaterModComponent.Session.ClosestPlanet.MinimumRadius).ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetRadiusNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wcurrentspeed":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    //Get Current Speed
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetCurrentSpeed.Replace("{0}", WaterModComponent.Session.ClosestWater.CurrentSpeed.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Current Speed
-                    if (args.Length == 2)
-                    {
-                        float currentSpeed;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out currentSpeed))
-                        {
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.CurrentSpeed = currentSpeed;
-                                    SyncToServer(false);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCurrentSpeed.Replace("{0}", water.CurrentSpeed.ToString()));
-
-                                    return;
-                                }
-                            }
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCurrentSpeedNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wcurrentscale":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    //Get Current Scale
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetCurrentScale.Replace("{0}", WaterModComponent.Session.ClosestWater.CurrentScale.ToString()));
-                            return;
-
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Current Scale
-                    if (args.Length == 2)
-                    {
-                        float currentScale;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out currentScale))
-                        {
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.CurrentScale = currentScale;
-                                    SyncToServer(false);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCurrentScale.Replace("{0}", water.CurrentScale.ToString()));
-
-                                    return;
-                                }
-                            }
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCurrentScaleNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wwaveheight":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Oscillation
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveHeight.Replace("{0}", WaterModComponent.Session.ClosestWater.WaveHeight.ToString()));
-                            return;
-
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Oscillation
-                    if (args.Length == 2)
-                    {
-                        float waveHeight;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveHeight))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.WaveHeight = waveHeight;
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveHeight.Replace("{0}", water.WaveHeight.ToString()));
-
-                                    return;
-                                }
-                            }
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveHeightNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wtideheight":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Tide Height
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetTideHeight.Replace("{0}", WaterModComponent.Session.ClosestWater.TideHeight.ToString()));
-                            return;
-
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Tide Height
-                    if (args.Length == 2)
-                    {
-                        float tideHeight;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideHeight))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.TideHeight = MyMath.Clamp(tideHeight, 0, 10000);
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideHeight.Replace("{0}", water.TideHeight.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideHeightNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wtidespeed":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Tide Scale
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetTideSpeed.Replace("{0}", WaterModComponent.Session.ClosestWater.TideSpeed.ToString()));
-                            return;
-
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Tide Speed
-                    if (args.Length == 2)
-                    {
-                        float tideSpeed;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideSpeed))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.TideSpeed = MyMath.Clamp(tideSpeed, 0, 1000);
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideSpeed.Replace("{0}", water.TideSpeed.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTideSpeedNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wreset":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    //Reset
-                    foreach (var Key in Waters.Keys)
-                    {
-                        if (Waters[Key].PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                        {
-                            float radius = Waters[Key].Radius;
-                            Waters[Key] = new Water(WaterModComponent.Session.ClosestPlanet) { Radius = radius };
-
-                            SyncToServer(true);
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.Reset);
-                            return;
-                        }
-                    }
-
-                    //If foreach loop doesn't find the planet, assume it doesn't exist
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    break;
-
-                case "wwavespeed":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Swing
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveSpeed.Replace("{0}", WaterModComponent.Session.ClosestWater.WaveSpeed.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Swing
-                    if (args.Length == 2)
-                    {
-                        float waveSpeed;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveSpeed))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.WaveSpeed = MathHelper.Clamp(waveSpeed, 0f, 1f);
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveSpeed.Replace("{0}", water.WaveSpeed.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveSpeedNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wwavescale":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Scale
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetWaveScale.Replace("{0}", WaterModComponent.Session.ClosestWater.WaveScale.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Scale
-                    if (args.Length == 2)
-                    {
-                        float waveScale;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveScale))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.WaveScale = waveScale;
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveScale.Replace("{0}", water.WaveScale.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetWaveScaleNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-
-                case "wcreate":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    if (WaterUtils.HasWater(WaterModComponent.Session.ClosestPlanet))
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.HasWater);
-                        return;
-                    }
-
-                    if (args.Length == 2)
-                    {
-                        float radius;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
-                        {
-                            Waters[WaterModComponent.Session.ClosestPlanet.EntityId] = new Water(WaterModComponent.Session.ClosestPlanet, radiusMultiplier: MathHelper.Clamp(radius, 0.01f, 2f));
-                            SyncToServer(true);
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
-                            break;
-                        }
-                        else
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoParse);
-                            break;
-                        }
-                    }
-
-                    if (args.Length == 1)
-                    {
-                        Waters[WaterModComponent.Session.ClosestPlanet.EntityId] = new Water(WaterModComponent.Session.ClosestPlanet);
-                        SyncToServer(true);
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
-                        break;
-                    }
-
-                    break;
-
-                case "wremove":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    if (Waters.Remove(WaterModComponent.Session.ClosestPlanet.EntityId))
-                    {
-                        SyncToServer(true);
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.RemoveWater);
-                        return;
-                    }
-
-                    //If foreach loop doesn't find the planet, assume it doesn't exist
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    break;
-
-                case "wpdrag":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Toggle Player Drag
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.PlayerDrag = !water.PlayerDrag;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.TogglePlayerDrag);
-                                return;
-                            }
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    break;
-                case "wtransparent":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Toggle Water Transparency
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.Transparent = !water.Transparent;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleTransparency);
-                                return;
-                            }
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    break;
-                case "wlit":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Toggle Water Lighting
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.Lit = !water.Lit;
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleLighting);
-                                return;
-                            }
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    break;
-                case "wtexturelist": //alias to /wtextures
-                case "wtextures":
-                    sendToOthers = false;
-                    if (WaterData.WaterTextures.Count > 0)
-                    {
-                        string textures = "";
-
-                        foreach (var texture in WaterData.WaterTextures)
-                        {
-                            textures += texture + ", ";
-                        }
-
-                        if (textures.Length > 2)
-                        {
-                            textures = textures.Substring(0, textures.Length - 2) + "."; //remove end comma and space. add period
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ListTextures + textures);
-                        }
-                    }
-                    else
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextures);
-                    }
-                    break;
-                case "wmateriallist": //alias to /wmaterials
-                case "wmaterials":
-                    sendToOthers = false;
-                    if (WaterData.MaterialConfigs.Count > 0)
-                    {
-                        string materials = "";
-
-                        foreach (var material in WaterData.MaterialConfigs)
-                        {
-                            materials += material.Key + ", ";
-                        }
-
-                        if (materials.Length > 2)
-                        {
-                            materials = materials.Substring(0, materials.Length - 2) + "."; //remove end comma and space. add period
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ListMaterials + materials);
-                        }
-                    }
-                    else
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoMaterials);
-                    }
-                    break;
-                case "wtexture":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Texture
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetTexture.Replace("{0}", WaterModComponent.Session.ClosestWater.Texture.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Texture
-                    if (args.Length == 2)
-                    {
-                        if (!WaterData.WaterTextures.Contains(args[1]))
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTextureNoFind.Replace("{0}", args[1]));
-                            return;
-                        }
-
-                        MyStringId waterTexture = MyStringId.GetOrCompute(args[1]);
-                        if (waterTexture != null)
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.TextureID = waterTexture;
-                                    water.Texture = args[1];
-                                    water.UpdateTexture();
-
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTexture.Replace("{0}", water.Texture.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetTextureNoFind.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wmaterial":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Material
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetMaterial.Replace("{0}", WaterModComponent.Session.ClosestWater.Material.SubtypeId));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Material
-                    if (args.Length == 2)
-                    {
-                        if (!WaterData.MaterialConfigs.ContainsKey(args[1]))
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetMaterialNoFind.Replace("{0}", args[1]));
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        foreach (var water in Waters.Values)
-                        {
-                            if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                            {
-                                water.MaterialId = args[1];
-
-                                SyncToServer(true);
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetMaterial.Replace("{0}", water.Material.SubtypeId.ToString()));
-                                return;
-                            }
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-                    break;
-                case "wexport":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestWater != null)
-                    {
-                        PlanetConfig temp = new PlanetConfig(WaterModComponent.Session.ClosestWater.planet.Generator.Id.SubtypeName, WaterModComponent.Session.ClosestWater);
-                        MyClipboardHelper.SetClipboard(MyAPIGateway.Utilities.SerializeToXML(temp));
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ExportWater);
-                        return;
-                    }
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    break;
-
-                case "wsettings":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestPlanet == null)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                        return;
-                    }
-
-                    if (WaterModComponent.Session.ClosestWater != null)
-                    {
-                        WaterUtils.ShowMessage(WaterModComponent.Session.ClosestWater.ToString());
-                        return;
-                    }
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    break;
-
-                case "wcrush":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Crush Damage
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetCrushDamage.Replace("{0}", WaterModComponent.Session.ClosestWater.CrushDamage.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Crush Damage
-                    if (args.Length == 2)
-                    {
-                        float crushDepth;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out crushDepth))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.CrushDamage = crushDepth;
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCrushDamage.Replace("{0}", water.CrushDamage.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCrushDamageNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wrate":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Collection Rate
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetCollectRate.Replace("{0}", WaterModComponent.Session.ClosestWater.CollectionRate.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Collect Rate
-                    if (args.Length == 2)
-                    {
-                        float collectRate;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out collectRate))
-                        {
-                            if (WaterModComponent.Session.ClosestPlanet == null)
-                            {
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                return;
-                            }
-
-                            foreach (var water in Waters.Values)
-                            {
-                                if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                {
-                                    water.CollectionRate = collectRate;
-                                    SyncToServer(true);
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCollectRate.Replace("{0}", water.CollectionRate.ToString()));
-                                    return;
-                                }
-                            }
-
-                            //If foreach loop doesn't find the planet, assume it doesn't exist
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCollectRateNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-                case "wcolor":
-                    sendToOthers = false;
-
-                    if (MyAPIGateway.Session.PromoteLevel < MyPromoteLevel.Moderator)
-                    {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
-                        return;
-                    }
-
-                    //Get Fog Color
-                    if (args.Length == 1)
-                    {
-                        if (WaterModComponent.Session.ClosestPlanet == null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                            return;
-                        }
-
-                        if (WaterModComponent.Session.ClosestWater != null)
-                        {
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GetFogColor.Replace("{0}", WaterModComponent.Session.ClosestWater.FogColor.ToString()));
-                            return;
-                        }
-
-                        //If foreach loop doesn't find the planet, assume it doesn't exist
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                    }
-
-                    //Set Fog Color
-                    if (args.Length == 4)
-                    {
-                        float r, g, b;
-                        if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out r))
-                        {
-                            if (float.TryParse(WaterUtils.ValidateCommandData(args[2]), out g))
-                            {
-                                if (float.TryParse(WaterUtils.ValidateCommandData(args[3]), out b))
-                                {
-                                    if (WaterModComponent.Session.ClosestPlanet == null)
-                                    {
-                                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
-                                        return;
-                                    }
-
-                                    foreach (var water in Waters.Values)
-                                    {
-                                        if (water.PlanetID == WaterModComponent.Session.ClosestPlanet.EntityId)
-                                        {
-                                            water.FogColor = new Vector3(r, g, b);
-                                            SyncToServer(true);
-                                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetFogColor.Replace("{0}", water.FogColor.ToString()));
-                                            return;
-                                        }
-                                    }
-
-                                    //If foreach loop doesn't find the planet, assume it doesn't exist
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanetWater);
-                                }
-                                else
-                                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCollectRateNoParse.Replace("{0}", args[3]));
-                            }
-                            else
-                                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCollectRateNoParse.Replace("{0}", args[2]));
-                        }
-                        else
-                            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.SetCollectRateNoParse.Replace("{0}", args[1]));
-                    }
-                    break;
-            }
-        }
-
-        #endregion Commands
 
         /// <summary>
         /// Called when the world is loading
@@ -1934,6 +393,9 @@ namespace Jakaria.Components
                                 {
                                     DefinitionId = blockDefinition.Id
                                 };
+
+                            if(!(blockDefinition is MyFunctionalBlockDefinition))
+                                Config.MaximumPressure = 4014.08f;
 
                             if (blockDefinition.IsAirTight == true)
                                 Config.Volume = blockDimensions.Volume; //IsAirtight implies that every side is a solid wall, meaning that 100% of water in the block is displaced
@@ -2118,20 +580,6 @@ namespace Jakaria.Components
                     }
             }
 
-            /*WaterUtils.WriteLog("Loading Water");
-            for (int i = waters.Count - 1; i >= 0; i--)
-            {
-                for (int j = 0; j < waters.Count; j++)
-                {
-                    if (i != j && waters[i].planetID == waters[j].planetID)
-                    {
-                        WaterUtils.WriteLog("Found duplicate water, removing");
-                        waters.RemoveAtFast(j);
-                        break;
-                    }
-                }
-            }*/
-
             foreach (var water in Waters.Values)
             {
                 water.UpdateTexture();
@@ -2230,7 +678,6 @@ namespace Jakaria.Components
             DragAPI.Close();
 
             MyAPIGateway.Multiplayer.UnregisterMessageHandler(WaterData.ClientHandlerID, ClientHandler);
-            MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
             MyExplosions.OnExplosion -= MyExplosions_OnExplosion;
             MyEntities.OnEntityAdd -= Entities_OnEntityCreate;
 
@@ -2282,51 +729,61 @@ namespace Jakaria.Components
 
             if (Grid != null)
             {
-                Vector3D position = Grid.PositionComp.GetPosition();
-                Vector3D spawnPosition;
-                Vector3D surfacePosition;
-
-                Vector3D normal;
-                MyPlanet planet = MyGamePruningStructure.GetClosestPlanet(position);
-                Water water = GetClosestWater(position);
-
+                MyPlanet planet = MyGamePruningStructure.GetClosestPlanet(Grid.GetPosition());
+                Water water = GetClosestWater(Grid.GetPosition());
+                WaterUtils.ShowMessage(respawnShipPrefabName);
                 RespawnPodConfig config;
-                if (water != null && planet != null && WaterData.RespawnPodConfigs.TryGetValue(MyDefinitionId.Parse("RespawnShipDefinition/" + respawnShipPrefabName), out config))
+                if (water != null && planet != null && Grid.Physics != null && WaterData.RespawnPodConfigs.TryGetValue(MyDefinitionId.Parse("RespawnShipDefinition/" + respawnShipPrefabName), out config))
                 {
-                    MyAPIGateway.Parallel.Start(() =>
+                    if (config.SpawnOnLand == config.SpawnOnWater)
+                        return;
+
+                    for (int i = 0; i < WaterData.MaxRespawnIterations; i++)
                     {
-                        for (int i = 0; i < 1000; i++)
+                        Vector3D normal = MyUtils.GetRandomVector3Normalized();
+                        Vector3D closestPlanetPosition = planet.GetClosestSurfacePointGlobal(water.Position + (normal * planet.AverageRadius));
+                        if(water.IsUnderwater(ref closestPlanetPosition))
                         {
-                            surfacePosition = planet.GetClosestSurfacePointGlobal(Vector3.Normalize(MyUtils.GetRandomVector3D()) * water.Radius);
-                            spawnPosition = water.GetClosestSurfacePointSimple(surfacePosition);
-                            normal = water.GetUpDirection(ref spawnPosition);
-
-                            if (water.IsUnderwater(ref spawnPosition))
+                            if(config.SpawnOnWater)
                             {
-                                if (config.SpawnOnWater)
+                                Vector3D closestWaterPoint = water.GetClosestSurfacePointGlobal(closestPlanetPosition, config.SpawnAltitude);
+                                if (!planet.IsUnderGround(closestWaterPoint))
                                 {
-                                    spawnPosition += (normal * config.WaterSpawnAltitude);
-
-                                    if (!WaterUtils.IsUnderGround(planet, spawnPosition))
+                                    MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                                     {
-                                        MyAPIGateway.Utilities.InvokeOnGameThread(() => Grid.SetPosition(spawnPosition));
-
-                                        return;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (!config.SpawnOnWater)
-                                {
-                                    spawnPosition = surfacePosition + (normal * Math.Abs(config.WaterSpawnAltitude));
-
-                                    MyAPIGateway.Utilities.InvokeOnGameThread(() => Grid.SetPosition(spawnPosition));
+                                        Quaternion orientation = Quaternion.CreateFromForwardUp(MyUtils.GetRandomPerpendicularVector(normal), normal);
+                                        MatrixD matrix = MatrixD.CreateFromTransformScale(orientation, closestWaterPoint, Vector3D.One);
+                                        Grid.Teleport(matrix);
+                                        Grid.Physics.LinearVelocity = Vector3.Zero;
+                                        Grid.Physics.AngularVelocity = Vector3.Zero;
+                                        Grid.WorldMatrix = matrix;
+                                    });
                                     return;
                                 }
                             }
                         }
-                    });
+                        else
+                        {
+                            if (config.SpawnOnLand)
+                            {
+                                MyAPIGateway.Utilities.InvokeOnGameThread(() =>
+                                {
+                                    Quaternion orientation = Quaternion.CreateFromForwardUp(MyUtils.GetRandomPerpendicularVector(normal), normal);
+                                    MatrixD matrix = MatrixD.CreateFromTransformScale(orientation, planet.GetClosestSurfacePointGlobal(closestPlanetPosition) + (normal * Math.Abs(config.SpawnAltitude)), Vector3D.One);
+                                    Grid.Teleport(matrix);
+                                    Grid.Physics.LinearVelocity = Vector3.Zero;
+                                    Grid.Physics.AngularVelocity = Vector3.Zero;
+                                    Grid.WorldMatrix = matrix;
+                                });
+                                return;
+                            }
+                        }
+
+                        if (i == WaterData.MaxRespawnIterations - 1)
+                        {
+                            WaterUtils.WriteLog("Could not find suitable respawn area for '" + respawnShipPrefabName + "'");
+                        }
+                    }
                 }
             }
         }
@@ -2370,8 +827,8 @@ namespace Jakaria.Components
                 //Client
                 if (!MyAPIGateway.Utilities.IsDedicated)
                 {
-                    if (WaterModComponent.Session.ClosestPlanet != null)
-                        nightValue = MyMath.Clamp(Vector3.Dot(-Session.GravityDirection, WaterModComponent.Session.SunDirection) + 0.22f, 0.22f, 1f);
+                    if (Session.ClosestPlanet != null)
+                        nightValue = MyMath.Clamp(Vector3.Dot(-Session.GravityDirection, Session.SunDirection) + 0.22f, 0.22f, 1f);
 
                     Session.SunDirection = MyVisualScriptLogicProvider.GetSunDirection();
                 }
@@ -2392,7 +849,7 @@ namespace Jakaria.Components
                 Session.InsideGrid = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Grids : 0;
                 Session.InsideVoxel = MyAPIGateway.Session?.Player?.Character?.Components?.Get<MyEntityReverbDetectorComponent>() != null ? MyAPIGateway.Session.Player.Character.Components.Get<MyEntityReverbDetectorComponent>().Voxels : 0;
 
-                Session.CameraAirtight = WaterUtils.IsPositionAirtight(ref WaterModComponent.Session.CameraPosition);
+                Session.CameraAirtight = WaterUtils.IsPositionAirtight(ref Session.CameraPosition);
 
                 if (Session.CameraAirtight || ((MyAPIGateway.Session.Player.Controller?.ControlledEntity?.Entity as MyCockpit) != null && (MyAPIGateway.Session.Player.Controller.ControlledEntity.Entity as MyCockpit).OxygenFillLevel > 0f))
                     Session.InsideGrid = 25;
@@ -2400,17 +857,17 @@ namespace Jakaria.Components
                 if (MyAPIGateway.Input.IsNewGameControlPressed(MyControlsSpace.TOGGLE_HUD))
                     Settings.ShowHud = !MyAPIGateway.Session?.Config?.MinimalHud ?? true;
 
-                WaterModComponent.Session.ClosestPlanet = MyGamePruningStructure.GetClosestPlanet(Session.CameraPosition);
-                WaterModComponent.Session.ClosestWater = GetClosestWater(Session.CameraPosition);
+                Session.ClosestPlanet = MyGamePruningStructure.GetClosestPlanet(Session.CameraPosition);
+                Session.ClosestWater = GetClosestWater(Session.CameraPosition);
 
-                if (WaterModComponent.Session.ClosestPlanet != null)
+                if (Session.ClosestPlanet != null)
                 {
-                    Session.GravityDirection = Vector3.Normalize(WaterModComponent.Session.ClosestPlanet.PositionComp.GetPosition() - Session.CameraPosition);
+                    Session.GravityDirection = Vector3.Normalize(Session.ClosestPlanet.PositionComp.GetPosition() - Session.CameraPosition);
 
-                    Session.Gravity = Session.GravityDirection * WaterModComponent.Session.ClosestPlanet.Generator.SurfaceGravity;
+                    Session.Gravity = Session.GravityDirection * Session.ClosestPlanet.Generator.SurfaceGravity;
                 }
 
-                if (WaterModComponent.Session.ClosestWater != null)
+                if (Session.ClosestWater != null)
                     MyAPIGateway.Parallel.StartBackground(SimulateEffects);
 
                 DrawAfterSimulation();
@@ -2447,29 +904,30 @@ namespace Jakaria.Components
         {
             Vector4 WhiteColor = new Vector4(nightValue, nightValue, nightValue, 1);
             QuadBillboards?.Clear();
-            BillboardCache?.Clear();
-
-            if (Waters != null)
-                foreach (var Water in Waters)
-                {
-                    Water.Value.BillboardCache?.Clear();
-                }
 
             if (Waters != null)
             {
                 MyAPIGateway.Parallel.ForEach(Waters.Values, water =>
                 {
-                    if (water.PlanetConfig == null || water.Material == null)
-                        water.UpdateTexture();
+                    if (water != null)
+                    {
+                        water.BillboardCache?.Clear();
 
-                    if (water?.waterFaces != null)
-                        foreach (var face in water.waterFaces)
-                        {
-                            if (face?.Water == null)
-                                continue;
+                        if (water.PlanetConfig == null)
+                            water.UpdateTexture();
 
-                            face.Draw(WaterModComponent.Session.ClosestWater?.PlanetID == water.PlanetID);
-                        }
+                        if(water.Material == null)
+                            water.UpdateMaterial();
+
+                        if (water.waterFaces != null)
+                            foreach (var face in water.waterFaces)
+                            {
+                                if (face?.Water == null)
+                                    continue;
+
+                                face.Draw(Session.ClosestWater?.PlanetID == water.PlanetID);
+                            }
+                    }
                 });
             }
 
@@ -2494,11 +952,11 @@ namespace Jakaria.Components
                         size = splash.radius * lifeRatio;
                         axisA = Session.GravityAxisA * size;
                         axisB = Session.GravityAxisB * size;
-                        Quad.Point0 = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(splash.position - axisA - axisB);
-                        Quad.Point2 = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(splash.position + axisA + axisB);
-                        Quad.Point1 = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(splash.position - axisA + axisB);
-                        Quad.Point3 = WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(splash.position + axisA - axisB);
-
+                        Quad.Point0 = Session.ClosestWater.GetClosestSurfacePointGlobal(splash.position - axisA - axisB);
+                        Quad.Point2 = Session.ClosestWater.GetClosestSurfacePointGlobal(splash.position + axisA + axisB);
+                        Quad.Point1 = Session.ClosestWater.GetClosestSurfacePointGlobal(splash.position - axisA + axisB);
+                        Quad.Point3 = Session.ClosestWater.GetClosestSurfacePointGlobal(splash.position + axisA - axisB);
+                        //TODO MOVE TO PERSISTENCY
                         QuadBillboards.Push(new QuadBillboard(WaterData.SplashMaterial, ref Quad, WhiteColor * (1f - lifeRatio) * Session.ClosestWater.PlanetConfig.ColorIntensity));
                     }
                 }
@@ -2522,8 +980,7 @@ namespace Jakaria.Components
                 {
                     if (Settings.ShowDebug && MyAPIGateway.Session?.Player?.Character != null)
                     {
-                        MyAPIGateway.Utilities.ShowNotification("QuadBillboards " + QuadBillboards.Count, 16 * 60);
-                        MyAPIGateway.Utilities.ShowNotification("BillboardCache " + BillboardCache.Count, 16 * 60);
+                        MyAPIGateway.Utilities.ShowNotification("Depth " + Session.ClosestWater.GetDepth(ref Session.CameraPosition), 16 * 60);
                         MyAPIGateway.Utilities.ShowNotification("SimulatedSplashes " + SimulatedSplashes.Count, 16 * 60);
                         MyAPIGateway.Utilities.ShowNotification("SurfaceSplashes " + SurfaceSplashes.Count, 16 * 60);
                         MyAPIGateway.Utilities.ShowNotification("DamageQueue " + DamageQueue.Count, 16 * 60);
@@ -2531,11 +988,11 @@ namespace Jakaria.Components
                         MyAPIGateway.Utilities.ShowNotification("Waters " + Waters.Count, 16 * 60);
                     }
 
-                    Session.CameraClosestWaterPosition = WaterModComponent.Session.ClosestWater != null ? WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(Session.CameraPosition) : Vector3D.Zero;
-                    Session.CameraClosestPosition = WaterModComponent.Session.ClosestPlanet?.GetClosestSurfacePointGlobal(Session.CameraPosition) ?? Vector3D.Zero;
-                    Session.CameraAltitude = WaterModComponent.Session.ClosestPlanet != null ? WaterUtils.GetAltitude(WaterModComponent.Session.ClosestPlanet, Session.CameraPosition) : double.MaxValue;
+                    Session.CameraClosestWaterPosition = Session.ClosestWater != null ? Session.ClosestWater.GetClosestSurfacePointGlobal(Session.CameraPosition) : Vector3D.Zero;
+                    Session.CameraClosestPosition = Session.ClosestPlanet?.GetClosestSurfacePointGlobal(Session.CameraPosition) ?? Vector3D.Zero;
+                    Session.CameraAltitude = Session.ClosestPlanet != null ? WaterUtils.GetAltitude(Session.ClosestPlanet, Session.CameraPosition) : double.MaxValue;
                     Session.CameraUnderground = Session.CameraAltitude < 0;
-                    Session.CameraAboveWater = WaterModComponent.Session.ClosestWater == null || Session.CameraDepth > 0;
+                    Session.CameraAboveWater = Session.ClosestWater == null || Session.CameraDepth > 0;
                 }
             }
             catch (Exception e)
@@ -2555,7 +1012,7 @@ namespace Jakaria.Components
                 return;
 
             lock (effectLock)
-                Bubbles.Add(new AnimatedPointBillboard(position, -WaterModComponent.Session.GravityDirection, radius, MyUtils.GetRandomInt(250, 500), MyUtils.GetRandomFloat(0, 360), WaterData.BubblesMaterial));
+                Bubbles.Add(new AnimatedPointBillboard(position, -Session.GravityDirection, radius, MyUtils.GetRandomInt(250, 500), MyUtils.GetRandomFloat(0, 360), WaterData.BubblesMaterial));
         }
 
         public void CreateSplash(Vector3D Position, float Radius, bool Audible)
@@ -2647,20 +1104,20 @@ namespace Jakaria.Components
                 Session.GravityAxisB = Session.GravityAxisA.Cross(Session.GravityDirection);
             }
 
-            if (WaterModComponent.Session.ClosestWater != null)
+            if (Session.ClosestWater != null)
             {
-                Session.DistanceToHorizon = Session.CameraUnderwater ? 250 : (float)Math.Max(Math.Sqrt((Math.Pow(Math.Max(Session.CameraDepth, 50) + WaterModComponent.Session.ClosestWater.Radius, 2)) - (WaterModComponent.Session.ClosestWater.Radius * WaterModComponent.Session.ClosestWater.Radius)), 500);
+                Session.DistanceToHorizon = Session.CameraUnderwater ? 250 : (float)Math.Max(Math.Sqrt((Math.Pow(Math.Max(Session.CameraDepth, 50) + Session.ClosestWater.Radius, 2)) - (Session.ClosestWater.Radius * Session.ClosestWater.Radius)), 500);
 
-                //float dot = _face.Water.Lit ? Vector3.Dot(quadNormal, WaterModComponent.Session.SunDirection) : 1;
+                //float dot = _face.Water.Lit ? Vector3.Dot(quadNormal, Session.SunDirection) : 1;
                 //float ColorIntensity = _face.Water.Lit ? Math.Max(dot, _face.Water.PlanetConfig.AmbientColorIntensity) * _face.Water.PlanetConfig.ColorIntensity : _face.Water.PlanetConfig.ColorIntensity;
                 if (Session.ClosestWater.PlanetConfig != null)
-                    Session.AmbientColorIntensity = Math.Max(Vector3.Dot(-Session.GravityDirection, WaterModComponent.Session.SunDirection), Session.ClosestWater.PlanetConfig.AmbientColorIntensity) * Session.ClosestWater.PlanetConfig.ColorIntensity;
+                    Session.AmbientColorIntensity = Math.Max(Vector3.Dot(-Session.GravityDirection, Session.SunDirection), Session.ClosestWater.PlanetConfig.AmbientColorIntensity) * Session.ClosestWater.PlanetConfig.ColorIntensity;
                 else
                     Session.AmbientColorIntensity = 1f;
 
                 if (sunOccluder != null)
                 {
-                    sunOccluder.Render.Visible = Session.CameraUnderwater || (WaterModComponent.Session.ClosestWater.Intersects(Session.CameraPosition, Session.CameraPosition + (Session.SunDirection * 100)) != 0);
+                    sunOccluder.Render.Visible = Session.CameraUnderwater || (Session.ClosestWater.Intersects(Session.CameraPosition, Session.CameraPosition + (Session.SunDirection * 100)) != 0);
 
                     if (sunOccluder.Render.Visible)
                         sunOccluder.WorldMatrix = MatrixD.CreateWorld(Session.CameraPosition + (Session.SunDirection * 1000), -Vector3.CalculatePerpendicularVector(Session.SunDirection), -Session.SunDirection);
@@ -2671,12 +1128,12 @@ namespace Jakaria.Components
                     if (Session.CameraUnderwater)
                         particleOccluder.WorldMatrix = MatrixD.CreateWorld(Session.CameraPosition + (Session.CameraRotation * 250), -Vector3D.CalculatePerpendicularVector(Session.CameraRotation), -Session.CameraRotation);
                     else
-                        particleOccluder.WorldMatrix = MatrixD.CreateWorld(WaterModComponent.Session.ClosestWater.GetClosestSurfacePoint(Session.CameraPosition) + (Session.GravityDirection * 20), Session.GravityAxisA, -(Vector3D)Session.GravityDirection);
+                        particleOccluder.WorldMatrix = MatrixD.CreateWorld(Session.ClosestWater.GetClosestSurfacePointGlobal(Session.CameraPosition) + (Session.GravityDirection * 20), Session.GravityAxisA, -(Vector3D)Session.GravityDirection);
                 }
 
                 bool previousUnderwater = Session.CameraUnderwater;
 
-                Session.CameraDepth = WaterModComponent.Session.ClosestWater.GetDepth(ref Session.CameraPosition);
+                Session.CameraDepth = Session.ClosestWater.GetDepth(ref Session.CameraPosition);
                 Session.CameraUnderwater = Session.CameraDepth <= 0;
 
                 if (previousUnderwater != Session.CameraUnderwater)
@@ -2804,15 +1261,15 @@ namespace Jakaria.Components
                     weatherEffects.FogDensityOverride = (float)(0.06 + (0.00125 * (1.0 + (-Session.CameraDepth / 100))));
                 else
                     weatherEffects.FogDensityOverride = 0.001f;
-                
+
                 //TODO
                 /*if (Session.CameraAirtight)
                     weatherEffects.SunSpecularColorOverride = null;
                 else
                     weatherEffects.SunSpecularColorOverride = WaterMod.Session.ClosestWater.FogColor;*/
 
-                weatherEffects.FogColorOverride = Vector3.Lerp(WaterModComponent.Session.ClosestWater.FogColor, Vector3.Zero, (float)Math.Min(-Math.Min(Session.CameraDepth + 200, 0) / 800, 1)) * Math.Min(nightValue + 0.3f, 1f);
-                weatherEffects.SunIntensityOverride = Math.Max(MathHelper.Lerp(100, 0.00001f, (float)Math.Min(-Session.CameraDepth / (800 / (WaterModComponent.Session.ClosestWater.Material.Density / 1000)), 1)) * Math.Min(nightValue + 0.3f, 1f), 0);
+                weatherEffects.FogColorOverride = Vector3.Lerp(Session.ClosestWater.FogColor, Vector3.Zero, (float)Math.Min(-Math.Min(Session.CameraDepth + 200, 0) / 800, 1)) * Math.Min(nightValue + 0.3f, 1f);
+                weatherEffects.SunIntensityOverride = Math.Max(MathHelper.Lerp(100, 0.00001f, (float)Math.Min(-Session.CameraDepth / (800 / (Session.ClosestWater.Material.Density / 1000)), 1)) * Math.Min(nightValue + 0.3f, 1f), 0);
             }
 
             //Only Change fog once above water and all the time underwater
@@ -2855,8 +1312,6 @@ namespace Jakaria.Components
                     MyTransparentGeometry.AddBillboards(Water.Value.BillboardCache, false);
                 }
 
-            MyTransparentGeometry.AddBillboards(BillboardCache, false);
-
             if (Session.CameraDepth > -200)
             {
                 if (Vector3D.RectangularDistance(Session.LastLODBuildPosition, Session.CameraPosition) > 15)
@@ -2888,7 +1343,7 @@ namespace Jakaria.Components
         /// </summary>
         public void SimulateSounds()
         {
-            if (WaterModComponent.Session.ClosestPlanet?.HasAtmosphere == true && WaterModComponent.Session.ClosestWater != null)
+            if (Session.ClosestPlanet?.HasAtmosphere == true && Session.ClosestWater != null)
             {
                 //Music
                 if (Session.CameraAboveWater && Session.CameraDepth < 250)
@@ -2906,7 +1361,7 @@ namespace Jakaria.Components
                 else if (Session.CameraUnderwater)
                 {
                     //TODO USE DYNAMIC CRUSH DEPTH
-                    if (Session.CameraDepth < -WaterModComponent.Session.ClosestWater.CrushDamage)
+                    if (Session.CameraDepth < -Session.ClosestWater.CrushDamage)
                     {
                         //In crush depth
                         MyVisualScriptLogicProvider.MusicSetDynamicMusicLocal(false);
@@ -2980,7 +1435,7 @@ namespace Jakaria.Components
 
                             //TODO CRUSH DAMAGE STUF
                             if (MyAPIGateway.Session.Player?.Character != null)
-                                if (Session.CameraUnderwater && !AmbientBoatSoundEmitter.IsPlaying && Session.InsideGrid > 10 && Session.CameraDepth < -WaterModComponent.Session.ClosestWater.CrushDamage)
+                                if (Session.CameraUnderwater && !AmbientBoatSoundEmitter.IsPlaying && Session.InsideGrid > 10 && Session.CameraDepth < -Session.ClosestWater.CrushDamage)
                                 {
                                     AmbientBoatSoundEmitter.PlaySound(WaterData.GroanSound);
                                     AmbientBoatSoundEmitter.VolumeMultiplier = Settings.Volume;
@@ -3002,7 +1457,7 @@ namespace Jakaria.Components
                         if (!EnvironmentBeachSoundEmitter.IsPlaying)
                             EnvironmentBeachSoundEmitter.PlaySound(WaterData.EnvironmentBeachSound, force2D: true);
 
-                        if (closestWeather == null && Seagulls != null && WaterModComponent.Session.ClosestWater.EnableSeagulls && nightValue > 0.5f)
+                        if (closestWeather == null && Seagulls != null && Session.ClosestWater.EnableSeagulls && nightValue > 0.5f)
                             foreach (var seagull in Seagulls)
                             {
                                 if (seagull == null)
@@ -3046,7 +1501,7 @@ namespace Jakaria.Components
         /// </summary>
         public void SimulateEffects()
         {
-            if (WaterModComponent.Session.ClosestWater == null || WaterModComponent.Session.ClosestPlanet == null)
+            if (Session.ClosestWater == null || Session.ClosestPlanet == null)
                 return;
 
             lock (effectLock)
@@ -3119,14 +1574,14 @@ namespace Jakaria.Components
                                         Vector3I localPosition = grid.WorldToGridInteger(randomPosition);
                                         if (grid.GetCubeBlock(localPosition) == null && !grid.IsRoomAtPositionAirtight(localPosition))
                                         {
-                                            AmbientBubbles[i] = new AnimatedPointBillboard(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 40)), -WaterModComponent.Session.GravityDirection, 0.05f, MyUtils.GetRandomInt(150, 250), 0, WaterData.BubbleMaterial);
+                                            AmbientBubbles[i] = new AnimatedPointBillboard(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 40)), -Session.GravityDirection, 0.05f, MyUtils.GetRandomInt(150, 250), 0, WaterData.BubbleMaterial);
                                             break;
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    AmbientBubbles[i] = new AnimatedPointBillboard(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 40)), -WaterModComponent.Session.GravityDirection, 0.05f, MyUtils.GetRandomInt(150, 250), 0, WaterData.BubbleMaterial);
+                                    AmbientBubbles[i] = new AnimatedPointBillboard(Session.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(5, 40)), -Session.GravityDirection, 0.05f, MyUtils.GetRandomInt(150, 250), 0, WaterData.BubbleMaterial);
                                 }
 
                             }
@@ -3137,37 +1592,59 @@ namespace Jakaria.Components
                         }
                 }
 
-                if (WaterModComponent.Session.ClosestWater.EnableFish && WaterModComponent.Session.CameraUnderwater)
+                if (Session.ClosestWater.EnableFish)
                     for (int i = 0; i < Fishes.Length; i++)
                     {
                         Fish Fish = Fishes[i];
                         if (Fish == null || Fish.MarkedForClose)
                         {
-                            Vector3D NewPosition = WaterModComponent.Session.CameraClosestWaterPosition + (MyUtils.GetRandomPerpendicularVector(WaterModComponent.Session.GravityDirection) * MyUtils.GetRandomFloat(WaterModComponent.Session.ClosestWater.WaveHeight, 100)) + (WaterModComponent.Session.GravityDirection * (Session.ClosestWater.WaveHeight + Session.ClosestWater.TideHeight + MyUtils.GetRandomFloat(1, (float)(Session.CameraAltitude - Session.CameraDepth))));
+                            Vector3D NewPosition = Session.CameraClosestWaterPosition + (MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(Session.ClosestWater.WaveHeight, 100)) + (Session.GravityDirection * (Session.ClosestWater.WaveHeight + Session.ClosestWater.TideHeight + MyUtils.GetRandomFloat(1, (float)(Session.CameraAltitude - Session.CameraDepth))));
 
-                            Fishes[i] = new Fish(NewPosition, MyUtils.GetRandomPerpendicularVector(WaterModComponent.Session.GravityDirection), WaterModComponent.Session.GravityDirection, MyUtils.GetRandomInt(1000, 2000), 1);
+                            Fishes[i] = new Fish(NewPosition, MyUtils.GetRandomPerpendicularVector(Session.GravityDirection), Session.GravityDirection, MyUtils.GetRandomInt(1000, 2000), 1);
                         }
                         else
                         {
                             Fish.Simulate();
                         }
                     }
+                else
+                {
+                    foreach (var seagull in Seagulls)
+                    {
+                        if (seagull != null && seagull.InScene)
+                        {
+                            MyTransparentGeometry.RemovePersistentBillboard(seagull.Billboard);
+                            seagull.InScene = false;
+                        }
+                    }
+                }
 
-                if (WaterModComponent.Session.ClosestWater.EnableSeagulls && !WaterModComponent.Session.CameraUnderwater)
+                if (Session.ClosestWater.EnableSeagulls)
                     for (int i = 0; i < Seagulls.Length; i++)
                     {
                         Seagull Seagull = Seagulls[i];
                         if (Seagull == null || Seagull.MarkedForClose)
                         {
-                            Vector3D NewPosition = WaterModComponent.Session.CameraClosestPosition - (WaterModComponent.Session.GravityDirection * (WaterModComponent.Session.CameraAltitude + WaterModComponent.Session.CameraDepth + MyUtils.GetRandomDouble(10, 50))) + (MyUtils.GetRandomPerpendicularVector(WaterModComponent.Session.GravityDirection) * MyUtils.GetRandomFloat(0, 100));
+                            Vector3D NewPosition = Session.CameraClosestPosition - (Session.GravityDirection * (Session.CameraAltitude + Session.CameraDepth + MyUtils.GetRandomDouble(10, 50))) + (MyUtils.GetRandomPerpendicularVector(Session.GravityDirection) * MyUtils.GetRandomFloat(0, 100));
 
-                            Seagulls[i] = new Seagull(NewPosition, MyUtils.GetRandomPerpendicularVector(WaterModComponent.Session.GravityDirection), WaterModComponent.Session.GravityDirection, MyUtils.GetRandomInt(2000, 3000), 1);
+                            Seagulls[i] = new Seagull(NewPosition, MyUtils.GetRandomPerpendicularVector(Session.GravityDirection), Session.GravityDirection, MyUtils.GetRandomInt(2000, 3000), 1);
                         }
                         else
                         {
                             Seagull.Simulate();
                         }
                     }
+                else
+                {
+                    foreach (var seagull in Seagulls)
+                    {
+                        if (seagull != null && seagull.InScene)
+                        {
+                            MyTransparentGeometry.RemovePersistentBillboard(seagull.Billboard);
+                            seagull.InScene = false;
+                        }
+                    }
+                }
             }
         }
 

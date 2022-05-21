@@ -170,7 +170,7 @@ namespace Jakaria.API
         public static void RunCommand(string MessageText)
         {
             bool SendToOthers = false;
-            WaterModComponent.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
+            WaterCommandComponent.Static.Utilities_MessageEntered(MessageText, ref SendToOthers);
         }
 
         public static void BeforeStart()
@@ -180,19 +180,19 @@ namespace Jakaria.API
 
         public static void LoadData()
         {
-            WaterUtils.WriteLog("Beginning load water block configs");
+            WaterUtils.WriteLog("Beginning load water configs");
 
+            TextReader reader = null;
             try
             {
                 foreach (var Mod in MyAPIGateway.Session.Mods)
                 {
                     if (MyAPIGateway.Utilities.FileExistsInModLocation("Data/WaterConfig.xml", Mod))
                     {
-
-                        TextReader Reader = MyAPIGateway.Utilities.ReadFileInModLocation("Data/WaterConfig.xml", Mod);
-                        if (Reader != null)
+                        reader = MyAPIGateway.Utilities.ReadFileInModLocation("Data/WaterConfig.xml", Mod);
+                        if (reader != null)
                         {
-                            string xml = Reader.ReadToEnd();
+                            string xml = reader.ReadToEnd();
 
                             if (xml.Length > 0)
                             {
@@ -208,9 +208,12 @@ namespace Jakaria.API
                                         }
 
                                         BlockConfig.Init();
-                                        
-                                        WaterData.BlockConfigs[BlockConfig.DefinitionId] = BlockConfig;
-                                        WaterUtils.WriteLog("Loaded Block Config '" + BlockConfig.DefinitionId + "'");
+
+                                        if (!BlockConfig.DefinitionId.TypeId.IsNull)
+                                        {
+                                            WaterData.BlockConfigs[BlockConfig.DefinitionId] = BlockConfig;
+                                            WaterUtils.WriteLog("Loaded Block Config '" + BlockConfig.DefinitionId + "'");
+                                        }
                                     }
 
                                 if (WaterConfig.PlanetConfigs != null)
@@ -224,8 +227,11 @@ namespace Jakaria.API
 
                                         PlanetConfig.Init();
 
-                                        WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
-                                        WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
+                                        if (!PlanetConfig.DefinitionId.TypeId.IsNull)
+                                        {
+                                            WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
+                                            WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
+                                        }
                                     }
 
                                 if (WaterConfig.CharacterConfigs != null)
@@ -233,8 +239,11 @@ namespace Jakaria.API
                                     {
                                         CharacterConfig.Init();
 
-                                        WaterData.CharacterConfigs[CharacterConfig.DefinitionId] = CharacterConfig;
-                                        WaterUtils.WriteLog("Loaded Character Config '" + CharacterConfig.DefinitionId + "'");
+                                        if (!CharacterConfig.DefinitionId.TypeId.IsNull)
+                                        {
+                                            WaterData.CharacterConfigs[CharacterConfig.DefinitionId] = CharacterConfig;
+                                            WaterUtils.WriteLog("Loaded Character Config '" + CharacterConfig.DefinitionId + "'");
+                                        }
                                     }
 
                                 if (WaterConfig.RespawnPodConfigs != null)
@@ -242,8 +251,11 @@ namespace Jakaria.API
                                     {
                                         RespawnPodConfig.Init();
 
-                                        WaterData.RespawnPodConfigs[RespawnPodConfig.DefinitionId] = RespawnPodConfig;
-                                        WaterUtils.WriteLog("Loaded Respawn Pod Config '" + RespawnPodConfig.DefinitionId + "'");
+                                        if (!RespawnPodConfig.DefinitionId.TypeId.IsNull)
+                                        {
+                                            WaterData.RespawnPodConfigs[RespawnPodConfig.DefinitionId] = RespawnPodConfig;
+                                            WaterUtils.WriteLog("Loaded Respawn Pod Config '" + RespawnPodConfig.DefinitionId + "'");
+                                        }
                                     }
 
                                 if (WaterConfig.WaterTextures != null)
@@ -258,11 +270,9 @@ namespace Jakaria.API
                                     {
                                         Material.Init();
 
-                                        WaterData.MaterialConfigs[Material.SubtypeId] = Material;
-                                        WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
+                                            WaterData.MaterialConfigs[Material.SubtypeId] = Material;
+                                            WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
                                     }
-
-                                Reader.Dispose();
                             }
                         }
                     }
@@ -270,10 +280,15 @@ namespace Jakaria.API
             }
             catch(Exception e)
             {
+                WaterUtils.WriteLog("Exception loading water configs");
                 WaterUtils.WriteLog(e.ToString());
             }
+            finally
+            {
+                reader?.Dispose();
+            }
 
-            WaterUtils.WriteLog("Finished loading water block configs");
+            WaterUtils.WriteLog("Finished loading water configs");
         }
 
         #region Water
@@ -303,9 +318,9 @@ namespace Jakaria.API
         public static Vector3D GetClosestSurfacePoint(Vector3D Position, long? ID = null)
         {
             if (ID == null)
-                return WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position;
+                return WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePointGlobal(Position) ?? Position;
             else
-                return WaterModComponent.Static.Waters[ID.Value].GetClosestSurfacePoint(Position);
+                return WaterModComponent.Static.Waters[ID.Value].GetClosestSurfacePointGlobal(Position);
         }
 
         public static void GetClosestSurfacePoints(List<Vector3D> Positions, ICollection<Vector3D> Points, long? ID = null)
@@ -314,7 +329,7 @@ namespace Jakaria.API
             {
                 foreach (var Position in Positions)
                 {
-                    Points.Add(WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePoint(Position) ?? Position);
+                    Points.Add(WaterModComponent.Static.GetClosestWater(Position)?.GetClosestSurfacePointGlobal(Position) ?? Position);
                 }
             }
             else
@@ -323,7 +338,7 @@ namespace Jakaria.API
 
                 foreach (var Position in Positions)
                 {
-                    Points.Add(Water.GetClosestSurfacePoint(Position));
+                    Points.Add(Water.GetClosestSurfacePointGlobal(Position));
                 }
             }
         }

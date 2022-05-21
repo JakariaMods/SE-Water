@@ -11,11 +11,14 @@ namespace Jakaria.Configs
     [ProtoContract]
     public class RespawnPodConfig : BaseConfig
     {
-        [ProtoMember(1), XmlAttribute("WaterSpawnAltitude")]
-        public float WaterSpawnAltitude = 1000;
+        [ProtoMember(1)]
+        public float SpawnAltitude = 1000;
 
-        [ProtoMember(5), XmlAttribute("SpawnOnWater")]
+        [ProtoMember(5)]
         public bool SpawnOnWater = false;
+
+        [ProtoMember(10)]
+        public bool SpawnOnLand = true;
 
         public RespawnPodConfig() { }
     }

@@ -12,7 +12,7 @@ namespace Jakaria.Configs
         public float Density = 1024;
 
         [ProtoMember(5)]
-        public float Viscosity = 0.1f;
+        public float Viscosity = 0.05f;
 
         [ProtoMember(10)]
         public bool DrawSplashes = true;
@@ -24,16 +24,16 @@ namespace Jakaria.Configs
         public bool DrawWakes = true;
 
         [ProtoMember(25), XmlElement("CollectedItem")]
-        public string CollectedItemSubtypeId;
+        public string CollectedItemSubtypeId = "Ice";
 
         [ProtoIgnore(), XmlIgnore()]
         public MyObjectBuilder_PhysicalObject CollectedItem;
 
-        [ProtoMember(21)]
+        [ProtoMember(26)]
         public int CollectedAmount = 50;
 
         [ProtoMember(30)]
-        public float MaxSurfaceFluctuation = 3f;
+        public float MaxSurfaceFluctuation = 5f;
 
         [ProtoMember(31)]
         public float SurfaceFluctuationAngleSpeed = 2f;
@@ -42,9 +42,9 @@ namespace Jakaria.Configs
         public float SurfaceFluctuationSpeed = 0.5f;
 
         [ProtoMember(35)]
-        public float Reflectivity = 0.8f;
+        public float Reflectivity = 0.7f;
 
-        [ProtoMember(35)]
+        [ProtoMember(40)]
         public float UnderwaterReflectivity = 0.2f;
 
         public override void Init()
@@ -56,5 +56,7 @@ namespace Jakaria.Configs
         }
 
         public MaterialConfig() { }
+
+        public MaterialConfig(bool AutoInit) { if (AutoInit) base.Init(); }
     }
 }

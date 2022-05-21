@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Xml.Serialization;
+using Jakaria.Utils;
 using ProtoBuf;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game;
@@ -33,20 +34,30 @@ namespace Jakaria.Components
             if (MyAPIGateway.Session.IsServer)
             {
                 parachute = Entity as IMyParachute;
-                Entity.Components.TryGet<WaterPhysicsComponentGrid>(out physComponent);
                 NeedsUpdate = MyEntityUpdateEnum.EACH_10TH_FRAME;
             }
         }
 
         public override void UpdateAfterSimulation10()
         {
-            if(physComponent != null)
+            if(physComponent == null)
+                parachute.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out physComponent);
+
+            if (parachute.CubeGrid?.Physics == null)
+                return;
+
+            if (physComponent != null)
             {
-                //opens the parachute if the altitude above the water is less than the autodeploy height.
-                if(parachute.AutoDeploy && physComponent.FluidDepth < parachute.AutoDeployHeight && parachute.OpenRatio == 0)
+                //opens the parachute if the altitude above the water is less than the autodeploy height
+                if (physComponent.FluidDepth > parachute.CubeGrid.LocalVolume.Radius)
                 {
-                    parachute.OpenDoor();
+                    if (parachute.AutoDeploy && physComponent.FluidDepth < parachute.AutoDeployHeight && parachute.OpenRatio == 0)
+                    {
+                        parachute.OpenDoor();
+                    }
                 }
+                else if(parachute.CubeGrid.Physics?.Speed < 3)
+                    parachute.CloseDoor();
             }
         }
     }

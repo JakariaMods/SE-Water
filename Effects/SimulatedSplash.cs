@@ -47,12 +47,12 @@ namespace Jakaria
         public override void Simulate()
         {
             Position += Velocity;
-            Velocity += WaterModComponent.Session.Gravity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+            Velocity += WaterModComponent.Static.Session.Gravity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
 
-            if (WaterModComponent.Session.ClosestWater != null)
+            if (WaterModComponent.Static.Session.ClosestWater != null)
             {
                 //Optimized method for determining if the particle is underwater
-                if ((WaterModComponent.Session.ClosestWater.Position - Position).LengthSquared() - (WaterModComponent.Session.ClosestWater.Position - WaterModComponent.Session.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
+                if ((WaterModComponent.Static.Session.ClosestWater.Position - Position).LengthSquared() - (WaterModComponent.Static.Session.ClosestWater.Position - WaterModComponent.Static.Session.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
                 {
                     MarkedForClose = true;
 
@@ -68,7 +68,7 @@ namespace Jakaria
             {
                 MyQuadD quad;
 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterModComponent.Session.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterModComponent.Static.Session.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;

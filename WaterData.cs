@@ -11,7 +11,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.4";
+        public const string Version = "3.7";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
@@ -26,6 +26,7 @@ namespace Jakaria
         public static readonly MyStringId SeagullMaterial = MyStringId.GetOrCompute("JSeagull");
         public static readonly MyStringId GodRayMaterial = MyStringId.GetOrCompute("JGodRay");
         public static readonly MyStringId FoamMaterial = MyStringId.GetOrCompute("JFoam");
+        public static readonly MyStringId WakeMaterial = MyStringId.GetOrCompute("JWake");
         public static readonly MyStringId FishMaterial = MyStringId.GetOrCompute("JFish");
         public static readonly MyStringId PhysicalSplashMaterial = MyStringId.GetOrCompute("JPhysicalSplash");
 
@@ -88,7 +89,7 @@ namespace Jakaria
         public static readonly Vector4 WaterDeepColor = new Vector4(1, 1, 1, 0.98f);
         public static readonly Vector4 WaterUnderwaterColor = new Vector4(1, 1, 1, 0.75f);
         public static readonly Vector4 WaterFadeColor = new Vector4(1, 1, 1, 0.8f);
-        public static readonly Vector4 WakeColor = new Vector4(0.5f, 0.5f, 0.5f, 0.5f);
+        public static readonly Vector4 WakeColor = new Vector4(0.3f, 0.3f, 0.3f, 0.3f);
         public static readonly Vector4 SmallBubbleColor = new Vector4(0.15f, 0.2f, 0.25f, 0.2f);
         public static readonly Vector4 BlackColor = new Vector4(0, 0, 0, 1);
         public static readonly Vector4 RedColor = new Vector4(1, 0, 0, 1);
@@ -118,7 +119,13 @@ namespace Jakaria
         /// <summary>
         /// Dictionary for respawn pod water settings
         /// </summary>
-        public static Dictionary<string, MaterialConfig> MaterialConfigs = new Dictionary<string, MaterialConfig>();
+        public static Dictionary<string, MaterialConfig> MaterialConfigs = new Dictionary<string, MaterialConfig>()
+        {
+            {
+                "Water",
+                new MaterialConfig(true)
+            },
+        };
 
         /// <summary>
         /// Hashset of available water textures
@@ -191,5 +198,7 @@ namespace Jakaria
         public const float MaxWakeRadius = 20;
 
         public const MyBillboard.BlendTypeEnum BlendType = MyBillboard.BlendTypeEnum.Standard;
+
+        public const int MaxRespawnIterations = 500;
     }
 }

@@ -97,7 +97,7 @@ namespace Jakaria.Components
         {
             UpdateClosestWater();
 
-            if (!MyAPIGateway.Utilities.IsDedicated && Vector3D.DistanceSquared(position, WaterModComponent.Session.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
+            if (!MyAPIGateway.Utilities.IsDedicated && Vector3D.DistanceSquared(position, WaterModComponent.Static.Session.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
             {
                 SimulateEffects = true;
             }

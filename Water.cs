@@ -163,7 +163,7 @@ namespace Jakaria
         public List<MyBillboard> BillboardCache = new List<MyBillboard>();
 
         /// <summary>Provide a planet entity and it will set everything up for you</summary>
-        public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.032f)
+        public Water(MyPlanet planet, WaterSettings settings = null, float radiusMultiplier = 1.03f)
         {
             if (settings != null)
             {
@@ -271,21 +271,29 @@ namespace Jakaria
         }
 
         /// <summary>Returns the closest point to water</summary>
-        public Vector3D GetClosestSurfacePoint(Vector3D position, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointGlobal(Vector3D position, double altitudeOffset = 0)
         {
             Vector3D up = Vector3D.Normalize(position - this.Position);
 
-            return ApplyWavesToSurfaceVector(this.Position + (up * (this.Radius + altitudeOffset)), ref up);
+            return this.Position + ApplyWavesToSurfaceVector((up * (this.Radius + altitudeOffset)), ref up);
+        }
+
+        /// <summary>Returns the closest point to water</summary>
+        public Vector3D GetClosestSurfacePointLocal(Vector3D position, double altitudeOffset = 0)
+        {
+            Vector3D up = Vector3D.Normalize(position);
+
+            return ApplyWavesToSurfaceVector((up * (this.Radius + altitudeOffset)), ref up);
         }
 
         /// <summary>Returns the closest point using a provided normal</summary>
         public Vector3D GetClosestSurfacePointFromNormal(ref Vector3D up, double altitudeOffset = 0)
         {
-            Vector3D position = this.Position + ((up * (Radius + altitudeOffset)));
+            Vector3D position = ((up * (Radius + altitudeOffset)));
             
             //Horizontal Fluctuation
             position += WaterUtils.GetPerpendicularVector(up, noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationAngleSpeed) * MathHelperD.TwoPi) * noise.GetNoise((position + this.WaveTimer) * Material.SurfaceFluctuationSpeed) * Material.MaxSurfaceFluctuation;
-            return ApplyWavesToSurfaceVector(position, ref up);
+            return this.Position + ApplyWavesToSurfaceVector(position, ref up);
         }
 
         /// <summary>Returns the closest point to water</summary>
@@ -400,14 +408,19 @@ namespace Jakaria
         /// <summary>Returns the depth of water a position is at, negative numbers are underwater</summary>
         public double GetDepth(ref Vector3D position)
         {
-            return ((this.Position - position).Length() - (this.Position - GetClosestSurfacePoint(position)).Length());
-            //return GetClosestSurfacePoint(position).Length() - position.Length();
+            Vector3D up = Vector3D.Normalize(position - this.Position);
+            Vector3D surface = ApplyWavesToSurfaceVector(up * this.Radius, ref up);
+
+            return ((this.Position - position).Length() - surface.Length());
         }
 
         /// <summary>Returns the squared depth of water a position is at, negative numbers are underwater</summary>
         public double GetDepthSquared(ref Vector3D position)
         {
-            return ((this.Position - position).LengthSquared() - (this.Position - GetClosestSurfacePoint(position)).LengthSquared());
+            Vector3D up = Vector3D.Normalize(position - this.Position);
+            Vector3D surface = ApplyWavesToSurfaceVector(up * this.Radius, ref up);
+
+            return ((this.Position - position).LengthSquared() - surface.LengthSquared());
         }
 
         /// <summary>Returns the up direction at a position</summary>

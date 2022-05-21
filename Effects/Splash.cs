@@ -30,12 +30,12 @@ namespace Jakaria
                 splashSound = new MyEntity3DSoundEmitter(null);
                 splashSound.SetPosition(position);
 
-                if(WaterModComponent.Session.CameraUnderwater)
+                if(WaterModComponent.Static.Session.CameraUnderwater)
                     splashSound.PlaySound(WaterData.UnderwaterSplashSound);
                 else
                     splashSound.PlaySound(WaterData.SplashSound);
 
-                splashSound.CustomVolume = Volume * WaterModComponent.Settings.Volume * ((25f - Math.Max(WaterModComponent.Session.InsideGrid - 10, 0)) / 25f);
+                splashSound.CustomVolume = Volume * WaterModComponent.Static.Settings.Volume * ((25f - Math.Max(WaterModComponent.Static.Session.InsideGrid - 10, 0)) / 25f);
             }
         }
     }

@@ -26,7 +26,7 @@ using VRageMath;
 
 namespace Jakaria.Components
 {
-    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false)]
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), true)]
     public class WaterCollectorComponent : MyGameLogicComponent
     {
         public IMyCollector Block;
@@ -60,8 +60,22 @@ namespace Jakaria.Components
 
                     if (ClosestWater.IsUnderwater(ref blockPosition))
                     {
-                        if (!_inventory.IsFull && ClosestWater.Material.CollectedItem != null)
+                        if (!_inventory.IsFull)
                         {
+                            if (ClosestWater.Material == null)
+                            {
+                                WaterUtils.WriteLog("Water Material is null. Disabling collector");
+                                NeedsUpdate = MyEntityUpdateEnum.NONE;
+                                return;
+                            }
+
+                            if (ClosestWater.Material.CollectedItem == null)
+                            {
+                                WaterUtils.WriteLog("Water Item is null. Disabling collector. " + ClosestWater.Material.CollectedItemSubtypeId);
+                                NeedsUpdate = MyEntityUpdateEnum.NONE;
+                                return;
+                            }
+
                             if (Block.CubeGrid.GridSizeEnum == MyCubeSize.Large)
                                 _inventory.AddItems((int)(ClosestWater.Material.CollectedAmount * ClosestWater.CollectionRate), ClosestWater.Material.CollectedItem);
                             else

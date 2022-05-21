@@ -8,7 +8,7 @@
         public string WaterModVersion = "Water Mod V{0} by Jakaria.";
         public string TranslationAuthor = "Jakaria";
 
-        public string NoPlanetWater = "This planet does not have water";
+        public string NoWater = "This planet does not have water";
         public string NoPlanet = "No nearby planet found.";
 
         public string SetLanguage = "Set the language to '{0}'.";
@@ -72,6 +72,8 @@
         public string GenericNoParse = "Could not parse '{0}'.";
         public string GenericNoPermissions = "You do not have permissions to run this command.";
         public string GenericNoCreative = "You must be in creative mode to toggle fog.";
+        public string GenericMinArgs = "Not enough args. '{0}' Minimum";
+        public string GenericMaxArgs = "Too many args. '{0}' Maximum";
 
         public string ToggleDebug = "Toggled debug mode.";
 
@@ -96,6 +98,8 @@
 
         public string ListMaterials = "Available materials: ";
         public string NoMaterials = "Couldn't find any materials.";
+
+        public string ListCommands = "Available commands: ";
 
         public string NoTextAPI = "You do not have Text HUD API installed.";
 

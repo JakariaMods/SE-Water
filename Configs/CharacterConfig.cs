@@ -15,19 +15,19 @@ namespace Jakaria.Configs
         public float Volume = -1;
 
         [ProtoMember(5), XmlAttribute("SwimForce")]
-        public float SwimForce = 1000;
+        public float SwimForce = 1200;
 
         [ProtoMember(10), XmlAttribute("CanBreathUnderwater")]
         public bool CanBreathUnderwater = false;
 
         [ProtoMember(15), XmlAttribute("MaximumPressure")]
-        public float MaximumPressure = -1;
+        public float MaximumPressure = 2940;
 
         [ProtoMember(20), XmlAttribute("Breath")]
-        public int Breath = 10;
+        public int Breath = 15;
 
         [ProtoMember(25), XmlAttribute("DrowningDamage")]
-        public int DrowningDamage = 15;
+        public int DrowningDamage = 10;
 
         public CharacterConfig(string typeId, string subtypeId)
         {

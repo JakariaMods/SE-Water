@@ -18,7 +18,7 @@ namespace Jakaria
                 WaterModVersion = "Water Mod V{0} de Jakaria.",
                 TranslationAuthor = "Jakaria",
 
-                NoPlanetWater = "La planete n'a pas l'eau.",
+                NoWater = "La planete n'a pas l'eau.",
                 NoPlanet = "Il n'ya pas un planete voisin.",
 
                 SetLanguage = "Fixe la langue a '{0}'.",
@@ -67,7 +67,7 @@ namespace Jakaria
                 WaterModVersion = "Water Mod V{0} od Jakaria.",
                 TranslationAuthor = "ŁukaszLutek",
 
-                NoPlanetWater = "Brak wody na tej planecie.",
+                NoWater = "Brak wody na tej planecie.",
                 NoPlanet = "Brak planety w pobliżu.",
 
                 SetLanguage = "Ustawiono język na '{0}'. Przetłumaczone przez: {1}.",
@@ -116,7 +116,7 @@ namespace Jakaria
                 WaterModVersion = "Water Mod V{0} by Jakaria.",
                 TranslationAuthor = "Voss",
 
-                NoPlanetWater = "Dieser Planet hat kein Wasser.",
+                NoWater = "Dieser Planet hat kein Wasser.",
                 NoPlanet = "Kein Planet in Reichweite.",
 
                 SetLanguage = "Sprache umstellen auf '{0}'. Übersetzt von {1}.",
@@ -165,7 +165,7 @@ namespace Jakaria
                 WaterModVersion = "Water Mod V{0} plundered from Jakaria.",
                 TranslationAuthor = "Mad Cap'n LL",
 
-                NoPlanetWater = "Ain't no seas here.",
+                NoWater = "Ain't no seas here.",
                 NoPlanet = "Arrr. Where is the land?",
 
                 SetLanguage = "Now we be speaking '{0}'. Order from {1}.",
@@ -214,7 +214,7 @@ namespace Jakaria
                 WaterModVersion = "Water Mod V{0} по Jakaria.",
                 TranslationAuthor = "Google Translate",
 
-                NoPlanetWater = "На этой планете нет воды.",
+                NoWater = "На этой планете нет воды.",
                 NoPlanet = "Планеты нет.",
 
                 SetLanguage = "Установите язык на '{0}'. переведено {1}",
