@@ -52,7 +52,7 @@
         public string SetWaveSpeed = "Set the water's wave speed to '{0}'.";
         public string SetWaveSpeedNoParse = "Couldn't parse wave speed '{0}'.";
 
-        public string HasWater = "This planet already has public string UIWater";
+        public string HasWater = "This planet already has water";
         public string CreateWater = "Created water at your closest planet.";
         public string RemoveWater = "Removed the water at your closest planet.";
 
@@ -74,6 +74,7 @@
         public string GenericNoCreative = "You must be in creative mode to toggle fog.";
         public string GenericMinArgs = "Not enough args. '{0}' Minimum";
         public string GenericMaxArgs = "Too many args. '{0}' Maximum";
+        public string GenericNotEnoughArgs = "Not enough args";
 
         public string ToggleDebug = "Toggled debug mode.";
 

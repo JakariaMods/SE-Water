@@ -28,11 +28,10 @@ namespace Jakaria.TSS
         public static float DECORATION_RATIO = 0.25f;
         public static float TEXT_RATIO = 0.25f;
 
-        private Vector2 m_innerSize;
+        private Vector2 _innerSize;
+        private StringBuilder _stringBuilder = new StringBuilder();
 
-        private StringBuilder m_sb = new StringBuilder();
-
-        WaterPhysicsComponentGrid waterComponent;
+        private WaterPhysicsComponentGrid _waterComponent;
 
         public override ScriptUpdate NeedsUpdate
         {
@@ -41,10 +40,10 @@ namespace Jakaria.TSS
 
         public TSSDepth(IMyTextSurface surface, IMyCubeBlock block, Vector2 size) : base(surface, block, size)
         {
-            m_innerSize = new Vector2(ASPECT_RATIO, 1.1f);
-            FitRect(surface.SurfaceSize, ref m_innerSize);
+            _innerSize = new Vector2(ASPECT_RATIO, 1.1f);
+            FitRect(surface.SurfaceSize, ref _innerSize);
 
-            Block.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out waterComponent);
+            Block.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out _waterComponent);
         }
 
         public override void Run()
@@ -58,40 +57,40 @@ namespace Jakaria.TSS
                 if (m_block == null)
                     return;
 
-                m_sb.Clear();
-                m_sb.Append("Depth:");
+                _stringBuilder.Clear();
+                _stringBuilder.Append("Depth:");
 
                 var Text = new MySprite()
                 {
                     Position = new Vector2(m_halfSize.X, m_halfSize.Y - 16),
-                    Size = new Vector2(m_innerSize.X, m_innerSize.Y),
+                    Size = new Vector2(_innerSize.X, _innerSize.Y),
                     Type = SpriteType.TEXT,
                     FontId = m_fontId,
                     Alignment = TextAlignment.CENTER,
                     Color = m_foregroundColor,
                     RotationOrScale = m_fontScale,
-                    Data = m_sb.ToString(),
+                    Data = _stringBuilder.ToString(),
                 };
 
                 frame.Add(Text);
-                m_sb.Clear();
-                m_sb.Append(waterComponent != null ? (-waterComponent.FluidDepth).ToString("0") + "m" : "0m");
+                _stringBuilder.Clear();
+                _stringBuilder.Append(_waterComponent != null ? (-_waterComponent.FluidDepth).ToString("0") + "m" : "0m");
 
                 var Text2 = new MySprite()
                 {
                     Position = new Vector2(m_halfSize.X, m_halfSize.Y + 16),
-                    Size = new Vector2(m_innerSize.X, m_innerSize.Y),
+                    Size = new Vector2(_innerSize.X, _innerSize.Y),
                     Type = SpriteType.TEXT,
                     FontId = m_fontId,
                     Alignment = TextAlignment.CENTER,
                     Color = m_foregroundColor,
                     RotationOrScale = m_fontScale,
-                    Data = m_sb.ToString(),
+                    Data = _stringBuilder.ToString(),
 
                 };
                 frame.Add(Text2);
 
-                AddBrackets(frame, new Vector2(64, 256), m_innerSize.Y / 256 * 0.9f, (m_size.X - m_innerSize.X) / 2);
+                AddBrackets(frame, new Vector2(64, 256), _innerSize.Y / 256 * 0.9f, (m_size.X - _innerSize.X) / 2);
             }
         }
 

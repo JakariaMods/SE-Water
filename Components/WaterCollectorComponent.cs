@@ -8,15 +8,12 @@ using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.Game.GameSystems;
-using Sandbox.Game.Localization;
 using Sandbox.ModAPI;
 using Sandbox.ModAPI.Interfaces;
 using Sandbox.ModAPI.Interfaces.Terminal;
 using SpaceEngineers.Game.ModAPI;
-using VRage;
 using VRage.Game;
 using VRage.Game.Components;
-using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
@@ -26,61 +23,42 @@ using VRageMath;
 
 namespace Jakaria.Components
 {
-    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), true)]
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Collector), false)]
     public class WaterCollectorComponent : MyGameLogicComponent
     {
-        public IMyCollector Block;
-        public Water ClosestWater;
-
-        private IMyInventory _inventory;
+        private IMyCollector _collector;
+        private WaterPhysicsComponentGrid _waterComponent;
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
-            Block = Entity as IMyCollector;
-            _inventory = Block.GetInventory();
-            Block.UseConveyorSystem = false;
-            NeedsUpdate = MyEntityUpdateEnum.EACH_10TH_FRAME;
+            _collector = Entity as IMyCollector;
+
+            if (MyAPIGateway.Session.IsServer)
+            {
+                NeedsUpdate = MyEntityUpdateEnum.EACH_10TH_FRAME;
+            }
         }
 
         public override void UpdateAfterSimulation10()
         {
-            if (Block.CubeGrid?.Physics == null || !Block.IsWorking)
+            if(_waterComponent == null)
+                _collector.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out _waterComponent);
+
+            if (_collector.CubeGrid.Physics == null || !_collector.HasInventory)
                 return;
 
-            if (_inventory == null)
-                _inventory = Block.GetInventory();
-
-            if (_inventory != null)
+            if (_collector.IsWorking && _waterComponent?.ClosestWater?.Material?.CollectedItem != null)
             {
-                ClosestWater = WaterModComponent.Static.GetClosestWater(Block.PositionComp.GetPosition());
-
-                if (ClosestWater != null && ClosestWater.CollectionRate > 0)
+                Vector3D worldPosition = _collector.GetPosition();
+                if (_waterComponent.ClosestWater.IsUnderwater(ref worldPosition))
                 {
-                    Vector3D blockPosition = Block.CubeGrid.GridIntegerToWorld(Block.Position);
-
-                    if (ClosestWater.IsUnderwater(ref blockPosition))
+                    IMyInventory inventory = _collector.GetInventory();
+                    if (inventory != null)
                     {
-                        if (!_inventory.IsFull)
-                        {
-                            if (ClosestWater.Material == null)
-                            {
-                                WaterUtils.WriteLog("Water Material is null. Disabling collector");
-                                NeedsUpdate = MyEntityUpdateEnum.NONE;
-                                return;
-                            }
-
-                            if (ClosestWater.Material.CollectedItem == null)
-                            {
-                                WaterUtils.WriteLog("Water Item is null. Disabling collector. " + ClosestWater.Material.CollectedItemSubtypeId);
-                                NeedsUpdate = MyEntityUpdateEnum.NONE;
-                                return;
-                            }
-
-                            if (Block.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                                _inventory.AddItems((int)(ClosestWater.Material.CollectedAmount * ClosestWater.CollectionRate), ClosestWater.Material.CollectedItem);
-                            else
-                                _inventory.AddItems((int)((ClosestWater.Material.CollectedAmount / 5f) * ClosestWater.CollectionRate), ClosestWater.Material.CollectedItem);
-                        }
+                        if(_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
+                            inventory.AddItems(_waterComponent.ClosestWater.Material.CollectedAmount, _waterComponent.ClosestWater.Material.CollectedItem);
+                        else
+                            inventory.AddItems(_waterComponent.ClosestWater.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Material.CollectedItem);
                     }
                 }
             }

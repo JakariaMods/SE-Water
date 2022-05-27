@@ -14,6 +14,8 @@ using VRage.Game;
 using Sandbox.ModAPI;
 using Jakaria.Utils;
 using Jakaria.Components;
+using Jakaria.SessionComponents;
+
 namespace Jakaria
 {
     public class AnimatedPointBillboard : AnimatedBillboard
@@ -41,11 +43,10 @@ namespace Jakaria
                 CustomViewProjection = -1,
                 ColorIntensity = 1f,
                 Material = material,
-                UVSize = Vector2.One,
-                UVOffset = Vector2.Zero,
+                UVSize = Vector2.One
             };
 
-            initialColor = Billboard.Color;
+            _initialColor = Billboard.Color;
 
             InScene = true;
             MyTransparentGeometry.AddBillboard(Billboard, true);
@@ -59,13 +60,13 @@ namespace Jakaria
             {
                 MyQuadD quad;
                 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterModComponent.Static.Session.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterRenderComponent.Static.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;
                 Billboard.Position3 = quad.Point3;
 
-                Billboard.Color = Vector4.Lerp(initialColor, Vector4.Zero, (float)Life / (float)MaxLife);
+                Billboard.Color = Vector4.Lerp(_initialColor, Vector4.Zero, (float)Life / (float)MaxLife);
             }
 
             Life++;

@@ -19,6 +19,8 @@ namespace Jakaria
         public bool RequirePlanet;
         public bool RequireWater;
 
+        public bool SyncWater;
+
         public Command(Action<string[]> action)
         {
             Action = action;
@@ -29,6 +31,7 @@ namespace Jakaria
             MaxArgs = 1;
             RequirePlanet = false;
             RequireWater = false;
+            SyncWater = false;
         }
     }
 }

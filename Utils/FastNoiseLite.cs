@@ -1,4 +1,4 @@
-//HEAVILY cut down version of FastNoiseLite to get past KSH mod profiler
+//HEAVILY cut down version of FastNoiseLite to maximize performance
 
 // MIT License
 //
@@ -53,18 +53,11 @@ using System;
 using System.Runtime.CompilerServices;
 using VRageMath;
 
-public class FastNoiseLite
+public static class FastNoiseLite
 {
-    private double mFrequency = 0.01;
+    private const double FREQUENCY = 0.01;
 
-    /// <summary>
-    /// Create new FastNoise object
-    /// </summary>
-    public FastNoiseLite()
-    {
-    }
-
-    private static readonly double[] Gradients2D =
+    private static readonly double[] GRADIENTS_2D =
     {
          0.130526192220052f,  0.99144486137381f,   0.38268343236509f,   0.923879532511287f,  0.608761429008721f,  0.793353340291235f,  0.793353340291235f,  0.608761429008721f,
          0.923879532511287f,  0.38268343236509f,   0.99144486137381f,   0.130526192220051f,  0.99144486137381f,  -0.130526192220051f,  0.923879532511287f, -0.38268343236509f,
@@ -100,7 +93,7 @@ public class FastNoiseLite
         -0.38268343236509f,  -0.923879532511287f, -0.923879532511287f, -0.38268343236509f,  -0.923879532511287f,  0.38268343236509f,  -0.38268343236509f,   0.923879532511287f,
     };
 
-    private static readonly double[] Gradients3D =
+    private static readonly double[] GRADIENTS_3D =
     {
         0, 1, 1, 0,  0,-1, 1, 0,  0, 1,-1, 0,  0,-1,-1, 0,
         1, 0, 1, 0, -1, 0, 1, 0,  1, 0,-1, 0, -1, 0,-1, 0,
@@ -121,17 +114,17 @@ public class FastNoiseLite
     };
 
     // Hashing
-    private const int PrimeX = 501125321;
-    private const int PrimeY = 1136930381;
-    private const int PrimeZ = 1720413743;
+    private const int RPIME_X = 501125321;
+    private const int PRIME_Y = 1136930381;
+    private const int PRIME_Z = 1720413743;
 
     /// <returns>
     /// Noise output bounded between -1...1
     /// </returns>
-    public double GetNoise(double x, double y)
+    public static double GetNoise(double x, double y)
     {
-        x *= mFrequency;
-        y *= mFrequency;
+        x *= FREQUENCY;
+        y *= FREQUENCY;
 
         int x0 = x >= 0 ? (int)x : (int)x - 1;
         int y0 = y >= 0 ? (int)y : (int)y - 1;
@@ -145,34 +138,34 @@ public class FastNoiseLite
         double xs = xd0 * xd0 * xd0 * (xd0 * (xd0 * 6 - 15) + 10);
         double ys = yd0 * yd0 * yd0 * (yd0 * (yd0 * 6 - 15) + 10);
 
-        x0 *= PrimeX;
-        y0 *= PrimeY;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
+        x0 *= RPIME_X;
+        y0 *= PRIME_Y;
+        int x1 = x0 + RPIME_X;
+        int y1 = y0 + PRIME_Y;
 
         int hash = ((x0 ^ y1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 127 << 1;
 
-        double xf0 = xd0 * Gradients2D[hash] + yd0 * Gradients2D[hash | 1];
+        double xf0 = xd0 * GRADIENTS_2D[hash] + yd0 * GRADIENTS_2D[hash | 1];
 
         hash = ((x1 ^ y0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 127 << 1;
 
-        xf0 = MathHelper.Lerp(xf0, xd1 * Gradients2D[hash] + yd0 * Gradients2D[hash | 1], xs);
+        xf0 = MathHelper.Lerp(xf0, xd1 * GRADIENTS_2D[hash] + yd0 * GRADIENTS_2D[hash | 1], xs);
 
         hash = ((x0 ^ y1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 127 << 1;
 
-        double xf1 = xd0 * Gradients2D[hash] + yd1 * Gradients2D[hash | 1];
+        double xf1 = xd0 * GRADIENTS_2D[hash] + yd1 * GRADIENTS_2D[hash | 1];
 
         hash = ((x1 ^ y1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 127 << 1;
 
-        xf1 = MathHelper.Lerp(xf1, xd1 * Gradients2D[hash] + yd1 * Gradients2D[hash | 1], xs);
+        xf1 = MathHelper.Lerp(xf1, xd1 * GRADIENTS_2D[hash] + yd1 * GRADIENTS_2D[hash | 1], xs);
 
         return MathHelper.Lerp(xf0, xf1, ys) * 1.4247691104677813f; //This is unimagineably complex just to avoid the KSH Mod Profiler. I don't know what it does but it's dozens of helper methods compressed into one
     }
@@ -183,11 +176,11 @@ public class FastNoiseLite
     /// <returns>
     /// Noise output bounded between -1...1
     /// </returns>
-    public double GetNoise(double x, double y, double z)
+    public static double GetNoise(double x, double y, double z)
     {
-        x *= mFrequency;
-        y *= mFrequency;
-        z *= mFrequency;
+        x *= FREQUENCY;
+        y *= FREQUENCY;
+        z *= FREQUENCY;
 
         int x0 = x >= 0 ? (int)x : (int)x - 1;
         int y0 = y >= 0 ? (int)y : (int)y - 1;
@@ -204,60 +197,60 @@ public class FastNoiseLite
         double ys = yd0 * yd0 * yd0 * (yd0 * (yd0 * 6 - 15) + 10);
         double zs = zd0 * zd0 * zd0 * (zd0 * (zd0 * 6 - 15) + 10);
 
-        x0 *= PrimeX;
-        y0 *= PrimeY;
-        z0 *= PrimeZ;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
-        int z1 = z0 + PrimeZ;
+        x0 *= RPIME_X;
+        y0 *= PRIME_Y;
+        z0 *= PRIME_Z;
+        int x1 = x0 + RPIME_X;
+        int y1 = y0 + PRIME_Y;
+        int z1 = z0 + PRIME_Z;
 
         int hash = ((x0 ^ y0 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf00 = xd0 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2];
+        double xf00 = xd0 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y0 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf00 = MathHelper.Lerp(xf00, xd1 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2], xs);
+        xf00 = MathHelper.Lerp(xf00, xd1 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y1 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf10 = xd0 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2];
+        double xf10 = xd0 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y1 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf10 = MathHelper.Lerp(xf10, xd1 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2], xs);
+        xf10 = MathHelper.Lerp(xf10, xd1 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y0 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf01 = xd0 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2];
+        double xf01 = xd0 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y0 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf01 = MathHelper.Lerp(xf01, xd1 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2], xs);
+        xf01 = MathHelper.Lerp(xf01, xd1 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y1 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf11 = xd0 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2];
+        double xf11 = xd0 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y1 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf11 = MathHelper.Lerp(xf11, xd1 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2], xs);
+        xf11 = MathHelper.Lerp(xf11, xd1 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2], xs);
 
         double yf0 = MathHelper.Lerp(xf00, xf10, ys);
         double yf1 = MathHelper.Lerp(xf01, xf11, ys);
@@ -271,11 +264,11 @@ public class FastNoiseLite
     /// <returns>
     /// Noise output bounded between -1...1
     /// </returns>
-    public double GetNoise(Vector3D position)
+    public static double GetNoise(Vector3D position)
     {
-        position.X *= mFrequency;
-        position.Y *= mFrequency;
-        position.Z *= mFrequency;
+        position.X *= FREQUENCY;
+        position.Y *= FREQUENCY;
+        position.Z *= FREQUENCY;
 
         int x0 = position.X >= 0 ? (int)position.X : (int)position.X - 1;
         int y0 = position.Y >= 0 ? (int)position.Y : (int)position.Y - 1;
@@ -292,60 +285,60 @@ public class FastNoiseLite
         double ys = yd0 * yd0 * yd0 * (yd0 * (yd0 * 6 - 15) + 10);
         double zs = zd0 * zd0 * zd0 * (zd0 * (zd0 * 6 - 15) + 10);
 
-        x0 *= PrimeX;
-        y0 *= PrimeY;
-        z0 *= PrimeZ;
-        int x1 = x0 + PrimeX;
-        int y1 = y0 + PrimeY;
-        int z1 = z0 + PrimeZ;
+        x0 *= RPIME_X;
+        y0 *= PRIME_Y;
+        z0 *= PRIME_Z;
+        int x1 = x0 + RPIME_X;
+        int y1 = y0 + PRIME_Y;
+        int z1 = z0 + PRIME_Z;
 
         int hash = ((x0 ^ y0 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf00 = xd0 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2];
+        double xf00 = xd0 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y0 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf00 = MathHelper.Lerp(xf00, xd1 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2], xs);
+        xf00 = MathHelper.Lerp(xf00, xd1 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y1 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf10 = xd0 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2];
+        double xf10 = xd0 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y1 ^ z0) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf10 = MathHelper.Lerp(xf10, xd1 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd0 * Gradients3D[hash | 2], xs);
+        xf10 = MathHelper.Lerp(xf10, xd1 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd0 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y0 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf01 = xd0 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2];
+        double xf01 = xd0 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y0 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf01 = MathHelper.Lerp(xf01, xd1 * Gradients3D[hash] + yd0 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2], xs);
+        xf01 = MathHelper.Lerp(xf01, xd1 * GRADIENTS_3D[hash] + yd0 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2], xs);
 
         hash = ((x0 ^ y1 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        double xf11 = xd0 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2];
+        double xf11 = xd0 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2];
 
         hash = ((x1 ^ y1 ^ z1) * 0x27d4eb2d);
         hash ^= hash >> 15;
         hash &= 63 << 2;
 
-        xf11 = MathHelper.Lerp(xf11, xd1 * Gradients3D[hash] + yd1 * Gradients3D[hash | 1] + zd1 * Gradients3D[hash | 2], xs);
+        xf11 = MathHelper.Lerp(xf11, xd1 * GRADIENTS_3D[hash] + yd1 * GRADIENTS_3D[hash | 1] + zd1 * GRADIENTS_3D[hash | 2], xs);
 
         double yf0 = MathHelper.Lerp(xf00, xf10, ys);
         double yf1 = MathHelper.Lerp(xf01, xf11, ys);

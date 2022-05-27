@@ -12,9 +12,11 @@ using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.Game.ObjectBuilders.ComponentSystem;
 using VRage.Utils;
 using VRageMath;
 using VRageRender;
+using Jakaria.SessionComponents;
 
 namespace Jakaria.Components
 {
@@ -35,17 +37,19 @@ namespace Jakaria.Components
         /// </summary>
         public bool CanRecalculateAirtightness { get; protected set; } = false;
 
-        private readonly object BuoyancyLock = new object();
-        private float WaterDensityMultiplier;
+        private readonly object _buoyancyLock = new object();
+        private float _waterDensityMultiplier;
 
         private float _dragOptimizer;
-        private double maxRadius;
+        private double _maxRadius;
+
+        private bool _rebuildVolumesArray;
 
         //Grid Stuff
         public IMyCubeGrid IGrid;
         public MyCubeGrid Grid;
         private Dictionary<Vector3I, BlockVolumeData> _blockVolumesRaw;
-        private BlockVolumeData[] _lockVolumes;
+        private BlockVolumeData[] _blockVolumes;
         private List<Vector3I> _airtightBlocks;
         private int _blocksUnderwater;
         private int _gasBlocks;
@@ -53,8 +57,16 @@ namespace Jakaria.Components
         private MaterialConfig _material;
 
         //Client Effects
-        private MyBillboard[] COBIndicators;
-        private List<AnimatedBillboard> Wakes;
+        private MyBillboard[] _cobIndicators;
+        private List<AnimatedBillboard> _wakes;
+
+        private WaterSettingsComponent _settingsComponent;
+
+        public WaterPhysicsComponentGrid(WaterManagerComponent managerComponent) : base(managerComponent)
+        {
+            _settingsComponent = managerComponent.TryGet<WaterSettingsComponent>();
+        }
+
         //List<uint> Decals; TODO?
 
         /// <summary>
@@ -123,28 +135,28 @@ namespace Jakaria.Components
         /// </summary>
         private void Cleanup()
         {
-            if (COBIndicators != null)
+            if (_cobIndicators != null)
             {
-                lock (Wakes)
-                    foreach (var Indicator in COBIndicators)
+                lock (_wakes)
+                    foreach (var Indicator in _cobIndicators)
                     {
                         if (Indicator != null)
                             MyTransparentGeometry.RemovePersistentBillboard(Indicator);
                     }
 
-                COBIndicators = null;
+                _cobIndicators = null;
             }
 
-            if (Wakes != null)
+            if (_wakes != null)
             {
-                lock (Wakes)
-                    foreach (var Wake in Wakes)
+                lock (_wakes)
+                    foreach (var Wake in _wakes)
                     {
-                        if(Wake.InScene)
+                        if (Wake.InScene)
                             MyTransparentGeometry.RemovePersistentBillboard(Wake.Billboard);
                     }
 
-                Wakes = null;
+                _wakes = null;
             }
         }
 
@@ -157,9 +169,10 @@ namespace Jakaria.Components
             if (_blockVolumesRaw.ContainsKey(block.Position))
             {
                 _blockVolumesRaw.Remove(block.Position);
-                _lockVolumes = _blockVolumesRaw.Values.ToArray();
+                _rebuildVolumesArray = true;
+
                 NeedsRecalculateBuoyancy = true;
-                recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
+                _recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
             }
 
             if (block.FatBlock != null)
@@ -183,13 +196,15 @@ namespace Jakaria.Components
         /// </summary>
         private void IGrid_OnBlockAdded(IMySlimBlock block)
         {
+            _rebuildVolumesArray = true;
+
             if (_airtightBlocks == null || !_airtightBlocks.Contains(block.Position))
             {
                 BlockConfig config = WaterData.BlockConfigs[block.BlockDefinition.Id];
-                BlockVolumeData data = _blockVolumesRaw[block.Position] = new BlockVolumeData(block.Position, config, block);
-                _lockVolumes = _blockVolumesRaw.Values.ToArray();
+                BlockVolumeData data = _blockVolumesRaw[block.Position] = new BlockVolumeData(block, config);
+
                 NeedsRecalculateBuoyancy = true;
-                recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
+                _recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
 
                 Vector3D blockPosition = Grid.GridIntegerToWorld(block.Position);
                 data.CurrentlyUnderwater = ClosestWater?.IsUnderwater(ref blockPosition) ?? false;
@@ -203,19 +218,7 @@ namespace Jakaria.Components
                         {
                             if (!data.Config.FunctionalUnderWater || (FluidPressure > data.Config.MaxFunctionalPressure))
                             {
-                                if (functionalBlock is IMyThrust)
-                                {
-                                    if (data.Config.FunctionalUnderWater)
-                                    {
-                                        (functionalBlock as IMyThrust).ThrustMultiplier = 1;
-                                    }
-                                    else
-                                    {
-                                        (functionalBlock as IMyThrust).ThrustMultiplier = 0;
-                                        (functionalBlock as MyThrust).CurrentStrength = 0;
-                                    }
-                                }
-                                else if (functionalBlock.Enabled)
+                                if (functionalBlock.Enabled)
                                 {
                                     data.CorrectState = functionalBlock.Enabled;
                                     functionalBlock.Enabled = false;
@@ -231,19 +234,7 @@ namespace Jakaria.Components
                         {
                             if (!data.Config.FunctionalAboveWater)
                             {
-                                if (functionalBlock is IMyThrust)
-                                {
-                                    if (data.Config.FunctionalAboveWater)
-                                    {
-                                        (functionalBlock as IMyThrust).ThrustMultiplier = 1;
-                                    }
-                                    else
-                                    {
-                                        (functionalBlock as IMyThrust).ThrustMultiplier = 0;
-                                        (functionalBlock as MyThrust).CurrentStrength = 0;
-                                    }
-                                }
-                                else if (functionalBlock.Enabled)
+                                if (functionalBlock.Enabled)
                                 {
                                     data.CorrectState = functionalBlock.Enabled;
                                     functionalBlock.Enabled = false;
@@ -282,28 +273,14 @@ namespace Jakaria.Components
                 {
                     if (!blockData.Config.FunctionalUnderWater)
                     {
-                        if (block is IMyThrust)
-                        {
-
-                        }
-                        else
-                        {
-                            (block as IMyFunctionalBlock).Enabled = false;
-                        }
+                        (block as IMyFunctionalBlock).Enabled = false;
                     }
                 }
                 else
                 {
                     if (!blockData.Config.FunctionalAboveWater)
                     {
-                        if (block is IMyThrust)
-                        {
-
-                        }
-                        else
-                        {
-                            (block as IMyFunctionalBlock).Enabled = false;
-                        }
+                        (block as IMyFunctionalBlock).Enabled = false;
                     }
                 }
             }
@@ -349,7 +326,7 @@ namespace Jakaria.Components
             //Recalculate Pressure, Density
             if (ClosestWater != null && Entity.Physics != null)
             {
-                WaterDensityMultiplier = _material.Density / 1000f;
+                _waterDensityMultiplier = _material.Density / 1000f;
 
                 if (UseAirtightness)
                 {
@@ -387,28 +364,34 @@ namespace Jakaria.Components
 
                     if (FluidDepth < Entity.PositionComp.WorldVolume.Radius)
                     {
-                        nextRecalculate--;
+                        _nextRecalculate--;
 
-                        if (NeedsRecalculateBuoyancy || nextRecalculate <= 0)
+                        if (NeedsRecalculateBuoyancy || _nextRecalculate <= 0)
                         {
                             double displacement = 0;
 
                             _blocksUnderwater = 0;
-                            nextRecalculate = recalculateFrequency;
+                            _nextRecalculate = _recalculateFrequency;
                             NeedsRecalculateBuoyancy = false;
 
-                            maxRadius = 0;
+                            _maxRadius = 0;
 
                             CenterOfBuoyancy = Vector3D.Zero;
                             _centerOfMass = Grid.Physics.CenterOfMassWorld;
 
-                            if (_lockVolumes != null)
+                            if (_rebuildVolumesArray)
                             {
-                                MyAPIGateway.Parallel.ForEach(_lockVolumes, BlockVolume =>
+                                _blockVolumes = _blockVolumesRaw.Values.ToArray();
+                                _rebuildVolumesArray = false;
+                            }
+
+                            if (_blockVolumes != null)
+                            {
+                                MyAPIGateway.Parallel.ForEach(_blockVolumes, BlockVolume =>
                                 {
                                     if (BlockVolume.Config.Volume > 0)
                                     {
-                                        Vector3D pointWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Key);
+                                        Vector3D pointWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Block.Position);
                                         double pointDepth = ClosestWater.GetDepth(ref pointWorldPosition);
                                         bool pointUnderwater = pointDepth < Grid.GridSizeHalf;
 
@@ -426,55 +409,57 @@ namespace Jakaria.Components
                                                         }
                                                     }
 
-                                                    WaterModComponent.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
+                                                    _effectsComponent.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                                 }
 
-                                                if (_material.DrawWakes && Wakes != null && Math.Abs(pointDepth) < Grid.GridSizeHalf)
+                                                if (_material.DrawWakes && _wakes != null && Math.Abs(pointDepth) < Grid.GridSizeHalf)
                                                 {
                                                     Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(pointWorldPosition);
-                                                    Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref gravityDirection);
+                                                    Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
                                                     Vector3 BlockHorizontalVelocity = BlockVelocity - BlockVerticalVelocity;
                                                     float BlockHorizontalSpeed = BlockHorizontalVelocity.LengthSquared();
 
-                                                    if (BlockHorizontalSpeed > 100 && MyUtils.GetRandomInt(6 * recalculateFrequency) == 0)
+                                                    if (BlockHorizontalSpeed > 100 && MyUtils.GetRandomInt(6 * _recalculateFrequency) == 0)
                                                     {
                                                         float radius = Math.Max(Grid.GridSize, 1);
                                                         MyQuadD quad = new MyQuadD()
                                                         {
-                                                            Point0 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((WaterModComponent.Static.Session.GravityAxisA - WaterModComponent.Static.Session.GravityAxisB) * radius)),
-                                                            Point1 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((WaterModComponent.Static.Session.GravityAxisA + WaterModComponent.Static.Session.GravityAxisB) * radius)),
-                                                            Point2 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((-WaterModComponent.Static.Session.GravityAxisA + WaterModComponent.Static.Session.GravityAxisB) * radius)),
-                                                            Point3 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((-WaterModComponent.Static.Session.GravityAxisA - WaterModComponent.Static.Session.GravityAxisB) * radius)),
+                                                            Point0 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
+                                                            Point1 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
+                                                            Point2 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((-_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
+                                                            Point3 = ClosestWater.GetClosestSurfacePointGlobal(pointWorldPosition + ((-_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
                                                         };
 
-                                                        lock(Wakes)
-                                                            Wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0f), quad, BlockHorizontalVelocity, (recalculateFrequency + 1) + (int)(Math.Sqrt(BlockHorizontalSpeed) * 3), true, true, WaterData.WakeColor, WaterModComponent.Static.Session.AmbientColorIntensity));
+                                                        lock (_wakes)
+                                                            _wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0f), quad, BlockHorizontalVelocity, (_recalculateFrequency + 1) + (int)(Math.Sqrt(BlockHorizontalSpeed) * 3), true, true, WaterData.WakeColor, _renderComponent.AmbientColorIntensity));
                                                     }
                                                 }
                                             }
 
                                             if (FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
                                             {
-                                                WaterModComponent.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, ClosestWater.CrushDamage * recalculateFrequency));
+                                                _modComponent.DamageQueue.Push(new BlockDamagePair(BlockVolume.Block, ClosestWater.CrushDamage * (_recalculateFrequency + 1)));
 
                                                 if (SimulateEffects && MyUtils.GetRandomInt(0, 200) == 0)
-                                                    WaterModComponent.Static.CreateBubble(ref pointWorldPosition, Grid.GridSize);
+                                                    _effectsComponent.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                             }
 
                                             if (SimulatePhysics)
                                             {
                                                 double radius = (pointWorldPosition - _centerOfMass).LengthSquared();
-                                                maxRadius = Math.Max(maxRadius, radius); //For Calculating Drag
+                                                _maxRadius = Math.Max(_maxRadius, radius); //For Calculating Drag
                                                 double pointDisplacement = BlockVolume.Volume * Math.Max(Math.Min(-pointDepth / Grid.GridSizeHalf, 1) * BlockVolume.Block.BuildLevelRatio, 0);
-                                                
+
                                                 if (BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.MarkedForClose)
                                                 {
                                                     if (BlockVolume.Block.FatBlock is IMyGasTank)
+                                                    {
                                                         pointDisplacement *= (1f - (BlockVolume.Block.FatBlock as IMyGasTank).FilledRatio);
+                                                    }
                                                 }
 
                                                 Interlocked.Increment(ref _blocksUnderwater);
-                                                lock (BuoyancyLock)
+                                                lock (_buoyancyLock)
                                                 {
                                                     displacement += pointDisplacement;
                                                     CenterOfBuoyancy += ((Vector3D)(BlockVolume.Block.Min + BlockVolume.Block.Max) / 2.0) * pointDisplacement;
@@ -500,19 +485,7 @@ namespace Jakaria.Components
                                                     {
                                                         if (!BlockVolume.Config.FunctionalUnderWater || (FluidPressure > BlockVolume.Config.MaxFunctionalPressure))
                                                         {
-                                                            if (BlockVolume.Block.FatBlock is IMyThrust)
-                                                            {
-                                                                if (BlockVolume.Config.FunctionalUnderWater)
-                                                                {
-                                                                    (BlockVolume.Block.FatBlock as IMyThrust).ThrustMultiplier = 1;
-                                                                }
-                                                                else
-                                                                {
-                                                                    (BlockVolume.Block.FatBlock as IMyThrust).ThrustMultiplier = 0;
-                                                                    (BlockVolume.Block.FatBlock as MyThrust).CurrentStrength = 0;
-                                                                }
-                                                            }
-                                                            else if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
+                                                            if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
                                                             {
                                                                 BlockVolume.CorrectState = (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled;
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
@@ -528,7 +501,7 @@ namespace Jakaria.Components
                                                     if (Grid.BlocksDestructionEnabled && Grid.GridGeneralDamageModifier != 0)
                                                     {
                                                         Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(pointWorldPosition);
-                                                        Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref gravityDirection);
+                                                        Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
 
                                                         float BlockVerticalSpeed = BlockVerticalVelocity.Length();
 
@@ -537,14 +510,14 @@ namespace Jakaria.Components
                                                         {
                                                             if (_material.DrawSplashes && BlockVerticalSpeed > 5)
                                                             {
-                                                                lock (WaterModComponent.Static.effectLock)
-                                                                    WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
+                                                                lock (_effectsComponent.EffectLock)
+                                                                    _effectsComponent.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
                                                             }
                                                         }
 
-                                                        if (BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / WaterDensityMultiplier)
+                                                        if (BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / _waterDensityMultiplier)
                                                         {
-                                                            WaterModComponent.Static.DamageQueue.Push(new MyTuple<IMySlimBlock, float>(BlockVolume.Block, 50 * (BlockVerticalSpeed) * WaterDensityMultiplier));
+                                                            _modComponent.DamageQueue.Push(new BlockDamagePair(BlockVolume.Block, 50 * BlockVerticalSpeed * _waterDensityMultiplier));
                                                         }
                                                     }
                                                 }
@@ -554,19 +527,7 @@ namespace Jakaria.Components
                                                     {
                                                         if (!BlockVolume.Config.FunctionalAboveWater)
                                                         {
-                                                            if (BlockVolume.Block.FatBlock is IMyThrust)
-                                                            {
-                                                                if (BlockVolume.Config.FunctionalAboveWater)
-                                                                {
-                                                                    (BlockVolume.Block.FatBlock as IMyThrust).ThrustMultiplier = 1;
-                                                                }
-                                                                else
-                                                                {
-                                                                    (BlockVolume.Block.FatBlock as IMyThrust).ThrustMultiplier = 0;
-                                                                    (BlockVolume.Block.FatBlock as MyThrust).CurrentStrength = 0;
-                                                                }
-                                                            }
-                                                            else if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
+                                                            if ((BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled)
                                                             {
                                                                 BlockVolume.CorrectState = (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled;
                                                                 (BlockVolume.Block.FatBlock as IMyFunctionalBlock).Enabled = false;
@@ -582,15 +543,15 @@ namespace Jakaria.Components
                                                     if (SimulateEffects && _material.DrawSplashes)
                                                     {
                                                         Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(pointWorldPosition);
-                                                        Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref gravityDirection);
+                                                        Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
 
                                                         if (BlockVerticalVelocity.LengthSquared() < 25)
                                                             return;
 
-                                                        lock (WaterModComponent.Static.effectLock)
+                                                        lock (_effectsComponent.EffectLock)
                                                         {
-                                                            WaterModComponent.Static.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (speed / 5f)));
-                                                            WaterModComponent.Static.SimulatedSplashes.Add(new SimulatedSplash(pointWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
+                                                            _effectsComponent.SurfaceSplashes.Add(new Splash(pointWorldPosition, IGrid.GridSize * (_speed / 5f)));
+                                                            _effectsComponent.SimulatedSplashes.Add(new SimulatedSplash(pointWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
                                                         }
                                                     }
                                                 }
@@ -611,12 +572,12 @@ namespace Jakaria.Components
                                     {
                                         Vector3D PointWorldPosition = Grid.GridIntegerToWorld(AirtightBlock);
                                         double PointDepth = ClosestWater.GetDepthSquared(ref PointWorldPosition);
-                                        
+
                                         if (PointDepth < sqrGridSizeHalf)
                                         {
                                             double PointDisplacement = VolumeMultiplier * Math.Max(Math.Min(-PointDepth / sqrGridSizeHalf, 1), 0);
 
-                                            lock (BuoyancyLock)
+                                            lock (_buoyancyLock)
                                             {
                                                 displacement += PointDisplacement;
                                                 CenterOfBuoyancy += (Vector3D)AirtightBlock * PointDisplacement;
@@ -627,15 +588,15 @@ namespace Jakaria.Components
 
                                 if (displacement > 0)
                                 {
-                                    PercentUnderwater = ((float)_blocksUnderwater / _lockVolumes.Length);
+                                    PercentUnderwater = ((float)_blocksUnderwater / _blockVolumes.Length);
 
                                     CenterOfBuoyancy = Grid.GridIntegerToWorld(CenterOfBuoyancy / displacement);
 
                                     BuoyancyForce = -Grid.Physics.Gravity * _material.Density * (float)displacement * ClosestWater.Buoyancy;
 
-                                    maxRadius = Math.Max(maxRadius, Grid.GridSizeHalf * Grid.GridSizeHalf);
+                                    _maxRadius = Math.Max(_maxRadius, Grid.GridSizeHalf * Grid.GridSizeHalf);
 
-                                    _dragOptimizer = 0.5f * _material.Density * ((float)maxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+                                    _dragOptimizer = 0.5f * _material.Density * ((float)_maxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
                                 }
                                 else
                                 {
@@ -661,17 +622,17 @@ namespace Jakaria.Components
                                 IGrid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, BuoyancyForce, CenterOfBuoyancy, null);
 
                             //Drag
-                            if (speed > 0.1f)
+                            if (_speed > 0.1f)
                             {
-                                Vector3 VelocityDamper = gravityDirection * (Vector3.Dot(Vector3.Normalize(velocity), gravityDirection) * speed * _material.Viscosity * WaterDensityMultiplier) * PercentUnderwater;
+                                Vector3 VelocityDamper = _gravityDirection * (Vector3.Dot(_velocityDirection, _gravityDirection) * _speed * _material.Viscosity * _waterDensityMultiplier) * PercentUnderwater;
 
                                 //Vertical Velocity Damping
                                 if (VelocityDamper.IsValid() && !Vector3.IsZero(VelocityDamper, 1e-4f))
                                     IGrid.Physics.LinearVelocity -= VelocityDamper;
 
-                                if (WaterModComponent.Static.DragAPI.Heartbeat)
+                                if (_modComponent.DragClientAPI.Heartbeat)
                                 {
-                                    var api = WaterModComponent.Static.dragAPIGetter.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
+                                    var api = _modComponent.DragObjects.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
 
                                     if (api != null)
                                     {
@@ -680,24 +641,24 @@ namespace Jakaria.Components
                                 }
                                 else
                                 {
-                                    DragForce = -_dragOptimizer * (velocity * speed) * PercentUnderwater;
+                                    DragForce = -_dragOptimizer * (_velocity * _speed) * PercentUnderwater;
 
                                     //Linear Drag
                                     if (DragForce.IsValid() && !Vector3.IsZero(DragForce, 1e-4f))
-                                        IGrid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, Vector3.ClampToSphere(DragForce, Entity.Physics.Mass * speed), null, null);
+                                        IGrid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, Vector3.ClampToSphere(DragForce, Entity.Physics.Mass * _speed), null, null);
                                 }
                             }
 
                             //Angular Drag
-                            if (angularSpeed > 0.03f)
+                            if (_angularSpeed > 0.03f)
                             {
                                 //https://web.archive.org/web/20160506233549/http://www.randygaul.net/wp-content/uploads/2014/02/RigidBodies_WaterSurface.pdf
                                 //Td = Ba*m*(V/Vb)*L^2*w
                                 //TorqueDrag = DragCoeff * mass * (VolumeWater / VolumeBody) * Length^2 * AngularVelocity
-                                Vector3 AngularDragForce = ((MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 1000000000f) * Entity.Physics.Mass * PercentUnderwater * (float)maxRadius) * IGrid.Physics.AngularVelocity;
+                                Vector3 AngularDragForce = ((MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 1000000000f) * Entity.Physics.Mass * PercentUnderwater * (float)_maxRadius) * IGrid.Physics.AngularVelocity;
 
                                 if (AngularDragForce.IsValid() && !Vector3.IsZero(AngularDragForce, 1e-4f))
-                                    IGrid.Physics.AngularVelocity -= Vector3.ClampToSphere(AngularDragForce, angularSpeed);
+                                    IGrid.Physics.AngularVelocity -= Vector3.ClampToSphere(AngularDragForce, _angularSpeed);
                             }
                         }
                     }
@@ -706,7 +667,7 @@ namespace Jakaria.Components
             catch (Exception e)
             {
                 if (!MyAPIGateway.Utilities.IsDedicated)
-                    MyAPIGateway.Utilities.ShowNotification("Water Error on Grid. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * recalculateFrequency);
+                    MyAPIGateway.Utilities.ShowNotification("Water Error on Grid. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * _recalculateFrequency);
 
                 WaterUtils.WriteLog(e.ToString());
             }
@@ -761,35 +722,35 @@ namespace Jakaria.Components
             if (MyAPIGateway.Utilities.IsDedicated)
                 return;
 
-            if (Wakes == null)
+            if (_wakes == null)
             {
-                Wakes = new List<AnimatedBillboard>();
+                _wakes = new List<AnimatedBillboard>();
             }
 
-            for (int i = Wakes.Count - 1; i >= 0; i--)
+            for (int i = _wakes.Count - 1; i >= 0; i--)
             {
-                AnimatedBillboard Splash = Wakes[i];
-                if (Splash == null || Splash.MarkedForClose)
+                AnimatedBillboard wake = _wakes[i];
+                if (wake == null || wake.MarkedForClose)
                 {
-                    Wakes.RemoveAtFast(i);
+                    _wakes.RemoveAtFast(i);
                     continue;
                 }
                 else
                 {
-                    Splash.Simulate();
-                    Splash.Velocity *= 0.9f;
+                    wake.Simulate();
+                    wake.Velocity *= 0.9f;
                 }
             }
 
-            if (WaterModComponent.Static.Settings.ShowCenterOfBuoyancy)
+            if (_settingsComponent.Settings.ShowCenterOfBuoyancy)
             {
-                if (COBIndicators == null)
+                if (_cobIndicators == null)
                 {
-                    COBIndicators = new MyBillboard[3];
+                    _cobIndicators = new MyBillboard[3];
 
                     for (int i = 0; i < 3; i++)
                     {
-                        COBIndicators[i] = new MyBillboard()
+                        _cobIndicators[i] = new MyBillboard()
                         {
                             Color = WaterData.RedColor,
                             ColorIntensity = 1,
@@ -799,19 +760,19 @@ namespace Jakaria.Components
                             UVOffset = Vector2.Zero,
                             UVSize = Vector2.One,
                         };
-                        MyTransparentGeometry.AddBillboard(COBIndicators[i], true);
+                        MyTransparentGeometry.AddBillboard(_cobIndicators[i], true);
                     }
                 }
                 else
                 {
                     MyBillboard Billboard;
                     Vector3D SideVector;
-                    Vector3D CameraNormal = MyUtils.Normalize(WaterModComponent.Static.Session.CameraPosition - CenterOfBuoyancy);
+                    Vector3D CameraNormal = MyUtils.Normalize(_renderComponent.CameraPosition - CenterOfBuoyancy);
                     Vector3D Direction;
                     Vector3D Offset;
 
                     //Forward
-                    Billboard = COBIndicators[0];
+                    Billboard = _cobIndicators[0];
                     Direction = Grid.WorldMatrix.Forward;
                     Offset = Direction * Grid.GridSizeHalf;
                     SideVector = MyUtils.GetVector3Scaled(Vector3D.Cross(Direction, CameraNormal), 0.01f);
@@ -821,7 +782,7 @@ namespace Jakaria.Components
                     Billboard.Position3 = CenterOfBuoyancy - Offset + SideVector;
 
                     //Right
-                    Billboard = COBIndicators[1];
+                    Billboard = _cobIndicators[1];
                     Direction = Grid.WorldMatrix.Right;
                     Offset = Direction * Grid.GridSizeHalf;
                     SideVector = MyUtils.GetVector3Scaled(Vector3D.Cross(Direction, CameraNormal), 0.01f);
@@ -831,7 +792,7 @@ namespace Jakaria.Components
                     Billboard.Position3 = CenterOfBuoyancy - Offset + SideVector;
 
                     //Up
-                    Billboard = COBIndicators[2];
+                    Billboard = _cobIndicators[2];
                     Direction = Grid.WorldMatrix.Up;
                     Offset = Direction * Grid.GridSizeHalf;
                     SideVector = MyUtils.GetVector3Scaled(Vector3D.Cross(Direction, CameraNormal), 0.01f);
@@ -841,21 +802,13 @@ namespace Jakaria.Components
                     Billboard.Position3 = CenterOfBuoyancy - Offset + SideVector;
                 }
             }
-            else if (COBIndicators != null)
+            else if (_cobIndicators != null)
             {
                 //Cleanup billboards
-                MyTransparentGeometry.RemovePersistentBillboards(COBIndicators);
+                MyTransparentGeometry.RemovePersistentBillboards(_cobIndicators);
 
-                COBIndicators = null;
+                _cobIndicators = null;
             }
-        }
-
-        public enum MyEntityType
-        {
-            Entity,
-            CubeGrid,
-            Character,
-            FloatingObject
         }
 
         /// <summary>
@@ -868,15 +821,11 @@ namespace Jakaria.Components
             public bool PreviousUnderwater;
             public bool? CorrectState;
             public IMySlimBlock Block;
-            public Vector3I Key;
             public double Volume;
 
-            public BlockVolumeData(Vector3I key, BlockConfig config, IMySlimBlock block, bool previousUnderwater = false, bool currentlyUnderwater = false)
+            public BlockVolumeData(IMySlimBlock block, BlockConfig config)
             {
-                CurrentlyUnderwater = currentlyUnderwater;
-                Key = key;
                 Config = config;
-                PreviousUnderwater = previousUnderwater;
                 Block = block;
 
                 if (config.IsPressurized)

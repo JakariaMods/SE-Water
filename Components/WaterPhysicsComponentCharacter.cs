@@ -9,20 +9,23 @@ using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRageMath;
 using Jakaria.Configs;
+using Jakaria.SessionComponents;
 
 namespace Jakaria.Components
 {
     public class WaterPhysicsComponentCharacter : WaterPhysicsComponentBase
     {
-        double MaxRadius;
-        bool Airtight;
-        MyCubeGrid NearestGrid;
+        private double _maxRadius;
+        private bool _airtight;
+        private MyCubeGrid _nearestGrid;
+        private int _breath;
+        private Vector3D _characterHeadPosition;
+        private bool _headUnderwater;
 
-        int Breath;
-        IMyCharacter Character;
-        CharacterConfig PlayerConfig;
-        Vector3D CharacterHeadPosition;
-        bool HeadUnderwater;
+        public IMyCharacter Character;
+        public CharacterConfig PlayerConfig;
+
+        public WaterPhysicsComponentCharacter(WaterManagerComponent managerComponent) : base(managerComponent) { }
 
         /// <summary>
         /// Initalize the component
@@ -51,34 +54,34 @@ namespace Jakaria.Components
         {
             base.UpdateAfter60();
 
-            MaxRadius = Character.PositionComp.LocalVolume.Radius;
-            NearestGrid = WaterUtils.GetApproximateGrid(position);
+            _maxRadius = Character.PositionComp.LocalVolume.Radius;
+            _nearestGrid = WaterUtils.GetApproximateGrid(_position);
 
             if (PlayerConfig != null && ClosestWater != null)
             {
-                HeadUnderwater = ClosestWater.IsUnderwater(ref CharacterHeadPosition);
+                _headUnderwater = ClosestWater.IsUnderwater(ref _characterHeadPosition);
 
                 MyCharacterOxygenComponent OxygenComponent;
-                if (NearestGrid != null)
-                    Airtight = NearestGrid.IsRoomAtPositionAirtight(NearestGrid.WorldToGridInteger(CharacterHeadPosition));
+                if (_nearestGrid != null)
+                    _airtight = _nearestGrid.IsRoomAtPositionAirtight(_nearestGrid.WorldToGridInteger(_characterHeadPosition));
                 else
-                    Airtight = false;
+                    _airtight = false;
 
-                if (Airtight || !HeadUnderwater)
+                if (_airtight || !_headUnderwater)
                 {
-                    Breath = PlayerConfig.Breath;
+                    _breath = PlayerConfig.Breath;
                 }
-                else if (HeadUnderwater)
+                else if (_headUnderwater)
                 {
                     //Drowning
                     if (!PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
                     {
-                        Breath = Math.Max(Breath - 1, 0);
+                        _breath = Math.Max(_breath - 1, 0);
 
                         if (SimulateEffects && ClosestWater.Material.DrawBubbles)
-                            WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+                            _effectsComponent.CreateBubble(ref _characterHeadPosition, (float)_maxRadius / 4);
 
-                        if (Breath <= 0 && (Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
+                        if (_breath <= 0 && (Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
                         {
                             if (MyAPIGateway.Session.IsServer)
                                 Character.DoDamage(PlayerConfig.DrowningDamage, MyDamageType.Asphyxia, true);
@@ -92,7 +95,7 @@ namespace Jakaria.Components
                             Character.DoDamage(ClosestWater.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
 
                         if (SimulateEffects && ClosestWater.Material.DrawBubbles)
-                            WaterModComponent.Static.CreateBubble(ref CharacterHeadPosition, (float)MaxRadius / 4);
+                            _effectsComponent.CreateBubble(ref _characterHeadPosition, (float)_maxRadius / 4);
                     }
                 }
             }
@@ -112,37 +115,37 @@ namespace Jakaria.Components
             {
                 if (SimulatePhysics || SimulateEffects)
                 {
-                    if (ClosestWater == null || !Entity.InScene || Entity.MarkedForClose || gravity == 0)
+                    if (ClosestWater == null || !Entity.InScene || Entity.MarkedForClose || _gravity == 0)
                         return;
 
                     //Character Physics
-                    CharacterHeadPosition = Character.GetHeadMatrix(false, false).Translation;
+                    _characterHeadPosition = Character.GetHeadMatrix(false, false).Translation;
 
                     if (PlayerConfig == null && Character.Definition?.Id.SubtypeName != null)
                         WaterData.CharacterConfigs.TryGetValue(((MyCharacterDefinition)Character.Definition).Id, out PlayerConfig);
 
-                    if (FluidDepth < MaxRadius && !Airtight)
+                    if (FluidDepth < _maxRadius && !_airtight)
                     {
-                        if (ClosestWater.Material.DrawSplashes && SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && verticalSpeed > 2f) //Splash effect
+                        if (ClosestWater.Material.DrawSplashes && SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && _verticalSpeed > 2f) //Splash effect
                         {
-                            WaterModComponent.Static.CreateSplash(position, Math.Min(speed, 2f), true);
+                            _effectsComponent.CreateSplash(_position, Math.Min(_speed, 2f), true);
                         }
 
                         Vector3 GridVelocity = Vector3.Zero;
 
                         if (WaterUtils.IsPlayerStateFloating(Character.CurrentMovementState))
                         {
-                            if (NearestGrid?.Physics != null)
+                            if (_nearestGrid?.Physics != null)
                             {
-                                if (NearestGrid.RayCastBlocks(CharacterHeadPosition, CharacterHeadPosition + (Vector3.Normalize(NearestGrid.Physics.LinearVelocity) * 10)) != null)
+                                if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
                                 {
-                                    GridVelocity = (NearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
+                                    GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
                                 }
                             }
 
-                            PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / MaxRadius, 1), 0);
-                            velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
-                            DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (velocity * speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
+                            PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
+                            _velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
+                            DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (_velocity * _speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
 
                             //Buoyancy
                             if ((!Character.EnabledThrusts || !Character.EnabledDamping))
@@ -166,7 +169,7 @@ namespace Jakaria.Components
             catch (Exception e)
             {
                 if (!MyAPIGateway.Utilities.IsDedicated)
-                    MyAPIGateway.Utilities.ShowNotification("Water Error on Character. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * recalculateFrequency);
+                    MyAPIGateway.Utilities.ShowNotification("Water Error on Character. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * _recalculateFrequency);
 
                 WaterUtils.WriteLog(e.ToString());
             }

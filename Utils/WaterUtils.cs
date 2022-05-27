@@ -13,6 +13,7 @@ using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Utils;
 using VRageMath;
+using Jakaria.SessionComponents;
 
 namespace Jakaria.Utils
 {
@@ -287,12 +288,12 @@ namespace Jakaria.Utils
             //pressure = density * gravity * height
             CharacterConfig characterConfig;
 
-            if (character?.Definition?.Id != null && water?.Material != null && water?.planet?.Generator != null && WaterData.CharacterConfigs.TryGetValue(character.Definition.Id, out characterConfig))
+            if (character?.Definition?.Id != null && water?.Material != null && water?.Planet?.Generator != null && WaterData.CharacterConfigs.TryGetValue(character.Definition.Id, out characterConfig))
             {
                 if (characterConfig == null)
                     return double.MaxValue;
 
-                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * (water.planet.Generator.SurfaceGravity * 9.8));
+                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * (water.Planet.Generator.SurfaceGravity * 9.8));
             }
 
             return double.MaxValue;

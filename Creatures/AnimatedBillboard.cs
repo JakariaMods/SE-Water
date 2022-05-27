@@ -19,15 +19,17 @@ namespace Jakaria
     {
         public Vector3D Velocity;
 
-        public bool FadeOut = false;
+        public bool FadeOut;
+
         public MyBillboard Billboard;
-        public bool InScene = false;
-        public bool MarkedForClose { protected set; get; }
 
-        public int Life { protected set; get; } = 0;
-        public int MaxLife { protected set; get; }
+        public bool InScene;
+        public bool MarkedForClose;
 
-        protected Vector4 initialColor;
+        public int Life;
+        public int MaxLife;
+
+        protected Vector4 _initialColor;
 
         public AnimatedBillboard() { }
 
@@ -51,7 +53,7 @@ namespace Jakaria
                 Position3 = quad.Point3,
             };
 
-            initialColor = Billboard.Color;
+            _initialColor = Billboard.Color;
 
             if (addToScene)
             {
@@ -80,7 +82,7 @@ namespace Jakaria
                 Position3 = position + ((leftVector + gravityDirection) * size),
             };
 
-            initialColor = Billboard.Color;
+            _initialColor = Billboard.Color;
 
             InScene = true;
             MyTransparentGeometry.AddBillboard(Billboard, true);
@@ -107,7 +109,7 @@ namespace Jakaria
             {
                 if (FadeOut)
                 {
-                    Billboard.Color = Vector4.Lerp(initialColor, Vector4.Zero, (float)Life / (float)MaxLife);
+                    Billboard.Color = Vector4.Lerp(_initialColor, Vector4.Zero, (float)Life / (float)MaxLife);
                 }
 
                 if (MarkedForClose)

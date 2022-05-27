@@ -10,18 +10,19 @@ using VRage.Game.Entity;
 using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
+using Jakaria.SessionComponents;
 
 namespace Jakaria.Components
 {
     public class WaterPhysicsComponentFloatingObject : WaterPhysicsComponentBase
     {
-        private float WaterDensityMultiplier;
+        private float _dragOptimizer = 0;
+        private double _maxRadius;
+        private bool _airtight;
 
-        float DragOptimizer = 0;
-        double MaxRadius;
+        public MyFloatingObject FloatingObject;
 
-        MyFloatingObject FloatingObject;
-        bool Airtight;
+        public WaterPhysicsComponentFloatingObject(WaterManagerComponent managerComponent) : base(managerComponent) { }
 
         /// <summary>
         /// Initalize the component
@@ -44,10 +45,9 @@ namespace Jakaria.Components
 
             if (ClosestWater != null)
             {
-                WaterDensityMultiplier = ClosestWater.Material.Density / 1000f;
-                MaxRadius = Entity.PositionComp.LocalVolume.Radius;
+                _maxRadius = Entity.PositionComp.LocalVolume.Radius;
 
-                Airtight = WaterUtils.IsPositionAirtight(ref position);
+                _airtight = WaterUtils.IsPositionAirtight(ref _position);
             }
         }
 
@@ -65,10 +65,10 @@ namespace Jakaria.Components
             {
                 if (SimulatePhysics || SimulateEffects)
                 {
-                    if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || gravity == 0 && Entity.Physics.Mass == 0)
+                    if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || _gravity == 0 && Entity.Physics.Mass == 0)
                         return;
 
-                    if (!Airtight && FluidDepth < 0)
+                    if (!_airtight && FluidDepth < 0)
                     {
                         if (FloatingObject.Item.Content?.SubtypeId != null && ClosestWater.Material?.CollectedItem?.SubtypeId != null)
                         {
@@ -79,46 +79,46 @@ namespace Jakaria.Components
                             }
                         }
 
-                        nextRecalculate--;
-                        if (NeedsRecalculateBuoyancy || nextRecalculate <= 0)
+                        _nextRecalculate--;
+                        if (NeedsRecalculateBuoyancy || _nextRecalculate <= 0)
                         {
-                            nextRecalculate = WaterData.BuoyancyUpdateFrequencyEntity;
+                            _nextRecalculate = WaterData.BuoyancyUpdateFrequencyEntity;
                             NeedsRecalculateBuoyancy = false;
-                            PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / MaxRadius, 1), 0);
-                            BuoyancyForce = -Entity.Physics.Gravity * ClosestWater.Material.Density * (WaterData.SphereVolumeOptimizer * (float)(MaxRadius * MaxRadius)) * PercentUnderwater * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS * ClosestWater.Buoyancy;
-                            DragOptimizer = 0.5f * ClosestWater.Material.Density * (float)(MaxRadius * MaxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+                            PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
+                            BuoyancyForce = -Entity.Physics.Gravity * ClosestWater.Material.Density * (WaterData.SphereVolumeOptimizer * (float)(_maxRadius * _maxRadius)) * PercentUnderwater * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS * ClosestWater.Buoyancy;
+                            _dragOptimizer = 0.5f * ClosestWater.Material.Density * (float)(_maxRadius * _maxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
 
                             if (Entity is MyMeteor)
                             {
-                                MyVisualScriptLogicProvider.CreateExplosion(position, 2, 0);
+                                MyVisualScriptLogicProvider.CreateExplosion(_position, 2, 0);
                                 MyFloatingObjects.Spawn(new MyPhysicalInventoryItem(500 * (MyFixedPoint)MyUtils.GetRandomFloat(1f, 3f), MyObjectBuilderSerializer.CreateNewObject<MyObjectBuilder_Ore>(WaterUtils.GetRandomMeteorMaterial())), Entity.WorldMatrix, null, null);
                                 Entity.Close();
                                 return;
                             }
                         }
 
-                        if (speed > 0.1f)
+                        if (_speed > 0.1f)
                         {
-                            Vector3 VelocityDamper = gravityDirection * (Vector3.Dot(Vector3.Normalize(Entity.Physics.LinearVelocity), gravityDirection) * speed * ClosestWater.Material.Viscosity * WaterDensityMultiplier);
+                            Vector3 VelocityDamper = _gravityDirection * (Vector3.Dot(Vector3.Normalize(Entity.Physics.LinearVelocity), _gravityDirection) * _speed * ClosestWater.Material.Viscosity);
 
                             //Vertical Velocity Damping
                             if (VelocityDamper.IsValid() && !Vector3.IsZero(VelocityDamper, 1e-4f))
                                 Entity.Physics.LinearVelocity -= VelocityDamper;
 
-                            DragForce = -DragOptimizer * (speed * velocity);
+                            DragForce = -_dragOptimizer * (_speed * _velocity);
 
                             //Linear Drag
                             if (DragForce.IsValid() && !Vector3.IsZero(DragForce, 1e-4f))
-                                Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, Vector3.ClampToSphere(DragForce, Entity.Physics.Mass * speed), null, null);
+                                Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, Vector3.ClampToSphere(DragForce, Entity.Physics.Mass * _speed), null, null);
                         }
 
                         //Angular Drag
-                        if (angularSpeed > 0.03f)
+                        if (_angularSpeed > 0.03f)
                         {
-                            Vector3 AngularDragForce = ((PercentUnderwater * DragOptimizer * angularSpeed) * Entity.Physics.AngularVelocity) / Entity.Physics.Mass;
+                            Vector3 AngularDragForce = ((PercentUnderwater * _dragOptimizer * _angularSpeed) * Entity.Physics.AngularVelocity) / Entity.Physics.Mass;
 
                             if (AngularDragForce.IsValid() && !Vector3.IsZero(AngularDragForce, 1e-4f))
-                                Entity.Physics.AngularVelocity -= Vector3.ClampToSphere(AngularDragForce, angularSpeed / 2);
+                                Entity.Physics.AngularVelocity -= Vector3.ClampToSphere(AngularDragForce, _angularSpeed / 2);
                         }
 
                         if (BuoyancyForce.IsValid())
@@ -129,9 +129,9 @@ namespace Jakaria.Components
                         {
                             if (FluidDepth < 0)
                             {
-                                if (SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && verticalSpeed > 2f)
+                                if (SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && _verticalSpeed > 2f)
                                 {
-                                    WaterModComponent.Static.CreateSplash(position, Math.Min(speed, 2f), true);
+                                    _effectsComponent.CreateSplash(_position, Math.Min(_speed, 2f), true);
                                 }
                             }
                         }
@@ -141,7 +141,7 @@ namespace Jakaria.Components
             catch (Exception e)
             {
                 if (!MyAPIGateway.Utilities.IsDedicated)
-                    MyAPIGateway.Utilities.ShowNotification("Water Error on Floating Object. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * recalculateFrequency);
+                    MyAPIGateway.Utilities.ShowNotification("Water Error on Floating Object. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * _recalculateFrequency);
 
                 WaterUtils.WriteLog(e.ToString());
             }

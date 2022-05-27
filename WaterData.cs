@@ -11,7 +11,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.7";
+        public const string Version = "3.8";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
@@ -166,39 +166,18 @@ namespace Jakaria
 
         public const float WaterVisibility = 5f;
 
-        /// <summary>
-        /// Text that will show in the PSA
-        /// </summary
-        public const string PSAText = "Hello Engineer!\n\n" +
-
-                                      "The Water Mod will be getting a physics overhaul in {PSADateCountdown} days ({PSADate}). This means that when the update is released, some of your boats may no longer function as expected.\n\n" +
-
-                                      "To help the transition from the current build into the new one, I have made an early-access version available on the workshop under the name 'Water Mod Dev'. Along with early-access, I have released Steam Guides on how to use it.\n\n" +
-
-                                      "I recommend you use the new version of water in the meantime; it will make the transition much easier and your feedback will make it even better.\n\n" +
-
-                                      "Thank you,\n" +
-                                      "Jakaria\n\n" +
-                                      "The water mod has a discord by the way! (/wdiscord)";
-
-        /// <summary>
-        /// Text that will show above the PSA to show the countdown
-        /// </summary>
-        public const string PSACountdownText = "(This will show {PSATimes} more time(s))";
-        /// <summary>
-        /// Date the PSA will end
-        /// </summary>
-        public static readonly DateTime PSADate = new DateTime(2022, 4, 23);
-        /// <summary>
-        /// How many times a PSA will show
-        /// </summary>
-        public static readonly int PSAFrequency = 0;
-
         public const float MaxWakeDistance = 10;
         public const float MaxWakeRadius = 20;
 
         public const MyBillboard.BlendTypeEnum BlendType = MyBillboard.BlendTypeEnum.Standard;
 
         public const int MaxRespawnIterations = 500;
+
+        public static readonly Vector3[] Base3Directions = new Vector3[3]
+        {
+            new Vector3(1, 0, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 0, 1)
+        };
     }
 }

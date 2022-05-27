@@ -79,7 +79,7 @@ namespace Jakaria
 
         public WaterSettings(Water water)
         {
-            this.Radius = water.Radius / water.planet.MinimumRadius;
+            this.Radius = water.Radius / water.Planet.MinimumRadius;
             this.WaveHeight = water.WaveHeight;
             this.WaveSpeed = water.WaveSpeed;
             this.WaveScale = water.WaveScale;

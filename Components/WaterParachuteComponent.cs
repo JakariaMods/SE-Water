@@ -26,38 +26,38 @@ namespace Jakaria.Components
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_Parachute), false)]
     public class WaterParachuteComponent : MyGameLogicComponent
     {
-        IMyParachute parachute;
-        WaterPhysicsComponentGrid physComponent;
+        private IMyParachute _parachute;
+        private WaterPhysicsComponentGrid _waterComponent;
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             if (MyAPIGateway.Session.IsServer)
             {
-                parachute = Entity as IMyParachute;
+                _parachute = Entity as IMyParachute;
                 NeedsUpdate = MyEntityUpdateEnum.EACH_10TH_FRAME;
             }
         }
 
         public override void UpdateAfterSimulation10()
         {
-            if(physComponent == null)
-                parachute.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out physComponent);
+            if(_waterComponent == null)
+                _parachute.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out _waterComponent);
 
-            if (parachute.CubeGrid?.Physics == null)
+            if (_parachute.CubeGrid?.Physics == null)
                 return;
 
-            if (physComponent != null)
+            if (_waterComponent != null)
             {
                 //opens the parachute if the altitude above the water is less than the autodeploy height
-                if (physComponent.FluidDepth > parachute.CubeGrid.LocalVolume.Radius)
+                if (_waterComponent.FluidDepth > _parachute.CubeGrid.LocalVolume.Radius)
                 {
-                    if (parachute.AutoDeploy && physComponent.FluidDepth < parachute.AutoDeployHeight && parachute.OpenRatio == 0)
+                    if (_parachute.AutoDeploy && _waterComponent.FluidDepth < _parachute.AutoDeployHeight && _parachute.OpenRatio == 0)
                     {
-                        parachute.OpenDoor();
+                        _parachute.OpenDoor();
                     }
                 }
-                else if(parachute.CubeGrid.Physics?.Speed < 3)
-                    parachute.CloseDoor();
+                else if(_parachute.CubeGrid.Physics?.Speed < 3)
+                    _parachute.CloseDoor();
             }
         }
     }

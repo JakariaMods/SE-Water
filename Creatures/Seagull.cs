@@ -17,8 +17,8 @@ namespace Jakaria
 {
     public class Seagull : AnimatedBillboard
     {
-        Vector3D AnimationNormal;
-        MyEntity3DSoundEmitter SoundEmitter;
+        private Vector3D _animationNormal;
+        private MyEntity3DSoundEmitter _soundEmitter;
 
         public Seagull() { }
 
@@ -48,14 +48,14 @@ namespace Jakaria
             MyTransparentGeometry.AddBillboard(Billboard, true);
             InScene = true;
 
-            AnimationNormal = gravityDirection;
+            _animationNormal = gravityDirection;
 
-            SoundEmitter = new MyEntity3DSoundEmitter(null);
+            _soundEmitter = new MyEntity3DSoundEmitter(null);
         }
 
         public override void Simulate()
         {
-            Vector3D Animation = AnimationNormal * Math.Sin(MyAPIGateway.Session.ElapsedPlayTime.TotalSeconds * 5) * 0.003;
+            Vector3D Animation = _animationNormal * Math.Sin(MyAPIGateway.Session.ElapsedPlayTime.TotalSeconds * 5) * 0.003;
 
             Billboard.Position0 -= Animation;
             Billboard.Position1 += Animation;
@@ -67,8 +67,8 @@ namespace Jakaria
 
         public void Caw()
         {
-            SoundEmitter.SetPosition(Billboard.Position0);
-            SoundEmitter.PlaySound(WaterData.SeagullSound, true);
+            _soundEmitter.SetPosition(Billboard.Position0);
+            _soundEmitter.PlaySound(WaterData.SeagullSound, true);
         }
     }
 }

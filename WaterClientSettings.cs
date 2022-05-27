@@ -8,30 +8,38 @@ using System.Threading.Tasks;
 namespace Jakaria
 {
     [ProtoContract]
-    public class WaterClientSettings
+    public struct WaterClientSettings
     {
         [ProtoMember(1)]
-        public float Quality = 1.5f;
+        public float Quality;
 
-        [ProtoMember(2)]
-        public bool ShowHud = true;
+        [ProtoMember(10)]
+        public bool ShowCenterOfBuoyancy;
 
-        [ProtoMember(3)]
-        public bool ShowCenterOfBuoyancy = false;
+        [ProtoMember(15)]
+        public bool ShowDepth;
 
-        [ProtoMember(4)]
-        public bool ShowDepth = true;
+        [ProtoIgnore()]
+        public bool ShowFog;
 
-        [ProtoMember(5)]
-        public bool ShowFog = true;
+        [ProtoMember(25)]
+        public bool ShowDebug;
 
-        [ProtoMember(6)]
-        public bool ShowDebug = false;
+        [ProtoMember(30)]
+        public float Volume;
 
-        [ProtoMember(7)]
-        public float Volume = 1f;
+        [ProtoMember(35)]
+        public bool ShowAltitude;
 
-        [ProtoMember(8)]
-        public bool ShowAltitude = true;
+        public static WaterClientSettings Default = new WaterClientSettings()
+        {
+            Quality = 1.5f,
+            ShowCenterOfBuoyancy = false,
+            ShowDepth = true,
+            ShowFog = true,
+            ShowDebug = false,
+            Volume = 1f,
+            ShowAltitude = true,
+        };
     }
 }

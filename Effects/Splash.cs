@@ -7,35 +7,55 @@ using System.Threading.Tasks;
 using VRage.Utils;
 using VRageMath;
 using Jakaria.Components;
+using VRageRender;
+using Sandbox.ModAPI;
+using VRage.Game;
+using Jakaria.SessionComponents;
+
 namespace Jakaria
 {
     public class Splash
     {
-        public Vector3D position;
-        public float radius;
+        public Vector3D Position;
+        public float Radius;
 
-        public int life = 1;
-        public int maxLife;
+        public int Life = 1;
+        public int MaxLife;
 
-        MyEntity3DSoundEmitter splashSound;
+        public MyBillboard Billboard;
 
-        public Splash(Vector3D Position, float Radius = 1f, float Volume = 1f)
+        private MyEntity3DSoundEmitter _splashSound;
+
+        public Splash(Vector3D position, float radius = 1f, float volume = 1f)
         {
-            position = Position;
-            radius = Radius;
-            maxLife = (int)MyUtils.GetRandomFloat(60, 80);
-            
-            if (Volume != 0)
+            this.Position = position;
+            this.Radius = radius;
+            MaxLife = (int)MyUtils.GetRandomFloat(60, 80);
+
+            Billboard = new MyBillboard()
             {
-                splashSound = new MyEntity3DSoundEmitter(null);
-                splashSound.SetPosition(position);
+                Material = WaterData.SplashMaterial,
+                CustomViewProjection = -1,
+                ColorIntensity = 1,
+                UVSize = Vector2.One,
+            };
 
-                if(WaterModComponent.Static.Session.CameraUnderwater)
-                    splashSound.PlaySound(WaterData.UnderwaterSplashSound);
-                else
-                    splashSound.PlaySound(WaterData.SplashSound);
+            MyTransparentGeometry.AddBillboard(Billboard, true);
 
-                splashSound.CustomVolume = Volume * WaterModComponent.Static.Settings.Volume * ((25f - Math.Max(WaterModComponent.Static.Session.InsideGrid - 10, 0)) / 25f);
+            if (volume != 0)
+            {
+                _splashSound = new MyEntity3DSoundEmitter(null);
+                _splashSound.SetPosition(this.Position);
+
+                MyAPIGateway.Utilities.InvokeOnGameThread(() =>
+                {
+                    if (WaterRenderComponent.Static.CameraUnderwater)
+                        _splashSound.PlaySound(WaterData.UnderwaterSplashSound);
+                    else
+                        _splashSound.PlaySound(WaterData.SplashSound);
+                });
+
+                _splashSound.CustomVolume = volume * WaterSoundComponent.Static.VolumeMultiplier;
             }
         }
     }

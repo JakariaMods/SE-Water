@@ -4,6 +4,7 @@ using System;
 using VRage.Game.Components;
 using VRage.ModAPI;
 using VRageMath;
+using Jakaria.SessionComponents;
 
 namespace Jakaria.Components
 {
@@ -64,23 +65,35 @@ namespace Jakaria.Components
         /// </summary>
         public float PercentUnderwater { get; protected set; }
 
-        protected Vector3 gravityDirection;
-        protected float gravity;
-        protected Vector3D position;
+        protected Vector3 _gravityDirection;
+        protected float _gravity;
+        protected Vector3D _position;
 
-        protected Vector3 velocity;
-        protected float speed;
-        protected Vector3 verticalVelocity;
-        protected float verticalSpeed;
-        protected float angularSpeed;
+        protected Vector3 _velocity;
+        protected Vector3 _velocityDirection;
+        protected float _speed;
+        protected Vector3 _verticalVelocity;
+        protected float _verticalSpeed;
+        protected float _angularSpeed;
 
-        protected int nextRecalculate = 0;
-        protected int recalculateFrequency = 0;
+        protected int _nextRecalculate = 0;
+        protected int _recalculateFrequency = 0;
+
+        protected WaterModComponent _modComponent;
+        protected WaterRenderComponent _renderComponent;
+        protected WaterEffectsComponent _effectsComponent;
+
+        public WaterPhysicsComponentBase(WaterManagerComponent managerComponent)
+        {
+            _modComponent = managerComponent.TryGet<WaterModComponent>();
+            _renderComponent = managerComponent.TryGet<WaterRenderComponent>();
+            _effectsComponent = managerComponent.TryGet<WaterEffectsComponent>();
+        }
 
         public override void OnAddedToContainer()
         {
-            WaterModComponent.Static.UpdateAfter1 += UpdateAfter1;
-            WaterModComponent.Static.UpdateAfter60 += UpdateAfter60;
+            _modComponent.UpdateAfter1 += UpdateAfter1;
+            _modComponent.UpdateAfter60 += UpdateAfter60;
             Entity.OnPhysicsChanged += Entity_OnPhysicsChanged;
 
             UpdateClosestWater();
@@ -88,8 +101,8 @@ namespace Jakaria.Components
 
         public override void OnBeforeRemovedFromContainer()
         {
-            WaterModComponent.Static.UpdateAfter1 -= UpdateAfter1;
-            WaterModComponent.Static.UpdateAfter60 -= UpdateAfter60;
+            _modComponent.UpdateAfter1 -= UpdateAfter1;
+            _modComponent.UpdateAfter60 -= UpdateAfter60;
             Entity.OnPhysicsChanged -= Entity_OnPhysicsChanged;
         }
 
@@ -97,7 +110,7 @@ namespace Jakaria.Components
         {
             UpdateClosestWater();
 
-            if (!MyAPIGateway.Utilities.IsDedicated && Vector3D.DistanceSquared(position, WaterModComponent.Static.Session.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
+            if (_renderComponent != null && Vector3D.DistanceSquared(_position, _renderComponent.CameraPosition) < MyAPIGateway.Session.SessionSettings.SyncDistance * MyAPIGateway.Session.SessionSettings.SyncDistance)
             {
                 SimulateEffects = true;
             }
@@ -106,16 +119,16 @@ namespace Jakaria.Components
 
             if(ClosestWater != null && Entity.Physics != null)
             {
-                FluidPressure = (ClosestWater.Material.Density * gravity * (float)Math.Max(-FluidDepth, 0)) / 1000;
+                FluidPressure = (ClosestWater.Material.Density * _gravity * (float)Math.Max(-FluidDepth, 0)) / 1000;
 
-                if (ClosestWater.planet?.HasAtmosphere == true)
+                if (ClosestWater.Planet?.HasAtmosphere == true)
                 {
                     //(101325 / 1000) Converts atm to kPa. 1atm = 101.325kPa
-                    FluidPressure += ClosestWater.planet.GetOxygenForPosition(position) * (101325 / 1000);
+                    FluidPressure += ClosestWater.Planet.GetOxygenForPosition(_position) * (101325 / 1000);
                 }
 
-                gravityDirection = Entity.Physics.Gravity;
-                gravity = gravityDirection.Normalize();
+                _gravityDirection = Entity.Physics.Gravity;
+                _gravity = _gravityDirection.Normalize();
             }
         }
 
@@ -126,20 +139,21 @@ namespace Jakaria.Components
 
             if(SimulatePhysics || SimulateEffects)
             {
-                position = Entity.PositionComp.WorldVolume.Center;
+                _position = Entity.PositionComp.WorldVolume.Center;
 
-                FluidDepth = ClosestWater.GetDepth(ref position);
-                FluidVelocity = ClosestWater.GetFluidVelocity(-gravityDirection);
+                FluidDepth = ClosestWater.GetDepth(ref _position);
+                FluidVelocity = ClosestWater.GetFluidVelocity(-_gravityDirection);
 
                 if (SimulatePhysics)
                 {
-                    velocity = Entity.Physics.LinearVelocity - FluidVelocity;
-                    speed = velocity.Length();
+                    _velocity = Entity.Physics.LinearVelocity - FluidVelocity;
+                    _velocityDirection = _velocity;
+                    _speed = _velocityDirection.Normalize();
 
-                    verticalVelocity = Vector3.ProjectOnVector(ref velocity, ref gravityDirection);
-                    verticalSpeed = verticalVelocity.Length();
+                    _verticalVelocity = Vector3.ProjectOnVector(ref _velocity, ref _gravityDirection);
+                    _verticalSpeed = _verticalVelocity.Length();
 
-                    angularSpeed = Entity.Physics.AngularVelocity.Length();
+                    _angularSpeed = Entity.Physics.AngularVelocity.Length();
                 }
             }
         }
@@ -149,7 +163,7 @@ namespace Jakaria.Components
         /// </summary>
         protected void UpdateClosestWater()
         {
-            ClosestWater = WaterModComponent.Static.GetClosestWater(position);
+            ClosestWater = _modComponent.GetClosestWater(_position);
         }
 
         /// <summary>

@@ -34,4 +34,3 @@ namespace Jakaria.Configs
         public BaseConfig() { }
     }
 }
-//TODO RENAME CONFIG TO DEFINITION TO MATCH VANILLA PATTERN

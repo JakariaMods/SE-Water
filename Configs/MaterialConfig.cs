@@ -1,4 +1,5 @@
-﻿using ProtoBuf;
+﻿using Jakaria.Utils;
+using ProtoBuf;
 using System;
 using System.Xml.Serialization;
 using VRage.Game;
@@ -24,13 +25,25 @@ namespace Jakaria.Configs
         public bool DrawWakes = true;
 
         [ProtoMember(25), XmlElement("CollectedItem")]
-        public string CollectedItemSubtypeId = "Ice";
+        public string CollectedItemSubtypeId
+        {
+            get { return _collectedItemSubtypeId; }
+            set
+            {
+                _collectedItemSubtypeId = value;
+                CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = _collectedItemSubtypeId };
+
+                WaterUtils.WriteLog($"Identified CollectedItem '{_collectedItemSubtypeId}' Null? '{CollectedItem == null}'");
+            }
+        }
+
+        private string _collectedItemSubtypeId = "Ice";
 
         [ProtoIgnore(), XmlIgnore()]
         public MyObjectBuilder_PhysicalObject CollectedItem;
 
         [ProtoMember(26)]
-        public int CollectedAmount = 50;
+        public int CollectedAmount = 10;
 
         [ProtoMember(30)]
         public float MaxSurfaceFluctuation = 5f;
@@ -49,7 +62,7 @@ namespace Jakaria.Configs
 
         public override void Init()
         {
-            CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = CollectedItemSubtypeId };
+            CollectedItemSubtypeId = _collectedItemSubtypeId;
             Viscosity = Math.Min(Viscosity, 1f);
 
             base.Init();
