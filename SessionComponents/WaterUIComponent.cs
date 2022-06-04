@@ -142,7 +142,7 @@ namespace Jakaria.SessionComponents
                         _depthMeter.Message = new StringBuilder("\n\n\n" + message);
 
                         if (!_renderComponent.CameraAirtight)
-                            _depthMeter.InitialColor = Color.Lerp(Color.Lerp(Color.White, Color.Yellow, (float)MathHelper.Clamp(-_renderComponent.CameraDepth / crushDepth, 0f, 1f)), Color.Red, (float)-(_renderComponent.CameraDepth + (crushDepth - 100)) / 100);
+                            _depthMeter.InitialColor = Color.Lerp(Color.White, Color.Red, (float)MathHelper.Clamp(-_renderComponent.CameraDepth / crushDepth, 0f, 1f));
                         else
                             _depthMeter.InitialColor = Color.Lerp(_depthMeter.InitialColor, Color.White, 0.25f);
 

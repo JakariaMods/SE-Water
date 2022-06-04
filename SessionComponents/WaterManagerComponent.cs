@@ -26,7 +26,7 @@ namespace Jakaria.SessionComponents
         public WaterManagerComponent()
         {
             Static = this;
-
+            
             try
             {
                 _components.Add(new WaterConfigComponent());
@@ -39,6 +39,7 @@ namespace Jakaria.SessionComponents
                 _components.Add(new WaterRenderComponent());
                 _components.Add(new WaterEffectsComponent());
                 _components.Add(new WaterRespawnPodComponent());
+                _components.Add(new BlockDamageComponent());
 
                 foreach (var component in _components)
                 {
@@ -86,6 +87,7 @@ namespace Jakaria.SessionComponents
             if(!MyAPIGateway.Session.IsServer)
             {
                 RemoveComponent<WaterRespawnPodComponent>();
+                RemoveComponent<BlockDamageComponent>();
             }
 
             foreach (var component in _components)

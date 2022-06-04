@@ -35,8 +35,6 @@ namespace Jakaria.SessionComponents
     {
         public Dictionary<long, Water> Waters = new Dictionary<long, Water>();
 
-        public ConcurrentStack<BlockDamagePair> DamageQueue = new ConcurrentStack<BlockDamagePair>();
-
         public Action UpdateAfter1;
         public Action UpdateAfter60;
 
@@ -159,8 +157,8 @@ namespace Jakaria.SessionComponents
                             {
                                 if (weather.Voxel == "WATERMODDATA")
                                 {
-                                    Jakaria.WaterSettings settings;
-                                    settings = MyAPIGateway.Utilities.SerializeFromXML<Jakaria.WaterSettings>(weather.Weathers?[0]?.Name);
+                                    WaterSettings settings;
+                                    settings = MyAPIGateway.Utilities.SerializeFromXML<WaterSettings>(weather.Weathers?[0]?.Name);
 
                                     Waters[planet.EntityId] = new Water(planet, settings);
                                     SyncClients();
@@ -289,21 +287,6 @@ namespace Jakaria.SessionComponents
                 {
                     water.Simulate();
                 }
-
-            if (MyAPIGateway.Session.IsServer)
-            {
-                foreach (var damagePair in DamageQueue) //Damaging blocks is not thread-safe so I do it here
-                {
-                    if (damagePair.Block.CubeGrid == null || damagePair.Block.CubeGrid.MarkedForClose == true)
-                        continue;
-
-                    if (damagePair.Block != null)
-                    {
-                        damagePair.Block.DoDamage(damagePair.Damage, MyDamageType.Fall, true);
-                    }
-                }
-                DamageQueue.Clear();
-            }
         }
 
         /// <summary>

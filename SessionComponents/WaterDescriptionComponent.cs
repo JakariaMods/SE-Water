@@ -35,7 +35,7 @@ namespace Jakaria.SessionComponents
             Static = null;
         }
 
-        public override void LoadData()
+        public override void BeforeStart()
         {
             var definitions = MyDefinitionManager.Static.GetAllDefinitions();
             foreach (var definition in definitions)

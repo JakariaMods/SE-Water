@@ -21,7 +21,7 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public class WaterRenderComponent : SessionComponentBase
     {
-        public Vector3D CameraClosestPosition;
+        public Vector3D CameraClosestSurfacePosition;
         public double CameraDepth;
         public Vector3D CameraGravityDirection;
         public Vector3D CameraClosestWaterPosition;
@@ -35,8 +35,8 @@ namespace Jakaria.SessionComponents
         public bool CameraUnderwater;
         public double CameraAltitude;
 
-        public MyPlanet ClosestPlanet = null;
-        public Water ClosestWater = null;
+        public MyPlanet ClosestPlanet;
+        public Water ClosestWater;
 
         public Vector3 SunDirection;
         public float AmbientColorIntensity;
@@ -47,6 +47,8 @@ namespace Jakaria.SessionComponents
         private bool? _previousUnderwaterState;
         private Vector3D _lastLODBuildPosition;
         private float _nightValue;
+        private bool _init;
+        private Vector4 _whiteColor;
 
         private WaterModComponent _modComponent;
         private IMyWeatherEffects _weatherComponent;
@@ -140,16 +142,32 @@ namespace Jakaria.SessionComponents
             SunDirection = MyVisualScriptLogicProvider.GetSunDirection();
 
             if (ClosestPlanet == null)
+            {
+                CameraClosestSurfacePosition = Vector3D.MaxValue;
+                CameraAltitude = double.MaxValue;
+
                 _nightValue = 1;
+            }
             else
+            {
+                CameraClosestSurfacePosition = ClosestPlanet.GetClosestSurfacePointGlobal(CameraPosition);
+                CameraAltitude = WaterUtils.GetAltitude(ClosestPlanet, CameraPosition);
+
                 _nightValue = MyMath.Clamp(Vector3.Dot(-CameraGravityDirection, SunDirection) + 0.22f, 0.22f, 1f);
+            }
 
-            if (ClosestWater == null)            
+            if (ClosestWater == null)
+            {
                 CameraUnderwater = false;
+                CameraClosestWaterPosition = Vector3D.MaxValue;
+            }
             else
+            {
                 CameraUnderwater = ClosestWater.IsUnderwater(ref CameraPosition);
+                CameraClosestWaterPosition = ClosestWater.GetClosestSurfacePointGlobal(CameraPosition);
+            }
 
-            Vector4 WhiteColor = new Vector4(_nightValue, _nightValue, _nightValue, 1);
+            _whiteColor = new Vector4(_nightValue, _nightValue, _nightValue, 1);
 
             if (_modComponent.Waters != null)
             {
@@ -181,34 +199,33 @@ namespace Jakaria.SessionComponents
                         }
                     }
                 });
-            }
 
-            //Effects
-            lock (_effectsComponent.EffectLock)
-            {
-                float lifeRatio = 0;
-
-                if (!CameraUnderwater)
+                //Effects
+                lock (_effectsComponent.EffectLock)
                 {
-                    float size;
-                    MyQuadD Quad;
-                    Vector3D axisA;
-                    Vector3D axisB;
+                    float lifeRatio = 0;
 
-                    foreach (var splash in _effectsComponent.SurfaceSplashes)
+                    if (!CameraUnderwater)
                     {
-                        if (splash == null)
-                            continue;
+                        float size;
+                        Vector3D axisA;
+                        Vector3D axisB;
 
-                        lifeRatio = (float)splash.Life / splash.MaxLife;
-                        size = splash.Radius * lifeRatio;
-                        axisA = GravityAxisA * size;
-                        axisB = GravityAxisB * size;
-                        splash.Billboard.Position0 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position - axisA - axisB);
-                        splash.Billboard.Position2 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA + axisB);
-                        splash.Billboard.Position1 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position - axisA + axisB);
-                        splash.Billboard.Position3 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA - axisB);
-                        splash.Billboard.Color = WhiteColor * (1f - lifeRatio) * ClosestWater.PlanetConfig.ColorIntensity;
+                        foreach (var splash in _effectsComponent.SurfaceSplashes)
+                        {
+                            if (splash == null)
+                                continue;
+
+                            lifeRatio = (float)splash.Life / splash.MaxLife;
+                            size = splash.Radius * lifeRatio;
+                            axisA = GravityAxisA * size;
+                            axisB = GravityAxisB * size;
+                            splash.Billboard.Position0 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position - axisA - axisB);
+                            splash.Billboard.Position2 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA + axisB);
+                            splash.Billboard.Position1 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position - axisA + axisB);
+                            splash.Billboard.Position3 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA - axisB);
+                            splash.Billboard.Color = _whiteColor * (1f - lifeRatio) * ClosestWater.PlanetConfig.ColorIntensity;
+                        }
                     }
                 }
             }
@@ -220,9 +237,6 @@ namespace Jakaria.SessionComponents
             {
                 CameraPosition = MyAPIGateway.Session.Camera.Position;
                 CameraDirection = MyAPIGateway.Session.Camera.WorldMatrix.Forward;
-                CameraClosestWaterPosition = ClosestWater != null ? ClosestWater.GetClosestSurfacePointGlobal(CameraPosition) : Vector3D.Zero;
-                CameraClosestPosition = ClosestPlanet?.GetClosestSurfacePointGlobal(CameraPosition) ?? Vector3D.Zero;
-                CameraAltitude = ClosestPlanet != null ? WaterUtils.GetAltitude(ClosestPlanet, CameraPosition) : double.MaxValue;
             }
 
             if (CameraGravityDirection != Vector3D.Zero)
@@ -400,9 +414,10 @@ namespace Jakaria.SessionComponents
             }
 
             //Only Change fog once above water and all the time underwater
-            if (_previousUnderwaterState != CameraUnderwater)
+            if (_previousUnderwaterState != CameraUnderwater || !_init)
             {
                 _previousUnderwaterState = CameraUnderwater;
+                _init = true;
 
                 if (CameraUnderwater)
                 {

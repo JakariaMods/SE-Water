@@ -61,10 +61,12 @@ namespace Jakaria.Components
         private List<AnimatedBillboard> _wakes;
 
         private WaterSettingsComponent _settingsComponent;
+        private BlockDamageComponent _damageComponent;
 
         public WaterPhysicsComponentGrid(WaterManagerComponent managerComponent) : base(managerComponent)
         {
             _settingsComponent = managerComponent.TryGet<WaterSettingsComponent>();
+            _damageComponent = managerComponent.TryGet<BlockDamageComponent>();
         }
 
         //List<uint> Decals; TODO?
@@ -116,6 +118,12 @@ namespace Jakaria.Components
                 IGrid.GasSystem.OnProcessingDataComplete -= RecalculateAirtightness;
 
             Cleanup();
+
+            if (_modComponent.DragClientAPI.Heartbeat)
+            {
+                DragClientAPI.DragObject value;
+                _modComponent.DragObjects.TryRemove(IGrid, out value);
+            }
 
             IGrid.OnBlockRemoved -= IGrid_OnBlockRemoved;
             IGrid.OnBlockAdded -= IGrid_OnBlockAdded;
@@ -399,17 +407,15 @@ namespace Jakaria.Components
                                         {
                                             if (SimulateEffects)
                                             {
-                                                if ((BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.IsFunctional) && MyUtils.GetRandomInt(300) == 0)
+                                                if ((BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.IsFunctional))
                                                 {
                                                     if (!BlockVolume.Config.PlayDamageEffect)
                                                     {
-                                                        if (BlockVolume.Block.FatBlock != null)
-                                                        {
-                                                            BlockVolume.Block.FatBlock.SetDamageEffect(false);
-                                                        }
+                                                        BlockVolume.Block.FatBlock.SetDamageEffect(false);
                                                     }
 
-                                                    _effectsComponent.CreateBubble(ref pointWorldPosition, Grid.GridSize);
+                                                    if (MyUtils.GetRandomInt(300) == 0)
+                                                        _effectsComponent.CreateBubble(ref pointWorldPosition, Grid.GridSize);
                                                 }
 
                                                 if (_material.DrawWakes && _wakes != null && Math.Abs(pointDepth) < Grid.GridSizeHalf)
@@ -436,9 +442,9 @@ namespace Jakaria.Components
                                                 }
                                             }
 
-                                            if (FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
+                                            if (_damageComponent != null && FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
                                             {
-                                                _modComponent.DamageQueue.Push(new BlockDamagePair(BlockVolume.Block, ClosestWater.CrushDamage * (_recalculateFrequency + 1)));
+                                                _damageComponent.DoDamage(BlockVolume.Block, ClosestWater.CrushDamage * (_recalculateFrequency + 1));
 
                                                 if (SimulateEffects && MyUtils.GetRandomInt(0, 200) == 0)
                                                     _effectsComponent.CreateBubble(ref pointWorldPosition, Grid.GridSize);
@@ -515,9 +521,9 @@ namespace Jakaria.Components
                                                             }
                                                         }
 
-                                                        if (BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / _waterDensityMultiplier)
+                                                        if (_damageComponent != null && BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / _waterDensityMultiplier)
                                                         {
-                                                            _modComponent.DamageQueue.Push(new BlockDamagePair(BlockVolume.Block, 50 * BlockVerticalSpeed * _waterDensityMultiplier));
+                                                            _damageComponent.DoDamage(BlockVolume.Block, 50 * BlockVerticalSpeed * _waterDensityMultiplier);
                                                         }
                                                     }
                                                 }
@@ -633,7 +639,7 @@ namespace Jakaria.Components
                                 if (_modComponent.DragClientAPI.Heartbeat)
                                 {
                                     var api = _modComponent.DragObjects.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
-
+                                    
                                     if (api != null)
                                     {
                                         api.ViscosityMultiplier = 1f + (float)(PercentUnderwater * _material.Density);

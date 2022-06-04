@@ -43,6 +43,8 @@
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="BlockDamagePair.cs" />
     <Compile Include="Command.cs" />
+    <Compile Include="Components\WaterPhysicsComponentGrid2.cs" />
+    <Compile Include="SessionComponents\BlockDamageComponent.cs" />
     <Compile Include="SessionComponents\WaterConfigComponent.cs" />
     <Compile Include="SessionComponents\WaterDescriptionComponent.cs" />
     <Compile Include="SessionComponents\SessionComponentBase.cs" />

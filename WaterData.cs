@@ -11,7 +11,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.8";
+        public const string Version = "3.9";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
@@ -59,27 +59,11 @@ namespace Jakaria
         public static readonly MySoundPair UnderwaterPoofSound = new MySoundPair("JPoofUnderwater");
         public static readonly MySoundPair SurfaceExplosionSound = new MySoundPair("JExplosionSurface");
 
-        public static readonly string[] DropContainerNames = new string[]
+        public static readonly Color[] DepthColorGradient = new Color[3]
         {
-            "Container_MK-1",
-            "Container_MK-2",
-            "Container_MK-3",
-            "Container_MK-4",
-            //"Container_MK-5", Space Only
-            //"Container_MK-6", Space Only
-            //"Container_MK-7", Strong-Signal Only
-            "Container_MK-8",
-            "Container_MK-9",
-            //"Container_MK-10", Space Only
-            "Container_MK-11",
-            "Container_MK-12",
-            "Container_MK-13",
-            //"Container_MK-14", Space Only
-            //"Container_MK-15", Space Only
-            "Container_MK-16",
-            "Container_MK-17",
-            "Container_MK-18",
-            //"Container_MK-19", Space Only
+            Color.White,
+            Color.Yellow,
+            Color.Red
         };
 
         public static readonly Vector4 BubbleColor = new Vector4(0.05f, 0.0625f, 0.075f, 0.5f);

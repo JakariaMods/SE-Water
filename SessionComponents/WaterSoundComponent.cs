@@ -35,8 +35,6 @@ namespace Jakaria.SessionComponents
         private int _insideGrid;
         private int _insideVoxel;
 
-        private bool _cameraAirtight;
-
         private WaterModComponent _modComponent;
         private WaterRenderComponent _renderComponent;
         private WaterEffectsComponent _effectsComponent;
@@ -74,6 +72,15 @@ namespace Jakaria.SessionComponents
             {
                 StopAmbientSounds();
                 return;
+            }
+
+            if(WaterSettingsComponent.Static.Settings.ShowDebug)
+            {
+                MyAPIGateway.Utilities.ShowNotification("underwater " + _environmentUnderwaterSoundEmitter.IsPlaying, 16);
+                MyAPIGateway.Utilities.ShowNotification("ocean " + _environmentOceanSoundEmitter.IsPlaying, 16);
+                MyAPIGateway.Utilities.ShowNotification("beach " + _environmentBeachSoundEmitter.IsPlaying, 16);
+                MyAPIGateway.Utilities.ShowNotification("sound " + _ambientSoundEmitter.IsPlaying, 16);
+                MyAPIGateway.Utilities.ShowNotification("boat " + _ambientBoatSoundEmitter.IsPlaying, 16);
             }
 
             if (_renderComponent.ClosestPlanet.HasAtmosphere)
@@ -152,8 +159,8 @@ namespace Jakaria.SessionComponents
                 }
 
                 _environmentUnderwaterSoundEmitter.VolumeMultiplier = VolumeMultiplier;
-                _environmentOceanSoundEmitter.VolumeMultiplier = VolumeMultiplier * MathHelper.Clamp((500f - (float)_renderComponent.CameraDepth) / 500.0f, 0, 1.0f);
-                _environmentBeachSoundEmitter.VolumeMultiplier = VolumeMultiplier * MathHelper.Clamp((100f - (float)_renderComponent.CameraDepth) / 100.0f, 0, 1.0f);
+                _environmentOceanSoundEmitter.VolumeMultiplier = VolumeMultiplier * MathHelper.Clamp((100f - (float)_renderComponent.CameraDepth) / 100f, 0, 1f);
+                _environmentBeachSoundEmitter.VolumeMultiplier = VolumeMultiplier * MathHelper.Clamp((100f - (float)_renderComponent.CameraDepth) / 100f, 0, 1f);
             }
             else
             {
@@ -171,14 +178,6 @@ namespace Jakaria.SessionComponents
 
             if (_environmentUnderwaterSoundEmitter.IsPlaying)
                 _environmentUnderwaterSoundEmitter.StopSound(true);
-        }
-
-        public override void LoadData()
-        {
-            if (MyAPIGateway.Utilities.IsDedicated)
-            {
-                UpdateOrder = MyUpdateOrder.NoUpdate;
-            }
         }
 
         public override void UnloadData()

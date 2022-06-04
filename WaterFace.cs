@@ -92,7 +92,7 @@ namespace Jakaria
             {
                 _children = null;
             }
-
+            
             if (_detailLevel < WaterData.MinWaterSplitDepth || (_radius > WaterData.MinWaterSplitRadius && (_face.Water.Position + (Vector3D.Normalize(_position + (-_face.AxisA + -_face.AxisB) * _radius) * _face.Water.Radius) - _face.RenderComponent.CameraPosition).AbsMax() < _radius * (3f + (_face.SettingsComponent.Settings.Quality * 2))))
             {
                 double halfRadius = _radius / 2.0;
@@ -200,7 +200,7 @@ namespace Jakaria
                     }
 
                     Vector3D Seperator = normal1 * WaterData.WaterVisibility;
-
+                    
                     _bottomBillboard.Color = WaterData.WhiteColor;
 
                     _bottomBillboard.ColorIntensity = ColorIntensity + Specularity;

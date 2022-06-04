@@ -202,7 +202,7 @@ namespace Jakaria.SessionComponents
                         Seagull Seagull = Seagulls[i];
                         if (Seagull == null || Seagull.MarkedForClose)
                         {
-                            Vector3D NewPosition = _renderComponent.CameraClosestPosition - (_renderComponent.CameraGravityDirection * (_renderComponent.CameraAltitude + _renderComponent.CameraDepth + MyUtils.GetRandomDouble(10, 50))) + (MyUtils.GetRandomPerpendicularVector(_renderComponent.CameraGravityDirection) * MyUtils.GetRandomFloat(0, 100));
+                            Vector3D NewPosition = _renderComponent.CameraClosestSurfacePosition - (_renderComponent.CameraGravityDirection * (_renderComponent.CameraAltitude + _renderComponent.CameraDepth + MyUtils.GetRandomDouble(10, 50))) + (MyUtils.GetRandomPerpendicularVector(_renderComponent.CameraGravityDirection) * MyUtils.GetRandomFloat(0, 100));
 
                             Seagulls[i] = new Seagull(NewPosition, MyUtils.GetRandomPerpendicularVector(_renderComponent.CameraGravityDirection), _renderComponent.CameraGravityDirection, MyUtils.GetRandomInt(2000, 3000), 1);
                         }

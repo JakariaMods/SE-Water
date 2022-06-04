@@ -292,8 +292,8 @@ namespace Jakaria.Utils
             {
                 if (characterConfig == null)
                     return double.MaxValue;
-
-                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * (water.Planet.Generator.SurfaceGravity * 9.8));
+                
+                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * character.Physics.Gravity.Length());
             }
 
             return double.MaxValue;
@@ -331,6 +331,26 @@ namespace Jakaria.Utils
 
                 return (blockCount / 3000) + 3;
             }
+        }
+
+        /// <summary>
+        /// Lerps between X colors.
+        /// </summary>
+        /// <returns></returns>
+        public static Color LerpGradient(Color[] gradient, float lerp)
+        {
+            lerp = Math.Max(Math.Min(lerp, 1), 0);
+            float scaled = (gradient.Length - 1) * lerp;
+
+            Color min = gradient[MathHelper.FloorToInt(scaled)];
+            Color max = gradient[MathHelper.CeilToInt(scaled)];
+            
+            if (min == max)
+                return min;
+
+            float newLerp = scaled / (gradient.Length - 1);
+            MyAPIGateway.Utilities.ShowNotification("" + Color.Lerp(min, max, newLerp), 16);
+            return Color.Lerp(min, max, newLerp);
         }
     }
 }

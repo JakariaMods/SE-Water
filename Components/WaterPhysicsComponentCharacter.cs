@@ -133,36 +133,33 @@ namespace Jakaria.Components
 
                         Vector3 GridVelocity = Vector3.Zero;
 
-                        if (WaterUtils.IsPlayerStateFloating(Character.CurrentMovementState))
+                        if (_nearestGrid?.Physics != null)
                         {
-                            if (_nearestGrid?.Physics != null)
+                            if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
                             {
-                                if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
-                                {
-                                    GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
-                                }
+                                GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
                             }
-
-                            PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
-                            _velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
-                            DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (_velocity * _speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
-
-                            //Buoyancy
-                            if ((!Character.EnabledThrusts || !Character.EnabledDamping))
-                            {
-                                DragForce += -Character.Physics.Gravity * ClosestWater.Material.Density * PlayerConfig.Volume;
-                            }
-
-                            DragForce *= PercentUnderwater;
-
-                            //Drag
-                            if (DragForce.IsValid())
-                                Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, DragForce, null, null);
-
-                            //Swimming
-                            if (PlayerConfig.SwimForce > 0 && !Character.EnabledThrusts)
-                                Character.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, Vector3.ClampToSphere(Character.LastMotionIndicator, PercentUnderwater) * PlayerConfig.SwimForce, null, null);
                         }
+
+                        PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
+                        _velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
+                        DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (_velocity * _speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
+
+                        //Buoyancy
+                        if ((!Character.EnabledThrusts || !Character.EnabledDamping))
+                        {
+                            DragForce += -Character.Physics.Gravity * ClosestWater.Material.Density * PlayerConfig.Volume;
+                        }
+
+                        DragForce *= PercentUnderwater;
+
+                        //Drag
+                        if (DragForce.IsValid())
+                            Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, DragForce, null, null);
+
+                        //Swimming
+                        if (PlayerConfig.SwimForce > 0 && !Character.EnabledThrusts)
+                            Character.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, Vector3.ClampToSphere(Character.LastMotionIndicator, PercentUnderwater) * PlayerConfig.SwimForce, null, null);
                     }
                 }
             }
