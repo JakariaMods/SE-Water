@@ -26,6 +26,8 @@ namespace Jakaria
         public float Radius;
         public float Angle;
 
+        private readonly WaterRenderSessionComponent _renderComponent;
+
         public AnimatedPointBillboard() { }
 
         public AnimatedPointBillboard(Vector3D position, Vector3D velocity, float radius, int maxLife, float angle, MyStringId material)
@@ -36,12 +38,14 @@ namespace Jakaria
 
             Radius = radius;
             Angle = angle;
-            
+
+            _renderComponent = Session.Instance.Get<WaterRenderSessionComponent>();
+
             Billboard = new MyBillboard()
             {
                 Color = WaterData.SmallBubbleColor,
                 CustomViewProjection = -1,
-                ColorIntensity = 1f,
+                ColorIntensity = 1,
                 Material = material,
                 UVSize = Vector2.One
             };
@@ -60,13 +64,13 @@ namespace Jakaria
             {
                 MyQuadD quad;
                 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterRenderComponent.Static.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, _renderComponent.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;
                 Billboard.Position3 = quad.Point3;
 
-                Billboard.Color = Vector4.Lerp(_initialColor, Vector4.Zero, (float)Life / (float)MaxLife);
+                Billboard.Color = Vector4.Lerp(_initialColor * _renderComponent.WhiteColor, Vector4.Zero, (float)Life / (float)MaxLife);
             }
 
             Life++;

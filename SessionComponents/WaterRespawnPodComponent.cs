@@ -1,4 +1,5 @@
-﻿using Jakaria.Configs;
+﻿using Jakaria.Components;
+using Jakaria.Configs;
 using Jakaria.Utils;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
@@ -19,25 +20,12 @@ namespace Jakaria.SessionComponents
     {
         public WaterModComponent _modComponent;
 
-        public static WaterRespawnPodComponent Static;
-
-        public WaterRespawnPodComponent()
-        {
-            Static = this;
-        }
-
-        public override void LoadDependencies()
-        {
-            _modComponent = WaterModComponent.Static;
-        }
-
-        public override void UnloadDependencies()
-        {
-            Static = null;
-        }
+        public const int MAX_ITERATIONS = 500;
 
         public override void LoadData()
         {
+            _modComponent = Session.Instance.Get<WaterModComponent>();
+
             MyVisualScriptLogicProvider.RespawnShipSpawned += RespawnShipSpawned;
         }
 
@@ -53,7 +41,7 @@ namespace Jakaria.SessionComponents
             if (grid != null)
             {
                 MyPlanet planet = MyGamePruningStructure.GetClosestPlanet(grid.GetPosition());
-                Water water = _modComponent.GetClosestWater(grid.GetPosition());
+                WaterComponent water = _modComponent.GetClosestWater(grid.GetPosition());
                 WaterUtils.ShowMessage(respawnShipPrefabName);
                 RespawnPodConfig config;
                 if (water != null && planet != null && grid.Physics != null && WaterData.RespawnPodConfigs.TryGetValue(MyDefinitionId.Parse("RespawnShipDefinition/" + respawnShipPrefabName), out config))
@@ -61,11 +49,11 @@ namespace Jakaria.SessionComponents
                     if (config.SpawnOnLand == config.SpawnOnWater)
                         return;
 
-                    for (int i = 0; i < WaterData.MaxRespawnIterations; i++)
+                    for (int i = 0; i < MAX_ITERATIONS; i++)
                     {
                         Vector3D normal = MyUtils.GetRandomVector3Normalized();
-                        Vector3D closestPlanetPosition = planet.GetClosestSurfacePointGlobal(water.Position + (normal * planet.AverageRadius));
-                        if (water.IsUnderwater(ref closestPlanetPosition))
+                        Vector3D closestPlanetPosition = planet.GetClosestSurfacePointGlobal(water.Entity.GetPosition() + (normal * planet.AverageRadius));
+                        if (water.IsUnderwaterGlobal(ref closestPlanetPosition))
                         {
                             if (config.SpawnOnWater)
                             {
@@ -102,7 +90,7 @@ namespace Jakaria.SessionComponents
                             }
                         }
 
-                        if (i == WaterData.MaxRespawnIterations - 1)
+                        if (i == MAX_ITERATIONS - 1)
                         {
                             WaterUtils.WriteLog("Could not find suitable respawn area for '" + respawnShipPrefabName + "'");
                         }

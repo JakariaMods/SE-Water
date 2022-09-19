@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using VRage.Game;
+using VRage.Game.ModAPI;
 
 namespace Jakaria.Configs
 {
@@ -20,8 +21,13 @@ namespace Jakaria.Configs
         [ProtoIgnore, XmlIgnore]
         public MyDefinitionId DefinitionId;
 
-        public virtual void Init()
+        [ProtoIgnore, XmlIgnore]
+        public IMyModContext ModContext;
+
+        public virtual void Init(IMyModContext modContext)
         {
+            ModContext = modContext;
+
             MyDefinitionId.TryParse(TypeId + "/" + SubtypeId, out DefinitionId);
         }
 

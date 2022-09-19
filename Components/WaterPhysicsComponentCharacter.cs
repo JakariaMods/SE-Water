@@ -10,6 +10,8 @@ using VRage.Game.ModAPI;
 using VRageMath;
 using Jakaria.Configs;
 using Jakaria.SessionComponents;
+using Sandbox.Engine.Physics;
+using VRageRender;
 
 namespace Jakaria.Components
 {
@@ -21,11 +23,12 @@ namespace Jakaria.Components
         private int _breath;
         private Vector3D _characterHeadPosition;
         private bool _headUnderwater;
+        private bool _underwater;
 
         public IMyCharacter Character;
         public CharacterConfig PlayerConfig;
 
-        public WaterPhysicsComponentCharacter(WaterManagerComponent managerComponent) : base(managerComponent) { }
+        public WaterPhysicsComponentCharacter() : base() { }
 
         /// <summary>
         /// Initalize the component
@@ -59,9 +62,9 @@ namespace Jakaria.Components
 
             if (PlayerConfig != null && ClosestWater != null)
             {
-                _headUnderwater = ClosestWater.IsUnderwater(ref _characterHeadPosition);
+                _headUnderwater = ClosestWater.IsUnderwaterGlobal(ref _characterHeadPosition);
 
-                MyCharacterOxygenComponent OxygenComponent;
+                MyCharacterOxygenComponent oxygenComponent;
                 if (_nearestGrid != null)
                     _airtight = _nearestGrid.IsRoomAtPositionAirtight(_nearestGrid.WorldToGridInteger(_characterHeadPosition));
                 else
@@ -74,11 +77,11 @@ namespace Jakaria.Components
                 else if (_headUnderwater)
                 {
                     //Drowning
-                    if (!PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out OxygenComponent) || !OxygenComponent.HelmetEnabled))
+                    if (!PlayerConfig.CanBreathUnderwater && (!Character.Components.TryGet<MyCharacterOxygenComponent>(out oxygenComponent) || !oxygenComponent.HelmetEnabled))
                     {
                         _breath = Math.Max(_breath - 1, 0);
 
-                        if (SimulateEffects && ClosestWater.Material.DrawBubbles)
+                        if (_effectsComponent != null && ClosestWater.Settings.Material.DrawBubbles)
                             _effectsComponent.CreateBubble(ref _characterHeadPosition, (float)_maxRadius / 4);
 
                         if (_breath <= 0 && (Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true))
@@ -88,13 +91,16 @@ namespace Jakaria.Components
                         }
                     }
 
+                    //Energy Draining
+
+
                     //Pressure Crushing
                     if (FluidPressure > PlayerConfig.MaximumPressure)
                     {
                         if (MyAPIGateway.Session.IsServer && Character.ControllerInfo?.Controller?.ControlledEntity is IMyCharacter == true)
-                            Character.DoDamage(ClosestWater.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
+                            Character.DoDamage(ClosestWater.Settings.CrushDamage * (FluidPressure / PlayerConfig.MaximumPressure), MyDamageType.Temperature, true);
 
-                        if (SimulateEffects && ClosestWater.Material.DrawBubbles)
+                        if (_effectsComponent != null && ClosestWater.Settings.Material.DrawBubbles)
                             _effectsComponent.CreateBubble(ref _characterHeadPosition, (float)_maxRadius / 4);
                     }
                 }
@@ -108,67 +114,79 @@ namespace Jakaria.Components
         {
             base.UpdateAfter1();
 
-            if (Entity.Physics == null || ClosestWater == null || ClosestWater.Material == null)
+            if (Entity.Physics == null || ClosestWater == null || ClosestWater.Settings.Material == null)
                 return;
 
-            try
+            if (SimulatePhysics)
             {
-                if (SimulatePhysics || SimulateEffects)
+                if (ClosestWater == null || !Entity.InScene || Entity.MarkedForClose || _gravityStrength == 0)
+                    return;
+
+                //Character Physics
+                _characterHeadPosition = Character.GetHeadMatrix(false, false).Translation;
+
+                if (PlayerConfig == null && Character.Definition?.Id.SubtypeName != null)
+                    WaterData.CharacterConfigs.TryGetValue(((MyCharacterDefinition)Character.Definition).Id, out PlayerConfig);
+
+                if (FluidDepth < _maxRadius && !_airtight)
                 {
-                    if (ClosestWater == null || !Entity.InScene || Entity.MarkedForClose || _gravity == 0)
-                        return;
+                    Vector3 GridVelocity = Vector3.Zero;
 
-                    //Character Physics
-                    _characterHeadPosition = Character.GetHeadMatrix(false, false).Translation;
+                    //Buoyancy is disabled when near grids to prevent bouncing
+                    bool shouldSimulateBuoyancy = true;
 
-                    if (PlayerConfig == null && Character.Definition?.Id.SubtypeName != null)
-                        WaterData.CharacterConfigs.TryGetValue(((MyCharacterDefinition)Character.Definition).Id, out PlayerConfig);
-
-                    if (FluidDepth < _maxRadius && !_airtight)
+                    if (_nearestGrid?.Physics != null)
                     {
-                        if (ClosestWater.Material.DrawSplashes && SimulateEffects && FluidDepth > -1 && FluidDepth < 1 && _verticalSpeed > 2f) //Splash effect
+                        if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
                         {
-                            _effectsComponent.CreateSplash(_position, Math.Min(_speed, 2f), true);
+                            GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
                         }
+                    }
+                    
+                    IHitInfo hitInfo;
+                    shouldSimulateBuoyancy = !MyAPIGateway.Physics.CastRay(_position, _position + (_gravityDirection * 2), out hitInfo, 30);
 
-                        Vector3 GridVelocity = Vector3.Zero;
+                    PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
+                    _velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
+                    DragForce = ClosestWater.Settings.PlayerDrag ? (ClosestWater.Settings.Material.Density * (_velocity * _speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
 
-                        if (_nearestGrid?.Physics != null)
+                    //Buoyancy
+                    if (shouldSimulateBuoyancy && (!Character.EnabledThrusts || !Character.EnabledDamping))
+                    {
+                        DragForce += -_gravity * ClosestWater.Settings.Material.Density * PlayerConfig.Volume;
+                    }
+
+                    DragForce *= PercentUnderwater;
+
+                    //Drag
+                    if (DragForce.IsValid())
+                        Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, DragForce, null, null);
+
+                    //Swimming
+                    if (PlayerConfig.SwimForce > 0 && !Character.EnabledThrusts)
+                        Character.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, Vector3.ClampToSphere(Character.LastMotionIndicator, PercentUnderwater) * PlayerConfig.SwimForce, null, null);
+                }
+
+                //Simple Splash Effects
+                if (_effectsComponent != null && ClosestWater.Settings.Material.DrawSplashes)
+                {
+                    bool underwater = FluidDepth < _maxRadius && !_airtight;
+
+                    if(_underwater != underwater)
+                    {
+                        _underwater = underwater;
+
+                        Vector3D surfacePosition = ClosestWater.GetClosestSurfacePointGlobal(ref _position);
+                        _effectsComponent.CreateSplash(surfacePosition, Math.Min(_speed, 2f), true);
+
+                        MatrixD matrix = MatrixD.CreateWorld(surfacePosition, -_renderComponent.CameraGravityDirection, _renderComponent.GravityAxisA);
+                        MyParticleEffect effect;
+                        if (MyParticlesManager.TryCreateParticleEffect("WaterSplashSmall", ref matrix, ref surfacePosition, 0, out effect))
                         {
-                            if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
-                            {
-                                GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
-                            }
+                            effect.UserColorIntensityMultiplier = ClosestWater.PlanetConfig.ColorIntensity;
                         }
-
-                        PercentUnderwater = (float)Math.Max(Math.Min(-FluidDepth / _maxRadius, 1), 0);
-                        _velocity = (-Character.Physics.LinearVelocity + GridVelocity + FluidVelocity);
-                        DragForce = ClosestWater.PlayerDrag ? (ClosestWater.Material.Density * (_velocity * _speed)) * (Character.PositionComp.LocalVolume.Radius * Character.PositionComp.LocalVolume.Radius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS : Vector3.Zero;
-
-                        //Buoyancy
-                        if ((!Character.EnabledThrusts || !Character.EnabledDamping))
-                        {
-                            DragForce += -Character.Physics.Gravity * ClosestWater.Material.Density * PlayerConfig.Volume;
-                        }
-
-                        DragForce *= PercentUnderwater;
-
-                        //Drag
-                        if (DragForce.IsValid())
-                            Character.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, DragForce, null, null);
-
-                        //Swimming
-                        if (PlayerConfig.SwimForce > 0 && !Character.EnabledThrusts)
-                            Character.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, Vector3.ClampToSphere(Character.LastMotionIndicator, PercentUnderwater) * PlayerConfig.SwimForce, null, null);
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                if (!MyAPIGateway.Utilities.IsDedicated)
-                    MyAPIGateway.Utilities.ShowNotification("Water Error on Character. Phys-" + SimulatePhysics + "Efct-" + SimulateEffects, 16 * _recalculateFrequency);
-
-                WaterUtils.WriteLog(e.ToString());
             }
         }
     }

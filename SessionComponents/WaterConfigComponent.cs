@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VRage.Game;
+using VRage.Game.ModAPI;
 using VRageMath;
 
 namespace Jakaria.SessionComponents
@@ -18,23 +19,6 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public class WaterConfigComponent : SessionComponentBase
     {
-        public static WaterConfigComponent Static;
-
-        public WaterConfigComponent()
-        {
-            Static = this;
-        }
-
-        public override void LoadDependencies()
-        {
-            
-        }
-
-        public override void UnloadDependencies()
-        {
-            Static = null;
-        }
-
         public override void LoadData()
         {
             LoadConfigFiles();
@@ -51,6 +35,8 @@ namespace Jakaria.SessionComponents
             {
                 foreach (var Mod in MyAPIGateway.Session.Mods)
                 {
+                    IMyModContext modContext = Mod.GetModContext();
+                    
                     if (MyAPIGateway.Utilities.FileExistsInModLocation("Data/WaterConfig.xml", Mod))
                     {
                         reader = MyAPIGateway.Utilities.ReadFileInModLocation("Data/WaterConfig.xml", Mod);
@@ -71,7 +57,7 @@ namespace Jakaria.SessionComponents
                                             continue;
                                         }
 
-                                        BlockConfig.Init();
+                                        BlockConfig.Init(modContext);
 
                                         if (!BlockConfig.DefinitionId.TypeId.IsNull)
                                         {
@@ -89,7 +75,7 @@ namespace Jakaria.SessionComponents
                                             continue;
                                         }
 
-                                        PlanetConfig.Init();
+                                        PlanetConfig.Init(modContext);
 
                                         if (!PlanetConfig.DefinitionId.TypeId.IsNull)
                                         {
@@ -101,7 +87,7 @@ namespace Jakaria.SessionComponents
                                 if (WaterConfig.CharacterConfigs != null)
                                     foreach (var CharacterConfig in WaterConfig.CharacterConfigs)
                                     {
-                                        CharacterConfig.Init();
+                                        CharacterConfig.Init(modContext);
 
                                         if (!CharacterConfig.DefinitionId.TypeId.IsNull)
                                         {
@@ -113,7 +99,7 @@ namespace Jakaria.SessionComponents
                                 if (WaterConfig.RespawnPodConfigs != null)
                                     foreach (var RespawnPodConfig in WaterConfig.RespawnPodConfigs)
                                     {
-                                        RespawnPodConfig.Init();
+                                        RespawnPodConfig.Init(modContext);
 
                                         if (!RespawnPodConfig.DefinitionId.TypeId.IsNull)
                                         {
@@ -132,10 +118,19 @@ namespace Jakaria.SessionComponents
                                 if (WaterConfig.MaterialConfigs != null)
                                     foreach (var Material in WaterConfig.MaterialConfigs)
                                     {
-                                        Material.Init();
+                                        Material.Init(modContext);
 
                                         WaterData.MaterialConfigs[Material.SubtypeId] = Material;
                                         WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
+                                    }
+
+                                if (WaterConfig.FishConfigs != null)
+                                    foreach (var Fish in WaterConfig.FishConfigs)
+                                    {
+                                        Fish.Init(modContext);
+
+                                        WaterData.FishConfigs[Fish.SubtypeId] = Fish;
+                                        WaterUtils.WriteLog("Loaded Fish Config '" + Fish.SubtypeId + "'");
                                     }
                             }
                         }
@@ -160,15 +155,23 @@ namespace Jakaria.SessionComponents
             //Calculate volume of every block in m^3
             foreach (var definition in MyDefinitionManager.Static.GetAllDefinitions())
             {
-                if (!WaterData.CharacterConfigs.ContainsKey(definition.Id))
-                    if (definition is MyCharacterDefinition)
+                if (definition is MyCharacterDefinition && !WaterData.CharacterConfigs.ContainsKey(definition.Id))
+                {
+                    MyCharacterDefinition characterDefinition = (MyCharacterDefinition)definition;
+                    WaterData.CharacterConfigs[characterDefinition.Id] = new CharacterConfig()
                     {
-                        MyCharacterDefinition characterDefinition = (MyCharacterDefinition)definition;
-                        WaterData.CharacterConfigs[characterDefinition.Id] = new CharacterConfig()
-                        {
-                            Volume = characterDefinition.CharacterLength * characterDefinition.CharacterWidth * characterDefinition.CharacterHeight,
-                        };
-                    }
+                        Volume = characterDefinition.CharacterLength * characterDefinition.CharacterWidth * characterDefinition.CharacterHeight,
+                    };
+                }
+
+                if(definition is MyPlanetGeneratorDefinition && !WaterData.PlanetConfigs.ContainsKey(definition.Id))
+                {
+                    MyPlanetGeneratorDefinition planetGeneratorDefinition = (MyPlanetGeneratorDefinition)definition;
+                    WaterData.PlanetConfigs[planetGeneratorDefinition.Id] = new PlanetConfig(planetGeneratorDefinition.Id)
+                    {
+                        
+                    };
+                }
 
                 if (definition is MyCubeBlockDefinition)
                 {
@@ -350,7 +353,7 @@ namespace Jakaria.SessionComponents
                                 Config.Volume = Math.Min(blockDefinition.Mass / 32f, (blockDimensions.Volume)); //No more information, treat it like a steel block
                             }
 
-                            Config.Init();
+                            Config.Init(null);
                         }
 
                         Config.Volume = Math.Max(Math.Min(Config.Volume, blockDimensions.Volume), 0); //Clamp volume to never be greater than the possible volume

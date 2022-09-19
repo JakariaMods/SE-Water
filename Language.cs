@@ -53,7 +53,7 @@
         public string SetWaveSpeedNoParse = "Couldn't parse wave speed '{0}'.";
 
         public string HasWater = "This planet already has water";
-        public string CreateWater = "Created water at your closest planet.";
+        public string CreateWater = "Created water at your closest planet. Use /wradius to set up the water's radius. /wrradius will tell you the radius at your position";
         public string RemoveWater = "Removed the water at your closest planet.";
 
         public string ExportWater = "Exported water settings to clipboard.";

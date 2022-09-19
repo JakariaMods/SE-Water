@@ -15,24 +15,7 @@ namespace Jakaria.SessionComponents
     {
         public const string FILE_NAME = "WaterClientSettings.xml";
 
-        public static WaterSettingsComponent Static;
-
         public WaterClientSettings Settings = WaterClientSettings.Default;
-
-        public WaterSettingsComponent()
-        {
-            Static = this;
-        }
-
-        public override void LoadDependencies()
-        {
-            
-        }
-
-        public override void UnloadDependencies()
-        {
-            Static = null;
-        }
 
         public override void LoadData()
         {

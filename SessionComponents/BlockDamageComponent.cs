@@ -19,24 +19,6 @@ namespace Jakaria.SessionComponents
     {
         private List<BlockDamagePair> _damageQueue = new List<BlockDamagePair>();
 
-        public static BlockDamageComponent Static;
-
-        public BlockDamageComponent()
-        {
-            Static = this;
-            UpdateOrder = MyUpdateOrder.AfterSimulation;
-        }
-
-        public override void LoadDependencies()
-        {
-
-        }
-
-        public override void UnloadDependencies()
-        {
-            Static = null;
-        }
-
         public void DoDamage(IMySlimBlock block, float damage)
         {
             lock (_damageQueue)
@@ -60,6 +42,18 @@ namespace Jakaria.SessionComponents
 
                 _damageQueue.Clear();
             }
+        }
+    }
+
+    public struct BlockDamagePair
+    {
+        public IMySlimBlock Block;
+        public float Damage;
+
+        public BlockDamagePair(IMySlimBlock block, float damage)
+        {
+            Block = block;
+            Damage = damage;
         }
     }
 }

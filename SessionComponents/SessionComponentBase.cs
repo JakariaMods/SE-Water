@@ -10,17 +10,12 @@ namespace Jakaria.SessionComponents
 {
     public abstract class SessionComponentBase
     {
-        public MyUpdateOrder UpdateOrder;
 
         public IMyModContext ModContext;
 
         public SessionComponentBase() { }
 
         public virtual void Init() { }
-
-        public abstract void LoadDependencies();
-
-        public abstract void UnloadDependencies();
 
         public virtual void UpdateAfterSimulation() { }
 

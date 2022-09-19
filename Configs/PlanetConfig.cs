@@ -42,12 +42,6 @@ namespace Jakaria.Configs
         [ProtoMember(27)]
         public float DistantSoftnessMultiplier = 5f;
 
-        public PlanetConfig(string subtypeId, Water water)
-        {
-            SubtypeId = subtypeId;
-            WaterSettings = new WaterSettings(water);
-        }
-
         public PlanetConfig(MyDefinitionId definitionId)
         {
             TypeId = definitionId.TypeId.ToString();

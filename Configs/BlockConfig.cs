@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using VRage.Game;
+using VRage.Game.ModAPI;
 
 namespace Jakaria.Configs
 {
@@ -34,8 +35,11 @@ namespace Jakaria.Configs
         [ProtoMember(20), XmlAttribute("IsPressurized")]
         public bool IsPressurized = false;
 
-        public override void Init()
+        public override void Init(IMyModContext modContext = null)
         {
+            if(modContext != null)
+                base.Init(modContext);
+
             /*if (Volume < 0)
                 Volume = 0;*/
 
@@ -44,8 +48,6 @@ namespace Jakaria.Configs
 
             if (MaxFunctionalPressure < 0)
                 MaxFunctionalPressure = float.MaxValue;
-
-            base.Init();
         }
     }
 }

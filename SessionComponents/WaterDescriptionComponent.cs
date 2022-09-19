@@ -14,27 +14,6 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public class WaterDescriptionComponent : SessionComponentBase
     {
-        private WaterModComponent _modComponent;
-
-        public static WaterDescriptionComponent Static;
-
-        public WaterDescriptionComponent()
-        {
-            Static = this;
-        }
-
-        public override void LoadDependencies()
-        {
-            _modComponent = WaterModComponent.Static;
-        }
-
-        public override void UnloadDependencies()
-        {
-            _modComponent = null;
-
-            Static = null;
-        }
-
         public override void BeforeStart()
         {
             var definitions = MyDefinitionManager.Static.GetAllDefinitions();

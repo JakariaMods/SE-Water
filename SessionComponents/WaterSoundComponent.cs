@@ -35,35 +35,15 @@ namespace Jakaria.SessionComponents
         private int _insideGrid;
         private int _insideVoxel;
 
-        private WaterModComponent _modComponent;
-        private WaterRenderComponent _renderComponent;
+        private WaterRenderSessionComponent _renderComponent;
         private WaterEffectsComponent _effectsComponent;
         private WaterSettingsComponent _settingsComponent;
 
-        public static WaterSoundComponent Static;
-
-        public WaterSoundComponent()
+        public override void LoadData()
         {
-            Static = this;
-            UpdateOrder = MyUpdateOrder.AfterSimulation;
-        }
-
-        public override void LoadDependencies()
-        {
-            _modComponent = WaterModComponent.Static;
-            _renderComponent = WaterRenderComponent.Static;
-            _effectsComponent = WaterEffectsComponent.Static;
-            _settingsComponent = WaterSettingsComponent.Static;
-        }
-
-        public override void UnloadDependencies()
-        {
-            _modComponent = null;
-            _renderComponent = null;
-            _effectsComponent = null;
-            _settingsComponent = null;
-
-            Static = null;
+            _renderComponent = Session.Instance.Get<WaterRenderSessionComponent>();
+            _effectsComponent = Session.Instance.Get<WaterEffectsComponent>();
+            _settingsComponent = Session.Instance.Get<WaterSettingsComponent>();
         }
 
         public override void UpdateAfterSimulation()
@@ -74,7 +54,7 @@ namespace Jakaria.SessionComponents
                 return;
             }
 
-            if(WaterSettingsComponent.Static.Settings.ShowDebug)
+            if(_settingsComponent.Settings.ShowDebug)
             {
                 MyAPIGateway.Utilities.ShowNotification("underwater " + _environmentUnderwaterSoundEmitter.IsPlaying, 16);
                 MyAPIGateway.Utilities.ShowNotification("ocean " + _environmentOceanSoundEmitter.IsPlaying, 16);
@@ -124,14 +104,15 @@ namespace Jakaria.SessionComponents
                     {
                         _ambientBoatTimer = MyUtils.GetRandomInt(1000, 1500); //Divide by 60 to get in seconds
 
-                        //TODO CRUSH DAMAGE STUF
                         if (MyAPIGateway.Session.Player?.Character != null)
-                            if (_renderComponent.CameraUnderwater && !_ambientBoatSoundEmitter.IsPlaying && _insideGrid > 10 && _renderComponent.CameraDepth < -_renderComponent.ClosestWater.CrushDamage)
+                        {
+                            if (_renderComponent.CameraUnderwater && !_ambientBoatSoundEmitter.IsPlaying && _insideGrid > 10 && _renderComponent.CameraDepth < -WaterUtils.GetCrushDepth(_renderComponent.ClosestWater, MyAPIGateway.Session.Player.Character))
                             {
                                 _ambientBoatSoundEmitter.PlaySound(WaterData.GroanSound);
                                 _ambientBoatSoundEmitter.VolumeMultiplier = VolumeMultiplier;
                                 _ambientBoatSoundEmitter.SetPosition(_renderComponent.CameraPosition + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, 75)));
                             }
+                        }
                     }
                 }
                 else
@@ -142,7 +123,7 @@ namespace Jakaria.SessionComponents
                     if (!_environmentBeachSoundEmitter.IsPlaying)
                         _environmentBeachSoundEmitter.PlaySound(WaterData.EnvironmentBeachSound, force2D: true);
 
-                    if (_renderComponent.ClosestWater.EnableSeagulls)
+                    if (_renderComponent.ClosestWater.Settings.EnableSeagulls)
                         foreach (var seagull in _effectsComponent.Seagulls)
                         {
                             if (seagull == null)

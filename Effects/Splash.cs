@@ -25,6 +25,7 @@ namespace Jakaria
         public MyBillboard Billboard;
 
         private MyEntity3DSoundEmitter _splashSound;
+        private WaterRenderSessionComponent _renderComponent;
 
         public Splash(Vector3D position, float radius = 1f, float volume = 1f)
         {
@@ -32,11 +33,13 @@ namespace Jakaria
             this.Radius = radius;
             MaxLife = (int)MyUtils.GetRandomFloat(60, 80);
 
+            _renderComponent = Session.Instance.Get<WaterRenderSessionComponent>();
+
             Billboard = new MyBillboard()
             {
                 Material = WaterData.SplashMaterial,
                 CustomViewProjection = -1,
-                ColorIntensity = 1,
+                ColorIntensity = _renderComponent.AmbientColorIntensity,
                 UVSize = Vector2.One,
             };
 
@@ -49,13 +52,13 @@ namespace Jakaria
 
                 MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                 {
-                    if (WaterRenderComponent.Static.CameraUnderwater)
+                    if (_renderComponent.CameraUnderwater)
                         _splashSound.PlaySound(WaterData.UnderwaterSplashSound);
                     else
                         _splashSound.PlaySound(WaterData.SplashSound);
                 });
 
-                _splashSound.CustomVolume = volume * WaterSoundComponent.Static.VolumeMultiplier;
+                _splashSound.CustomVolume = volume * Session.Instance.Get<WaterSoundComponent>().VolumeMultiplier;
             }
         }
     }

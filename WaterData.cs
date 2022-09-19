@@ -11,10 +11,11 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.9";
+        public const string Version = "3.10";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;
+        public const ushort ServerHandlerID = 50275;
 
         //Materials
         public static readonly MyStringId BlankMaterial = MyStringId.GetOrCompute("Square");
@@ -27,12 +28,10 @@ namespace Jakaria
         public static readonly MyStringId GodRayMaterial = MyStringId.GetOrCompute("JGodRay");
         public static readonly MyStringId FoamMaterial = MyStringId.GetOrCompute("JFoam");
         public static readonly MyStringId WakeMaterial = MyStringId.GetOrCompute("JWake");
-        public static readonly MyStringId FishMaterial = MyStringId.GetOrCompute("JFish");
         public static readonly MyStringId PhysicalSplashMaterial = MyStringId.GetOrCompute("JPhysicalSplash");
 
         //UVs
         public static readonly Vector2 FoamUVSize = new Vector2(0.25f, 0.5f); //4x2 UV Size. Y0 is Heavy Foam & Y1 is Light Foam
-        public static readonly Vector2 FishUVSize = new Vector2(0.25f, 0.5f); //4x2 UV Size.
 
         public static readonly Vector2[] SurfaceUVOffsets = new Vector2[4]
             {
@@ -58,13 +57,6 @@ namespace Jakaria
         public static readonly MySoundPair UnderwaterExplosionSound = new MySoundPair("JExplosionUnderwater");
         public static readonly MySoundPair UnderwaterPoofSound = new MySoundPair("JPoofUnderwater");
         public static readonly MySoundPair SurfaceExplosionSound = new MySoundPair("JExplosionSurface");
-
-        public static readonly Color[] DepthColorGradient = new Color[3]
-        {
-            Color.White,
-            Color.Yellow,
-            Color.Red
-        };
 
         public static readonly Vector4 BubbleColor = new Vector4(0.05f, 0.0625f, 0.075f, 0.5f);
         public static readonly Vector4 WhiteColor = Vector4.One;
@@ -111,6 +103,8 @@ namespace Jakaria
             },
         };
 
+        public static Dictionary<string, FishConfig> FishConfigs = new Dictionary<string, FishConfig>();
+
         /// <summary>
         /// Hashset of available water textures
         /// </summary>
@@ -137,8 +131,6 @@ namespace Jakaria
         /// </summary>
         public const float AirtightnessCoefficientSmall = 1.0f;
 
-        public const float CharacterDragCoefficient = 0.075f;
-
         public const float MinVolumeLarge = 2;
         public const float MinVolumeSmall = 0;
 
@@ -150,18 +142,19 @@ namespace Jakaria
 
         public const float WaterVisibility = 5f;
 
-        public const float MaxWakeDistance = 10;
-        public const float MaxWakeRadius = 20;
+        public const float DragMultiplier = 0.2f;
 
         public const MyBillboard.BlendTypeEnum BlendType = MyBillboard.BlendTypeEnum.Standard;
 
-        public const int MaxRespawnIterations = 500;
-
-        public static readonly Vector3[] Base3Directions = new Vector3[3]
+        public static readonly Vector3I[] Base3Directions = new Vector3I[3]
         {
-            new Vector3(1, 0, 0),
-            new Vector3(0, 1, 0),
-            new Vector3(0, 0, 1)
+            new Vector3I(1, 0, 0),
+            new Vector3I(0, 1, 0),
+            new Vector3I(0, 0, 1)
         };
+
+        public const string SaveVariableName = "JWater2";
+
+        public const string StartMessage = "";
     }
 }

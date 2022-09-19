@@ -12,6 +12,7 @@ using Jakaria;
 using VRageRender;
 using VRage.Game;
 using Sandbox.ModAPI;
+using Jakaria.SessionComponents;
 
 namespace Jakaria
 {
@@ -49,10 +50,11 @@ namespace Jakaria
             InScene = true;
 
             _animationNormal = gravityDirection;
-
+            
             _soundEmitter = new MyEntity3DSoundEmitter(null);
+            _soundEmitter.VolumeMultiplier = Session.Instance.Get<WaterSoundComponent>().VolumeMultiplier;
         }
-
+        
         public override void Simulate()
         {
             Vector3D Animation = _animationNormal * Math.Sin(MyAPIGateway.Session.ElapsedPlayTime.TotalSeconds * 5) * 0.003;

@@ -9,9 +9,25 @@
     <RootNamespace>Jakaria</RootNamespace>
     <AssemblyName>Jakaria</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>6.0</LangVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -39,11 +55,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="API\APIUsageExample.cs" />
-    <Compile Include="API\WaterModAPIBackend.cs" />
+    <Compile Include="API\RemoteDragSettings.cs" />
     <Compile Include="API\WaterModAPI.cs" />
-    <Compile Include="BlockDamagePair.cs" />
-    <Compile Include="Command.cs" />
     <Compile Include="Components\WaterPhysicsComponentGrid2.cs" />
+    <Compile Include="Components\WaterComponent.cs" />
+    <Compile Include="Components\WaterRenderComponent.cs" />
+    <Compile Include="Configs\FishConfig.cs" />
+    <Compile Include="SessionComponents\BackwardsCompatibilityComponent.cs" />
+    <Compile Include="SessionComponents\WaterAPIComponent.cs" />
+    <Compile Include="SessionComponents\WaterFishComponent.cs" />
+    <Compile Include="SessionComponents\WaterModComponent.cs" />
+    <Compile Include="SessionComponents\WaterSyncComponent.cs" />
+    <Compile Include="SessionComponents\XboxRenderComponent.cs" />
+    <Compile Include="SessionComponents\XboxCommandComponent.cs" />
     <Compile Include="SessionComponents\BlockDamageComponent.cs" />
     <Compile Include="SessionComponents\WaterConfigComponent.cs" />
     <Compile Include="SessionComponents\WaterDescriptionComponent.cs" />
@@ -51,7 +75,7 @@
     <Compile Include="SessionComponents\WaterRespawnPodComponent.cs" />
     <Compile Include="SessionComponents\WaterSettingsComponent.cs" />
     <Compile Include="SessionComponents\WaterEffectsComponent.cs" />
-    <Compile Include="SessionComponents\WaterManagerComponent.cs" />
+    <Compile Include="Session.cs" />
     <Compile Include="SessionComponents\WaterCommandComponent.cs" />
     <Compile Include="Components\WaterCollectorComponent.cs" />
     <Compile Include="Components\WaterPhysicsComponentInventoryBag.cs" />
@@ -60,7 +84,7 @@
     <Compile Include="Components\WaterPhysicsComponentGrid.cs" />
     <Compile Include="Components\WaterParachuteComponent.cs" />
     <Compile Include="Components\WaterPhysicsComponentBase.cs" />
-    <Compile Include="SessionComponents\WaterRenderComponent.cs" />
+    <Compile Include="SessionComponents\WaterRenderSessionComponent.cs" />
     <Compile Include="SessionComponents\WaterSoundComponent.cs" />
     <Compile Include="Configs\BlockConfig.cs" />
     <Compile Include="Configs\MaterialConfig.cs" />
@@ -71,28 +95,27 @@
     <Compile Include="Configs\WaterConfigAPI.cs" />
     <Compile Include="Creatures\AnimatedPointBillboard.cs" />
     <Compile Include="Creatures\Seagull.cs" />
-    <Compile Include="Creatures\Fish.cs" />
     <Compile Include="API\DragClientAPI.cs" />
     <Compile Include="Creatures\AnimatedBillboard.cs" />
     <Compile Include="Effects\SimulatedSplash.cs" />
     <Compile Include="TSSScripts\TSSBuoyancy.cs" />
     <Compile Include="TSSScripts\TSSBuoyancyRatio.cs" />
+    <Compile Include="Utils\Assert.cs" />
     <Compile Include="Utils\FastNoiseLite.cs" />
     <Compile Include="API\HudAPIv2.cs" />
     <Compile Include="Language.cs" />
     <Compile Include="Effects\Splash.cs" />
     <Compile Include="TSSScripts\TSSPressure.cs" />
-    <Compile Include="Utils\SphereTree.cs" />
-    <Compile Include="Water.cs" />
+    <Compile Include="Utils\PressurizationUtils.cs" />
+    <Compile Include="Utils\SerializableStringId.cs" />
     <Compile Include="TSSScripts\TSSDepth.cs" />
     <Compile Include="WaterClientSettings.cs" />
     <Compile Include="WaterData.cs" />
-    <Compile Include="WaterFace.cs" />
     <Compile Include="WaterLocalization.cs" />
-    <Compile Include="SessionComponents\WaterModComponent.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Utils\WaterUtils.cs" />
     <Compile Include="SessionComponents\WaterUIComponent.cs" />
+    <Compile Include="XboxRenderData.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="HavokWrapper">
@@ -121,6 +144,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
+    <Reference Include="System.Data.Entity" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml" />
@@ -143,6 +167,20 @@
       <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\VRage.Render.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

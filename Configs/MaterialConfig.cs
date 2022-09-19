@@ -3,6 +3,7 @@ using ProtoBuf;
 using System;
 using System.Xml.Serialization;
 using VRage.Game;
+using VRage.Game.ModAPI;
 
 namespace Jakaria.Configs
 {
@@ -60,16 +61,19 @@ namespace Jakaria.Configs
         [ProtoMember(40)]
         public float UnderwaterReflectivity = 0.2f;
 
-        public override void Init()
+        [ProtoMember(45)]
+        public float Fresnel = 1;
+
+        public override void Init(IMyModContext modContext = null)
         {
             CollectedItemSubtypeId = _collectedItemSubtypeId;
             Viscosity = Math.Min(Viscosity, 1f);
 
-            base.Init();
+            base.Init(modContext);
         }
 
         public MaterialConfig() { }
 
-        public MaterialConfig(bool AutoInit) { if (AutoInit) base.Init(); }
+        public MaterialConfig(bool AutoInit) { if (AutoInit) base.Init(null); }
     }
 }

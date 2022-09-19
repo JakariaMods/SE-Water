@@ -1,5 +1,6 @@
 ﻿using Jakaria.Components;
 using Jakaria.Configs;
+using Jakaria.SessionComponents;
 using Sandbox.Definitions;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
@@ -13,12 +14,13 @@ using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Utils;
 using VRageMath;
-using Jakaria.SessionComponents;
 
 namespace Jakaria.Utils
 {
     public static class WaterUtils
     {
+        private static List<MyEntity> _entities = new List<MyEntity>();
+
         /// <summary>
         /// Returns a vector perpendicular to a vector, takes an angle
         /// </summary>
@@ -40,22 +42,23 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Returns how far a position is into the night on a planet
+        /// Sends a chat message using WaterMod as the sender, not synced
         /// </summary>
-        public static float GetNightValue(MyPlanet planet, Vector3 position)
+        public static void ShowMessage(object message, bool sync = false)
         {
-            if (planet == null)
-                return 0;
-
-            return Vector3.Dot(MyVisualScriptLogicProvider.GetSunDirection(), Vector3.Normalize(position - planet.PositionComp.GetPosition()));
+            ShowMessage(message.ToString(), sync);
         }
 
         /// <summary>
-        /// Sends a chat message using WaterMod as the sender, not synced
+        /// Sends a chat message using WaterMod as the sender, optionally synced
         /// </summary>
-        public static void ShowMessage(string message)
+        public static void ShowMessage(string message, bool sync = false)
         {
-            MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
+            if (MyAPIGateway.Utilities.IsDedicated && sync)
+                MyVisualScriptLogicProvider.SendChatMessage(message, WaterLocalization.ModChatName);
+            else
+                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
+
         }
 
         /// <summary>
@@ -63,7 +66,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static void WriteLog(string message)
         {
-            MyLog.Default.WriteLine("WaterMod: " + message);
+            MyLog.Default.WriteLine(WaterLocalization.ModChatName + ": " + message);
         }
 
         /// <summary>
@@ -127,61 +130,23 @@ namespace Jakaria.Utils
             if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization || !MyAPIGateway.Session.SessionSettings.EnableOxygen)
                 return false;
 
+            _entities.Clear();
+
             BoundingSphereD sphere = new BoundingSphereD(position, 5);
-            List<MyEntity> entities = new List<MyEntity>();
-            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
             
-            foreach (var entity in entities)
+            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, _entities);
+            
+            foreach (var entity in _entities)
             {
                 IMyCubeGrid grid = entity as IMyCubeGrid;
 
                 if (grid?.GasSystem != null)
                 {
-                    Vector3I pos = grid.WorldToGridInteger(position);
-                    return grid.GasSystem.GetOxygenRoomForCubeGridPosition(ref pos) != null;
+                    return grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(position));
                 }
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Checks if a quad is airtight (Out of 4)
-        /// </summary>
-        public static int IsQuadAirtight(ref MyQuadD quad)
-        {
-            if (!MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
-                return 0;
-
-            BoundingSphereD sphere = new BoundingSphereD((quad.Point0 + quad.Point1) / 2, 5);
-            List<MyEntity> entities = new List<MyEntity>();
-            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities);
-
-            foreach (var entity in entities)
-            {
-                IMyCubeGrid grid = entity as IMyCubeGrid;
-
-                if (grid?.GasSystem != null)
-                {
-                    int count = 0;
-
-                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point0)))
-                        count++;
-
-                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point1)))
-                        count++;
-
-                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point2)))
-                        count++;
-
-                    if (grid.IsRoomAtPositionAirtight(grid.WorldToGridInteger(quad.Point3)))
-                        count++;
-
-                    return count;
-                }
-            }
-
-            return 0;
         }
 
         /// <summary>
@@ -228,7 +193,7 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Checks if a position on a planet is underground
+        /// Gets altitude at a position
         /// </summary>
         public static double GetAltitude(MyPlanet planet, Vector3D position, double altitudeOffset = 0)
         {
@@ -241,6 +206,22 @@ namespace Jakaria.Utils
                 return altitude;
 
             return (altitude - (planet.GetClosestSurfacePointGlobal(position) - planet.WorldMatrix.Translation).Length());
+        }
+
+        /// <summary>
+        /// Gets altitude at a position in local space
+        /// </summary>
+        public static double GetAltitudeLocal(MyPlanet planet, Vector3D position, double altitudeOffset = 0)
+        {
+            if (planet == null)
+                return 0;
+
+            double altitude = (position).Length() + altitudeOffset;
+
+            if (altitude < planet.MinimumRadius || altitude > planet.MaximumRadius)
+                return altitude;
+
+            return (altitude - planet.GetClosestSurfacePointGlobal(position).Length());
         }
 
         /// <summary>
@@ -257,43 +238,24 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Checks if a planet has water
-        /// </summary>
-        public static bool HasWater(MyPlanet planet)
-        {
-            return WaterModComponent.Static.Waters.ContainsKey(planet.EntityId);
-        }
-
-        /// <summary>
-        /// Checks if a player is in a floating state
-        /// </summary>
-        public static bool IsPlayerFloating(IMyCharacter player)
-        {
-            return (player.CurrentMovementState == MyCharacterMovementEnum.Falling || player.CurrentMovementState == MyCharacterMovementEnum.Jump || player.CurrentMovementState == MyCharacterMovementEnum.Flying);
-        }
-
-        /// <summary>
-        /// Checks if a player is in a floating state
-        /// </summary>
-        public static bool IsPlayerStateFloating(MyCharacterMovementEnum state)
-        {
-            return state == MyCharacterMovementEnum.Falling || state == MyCharacterMovementEnum.Jump || state == MyCharacterMovementEnum.Flying;
-        }
-
-        /// <summary>
         /// Gets the maximum depth a character can be before becoming crushed
         /// </summary>
-        public static double GetCrushDepth(Water water, IMyCharacter character)
+        public static double GetCrushDepth(WaterComponent water, IMyCharacter character)
         {
-            //pressure = density * gravity * height
-            CharacterConfig characterConfig;
-
-            if (character?.Definition?.Id != null && water?.Material != null && water?.Planet?.Generator != null && WaterData.CharacterConfigs.TryGetValue(character.Definition.Id, out characterConfig))
+            if(water != null)
             {
-                if (characterConfig == null)
-                    return double.MaxValue;
-                
-                return (characterConfig.MaximumPressure * 1000) / (water.Material.Density * character.Physics.Gravity.Length());
+                //pressure = density * gravity * height
+                CharacterConfig characterConfig;
+
+                if (character?.Definition?.Id != null && water.Settings.Material != null && water?.Planet?.Generator != null && WaterData.CharacterConfigs.TryGetValue(character.Definition.Id, out characterConfig))
+                {
+                    if (characterConfig == null)
+                        return double.MaxValue;
+
+                    float gravity;
+                    MyAPIGateway.Physics.CalculateNaturalGravityAt(character.GetPosition(), out gravity);
+                    return (characterConfig.MaximumPressure * 1000) / (water.Settings.Material.Density * gravity);
+                }
             }
 
             return double.MaxValue;
@@ -334,23 +296,46 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Lerps between X colors.
+        /// Returns random <see cref="Vector3"/> in the range of (0,1)
         /// </summary>
         /// <returns></returns>
-        public static Color LerpGradient(Color[] gradient, float lerp)
+        public static Vector3 GetRandomVector3Abs() => new Vector3(MyUtils.GetRandomFloat(0, 1), MyUtils.GetRandomFloat(0, 1), MyUtils.GetRandomFloat(0, 1));
+
+        public static string GetVersionString()
         {
-            lerp = Math.Max(Math.Min(lerp, 1), 0);
-            float scaled = (gradient.Length - 1) * lerp;
-
-            Color min = gradient[MathHelper.FloorToInt(scaled)];
-            Color max = gradient[MathHelper.CeilToInt(scaled)];
-            
-            if (min == max)
-                return min;
-
-            float newLerp = scaled / (gradient.Length - 1);
-            MyAPIGateway.Utilities.ShowNotification("" + Color.Lerp(min, max, newLerp), 16);
-            return Color.Lerp(min, max, newLerp);
+            return WaterData.Version + (WaterData.EarlyAccess ? "EA" : "");
         }
+
+        /*/// <summary>
+        /// Calculates maximum height of waves for the given context. https://planetcalc.com/4442/ Atmosphere density is merely an approximiation
+        /// </summary>
+        public static double GetWaveHeight(MyPlanet planet, Vector3D position, out double windSpeed)
+        {
+            WaterModComponent modComponent = Session.Instance.Get<WaterModComponent>();
+
+            windSpeed = 0;
+
+            if (planet == null || !planet.Generator.HasAtmosphere)
+                return 0;
+
+            double depth = WaterUtils.GetAltitude(planet, position);
+            windSpeed = planet.Generator.Atmosphere.MaxWindSpeed * 0.15;
+
+            *//*if (modComponent.RemoteDragAPI != null)
+            {
+                Vector3D? velocity = modComponent.RemoteDragAPI.GetWind(planet, position, null);
+
+                if (velocity.HasValue)
+                    windSpeed = velocity.Value.Length();
+            }
+            else
+            {
+                windSpeed *= MyAPIGateway.Session.WeatherEffects.GetWindMultiplier(position);
+            }*//*
+            
+            depth = Math.Max(depth, 3);
+            
+            return (Math.Min((0.27 * (windSpeed * windSpeed)) / (planet.Generator.SurfaceGravity * 9.81), depth * 0.6) * planet.Generator.Atmosphere.Density);
+        }*/
     }
 }

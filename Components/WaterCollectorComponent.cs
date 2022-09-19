@@ -47,18 +47,18 @@ namespace Jakaria.Components
             if (_collector.CubeGrid.Physics == null || !_collector.HasInventory)
                 return;
 
-            if (_collector.IsWorking && _waterComponent?.ClosestWater?.Material?.CollectedItem != null)
+            if (_collector.IsWorking && _waterComponent?.ClosestWater?.Settings.Material?.CollectedItem != null)
             {
                 Vector3D worldPosition = _collector.GetPosition();
-                if (_waterComponent.ClosestWater.IsUnderwater(ref worldPosition))
+                if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition))
                 {
                     IMyInventory inventory = _collector.GetInventory();
                     if (inventory != null)
                     {
                         if(_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                            inventory.AddItems(_waterComponent.ClosestWater.Material.CollectedAmount, _waterComponent.ClosestWater.Material.CollectedItem);
+                            inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                         else
-                            inventory.AddItems(_waterComponent.ClosestWater.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Material.CollectedItem);
+                            inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                     }
                 }
             }

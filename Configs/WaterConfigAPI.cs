@@ -28,5 +28,8 @@ namespace Jakaria.Configs
 
         [ProtoMember(25)]
         public MaterialConfig[] MaterialConfigs;
+
+        [ProtoMember(30)]
+        public FishConfig[] FishConfigs;
     }
 }

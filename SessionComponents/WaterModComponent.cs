@@ -1,343 +1,219 @@
-﻿using Sandbox.Game;
+﻿using Jakaria.Components;
+using Jakaria.Configs;
+using Jakaria.Utils;
+using ProtoBuf;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
+using VRage.Collections;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.Entity;
-using VRage.Utils;
-using VRageMath;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
-using Sandbox.Game.EntityComponents;
-using System.IO;
-using Draygo.Drag.API;
-using System.Collections.Concurrent;
-using System.Linq;
-using VRage;
-using Jakaria.Utils;
-using Jakaria.API;
-using VRage.Serialization;
-using Sandbox.Definitions;
-using ProtoBuf;
-using VRageRender;
-using Jakaria.Configs;
-using Jakaria.Components;
-using Jakaria.SessionComponents;
+using VRageMath;
 
 namespace Jakaria.SessionComponents
 {
     /// <summary>
-    /// Base entry mod component, manages everything
+    /// Base mod component
     /// </summary>
     public class WaterModComponent : SessionComponentBase
     {
-        public Dictionary<long, Water> Waters = new Dictionary<long, Water>();
+        public IEnumerable<WaterComponent> Waters => _waters.Values;
 
-        public Action UpdateAfter1;
-        public Action UpdateAfter60;
+        private Dictionary<MyPlanet, WaterComponent> _waters = new Dictionary<MyPlanet, WaterComponent>();
 
-        public ConcurrentDictionary<IMyEntity, DragClientAPI.DragObject> DragObjects = new ConcurrentDictionary<IMyEntity, DragClientAPI.DragObject>();
-        public DragClientAPI DragClientAPI = new DragClientAPI();
+        public event Action<MyEntity> OnWaterAdded;
+        public event Action<MyEntity> OnWaterRemoved;
 
-        private int _tickTimerSecond = 0;
+        public event Action UpdateAction;
+        public event Action UpdateActionSparse;
 
-        private WaterManagerComponent _managerComponent;
+        private int _timer;
 
-        public static WaterModComponent Static;
-
-        public WaterModComponent()
+        public override void UpdateAfterSimulation()
         {
-            Static = this;
-            UpdateOrder = MyUpdateOrder.AfterSimulation;
+            _timer++;
+
+            if(_timer % MyEngineConstants.UPDATE_STEPS_PER_SECOND == 0)
+            {
+                UpdateActionSparse?.Invoke();
+            }
+
+            UpdateAction?.Invoke();
         }
 
-        public override void LoadDependencies()
+        public WaterComponent GetWaterById(long id)
         {
-            _managerComponent = WaterManagerComponent.Static;
+            MyPlanet planet = (MyPlanet)MyEntities.GetEntityById(id);
+            return planet.Components.Get<WaterComponent>();
         }
 
-        public override void UnloadDependencies()
+        public WaterComponent GetClosestWater(Vector3D position)
         {
-            _managerComponent = null;
+            return MyGamePruningStructure.GetClosestPlanet(position)?.Components.Get<WaterComponent>() ?? null;
+        }
 
-            Static = null;
+        public bool AddWater(MyPlanet planet, WaterSettings settings = null, WaterComponentObjectBuilder ob = null)
+        {
+            WaterComponent water = new WaterComponent(planet, settings);
+            if(ob != null)
+            {
+                water.WaveTimer = ob.Timer;
+                water.TideTimer = ob.TideTimer;
+            }
+
+            if (planet.Components.Has<WaterComponent>())
+            {
+                return false;
+            }
+            else
+            {
+                planet.Components.Add(water);
+
+                _waters.Add(planet, water);
+                
+                UpdateAction += water.Simulate;
+
+                OnWaterAdded?.Invoke(planet);
+
+                return true;
+            }
+        }
+
+        public bool RemoveWater(MyPlanet planet)
+        {
+            WaterComponent water;
+            if(_waters.TryGetValue(planet, out water))
+            {
+                UpdateAction -= water.Simulate;
+
+                _waters.Remove(planet);
+
+                planet.Components.Remove(typeof(WaterComponent), water);
+
+                OnWaterRemoved?.Invoke(planet);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public WaterModComponentObjectBuilder Serialize()
+        {
+            WaterModComponentObjectBuilder builder = new WaterModComponentObjectBuilder
+            {
+                Waters = new List<WaterComponentObjectBuilder>(),
+            };
+
+            foreach (var water in Waters)
+            {
+                builder.Waters.Add(water.Serialize());
+            }
+
+            return builder;
+        }
+
+        private void MyEntities_OnEntityAdd(MyEntity entity)
+        {
+            TryAddPhysicsComponentToEntity(entity);
+        }
+
+        private void MyEntities_OnEntityCreate(MyEntity entity)
+        {
+            /*MyPlanet planet = entity as MyPlanet;
+            if(planet != null)
+            {
+                if (!planet.Components.Has<WaterComponent>())
+                {
+                    PlanetConfig planetConfig;
+                    if (WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out planetConfig) && planetConfig.WaterSettings != null)
+                    {
+                        AddWater(planet, planetConfig.WaterSettings);
+                    }
+                }
+            }*/
+
+            TryAddPhysicsComponentToEntity(entity);
+        }
+
+        private void TryAddPhysicsComponentToEntity(MyEntity entity)
+        {
+            if (entity is IMyCubeGrid && !entity.Components.Has<WaterPhysicsComponentGrid>())
+                entity.Components.Add(new WaterPhysicsComponentGrid());
+            else if (entity is IMyFloatingObject && !entity.Components.Has<WaterPhysicsComponentFloatingObject>())
+                entity.Components.Add(new WaterPhysicsComponentFloatingObject());
+            else if (entity is IMyCharacter && !entity.Components.Has<WaterPhysicsComponentCharacter>())
+                entity.Components.Add(new WaterPhysicsComponentCharacter());
+            else if (entity is IMyInventoryBag && !entity.Components.Has<WaterPhysicsComponentInventoryBag>())
+                entity.Components.Add(new WaterPhysicsComponentInventoryBag());
         }
 
         public override void BeforeStart()
         {
-            WaterModAPIBackend.BeforeStart();
-        }
-
-        public override void Init()
-        {
-            WaterUtils.ShowMessage(String.Format(WaterLocalization.CurrentLanguage.WaterModVersion, WaterData.Version + (WaterData.EarlyAccess ? "EA" : "")));
-            WaterUtils.WriteLog(String.Format(WaterLocalization.CurrentLanguage.WaterModVersion, WaterData.Version + (WaterData.EarlyAccess ? "EA" : "")));
-
-            MyAPIGateway.Multiplayer.RegisterMessageHandler(WaterData.ClientHandlerID, ClientHandler);
-
-            MyEntities.OnEntityCreate += Entities_OnEntityCreate;
-            MyEntities.OnEntityRemove += MyEntities_OnEntityRemove;
-
-            //Server
-            if (MyAPIGateway.Session.IsServer)
+            string packet;
+            if (MyAPIGateway.Utilities.GetVariable<string>(WaterData.SaveVariableName, out packet))
             {
-                MyEntities.OnEntityAdd += Entities_OnEntityAdd;
-                MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
-            }
-
-            if (!MyAPIGateway.Session.SessionSettings.EnableOxygen || !MyAPIGateway.Session.SessionSettings.EnableOxygenPressurization)
-            {
-                WaterUtils.ShowMessage("Oxygen/Airtightness is disabled, Airtightness flotation will not work.");
-                WaterUtils.WriteLog("Oxygen/Airtightness is disabled, Airtightness flotation will not work.");
-            }
-        }
-
-        private void MyEntities_OnEntityRemove(MyEntity obj)
-        {
-            if (obj is MyPlanet)
-            {
-                if(Waters.ContainsKey(obj.EntityId))
-                    Waters.Remove(obj.EntityId);
-            }
-        }
-
-        /// <summary>
-        /// Returns closest water to a position
-        /// </summary>
-        public Water GetClosestWater(Vector3D position)
-        {
-            double distance = float.PositiveInfinity;
-            Water closestWater = null;
-            foreach (var water in Waters.Values)
-            {
-                double distance2 = Vector3D.DistanceSquared(position, water.Position);
-
-                if (distance2 < distance)
+                if (!string.IsNullOrEmpty(packet))
                 {
-                    closestWater = water;
-
-                    distance = distance2;
-                }
-            }
-
-            return closestWater;
-        }
-
-        private void Entities_OnEntityAdd(MyEntity entity)
-        {
-            if (entity != null)
-            {
-                AddPhysicsComponentToEntity(entity);
-
-                if (MyAPIGateway.Session.IsServer)
-                {
-                    if (entity is MyPlanet)
+                    WaterModComponentObjectBuilder builder = MyAPIGateway.Utilities.SerializeFromXML<WaterModComponentObjectBuilder>(packet);
+                    if (builder != null)
                     {
-                        MyPlanet planet = entity as MyPlanet;
-
-                        if (WaterUtils.HasWater(planet))
-                            return;
-
-                        PlanetConfig config;
-
-                        if (WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out config))
+                        foreach (var water in builder.Waters)
                         {
-                            if (config.WaterSettings != null)
+                            MyPlanet planet = MyEntities.GetEntityById(water.EntityId) as MyPlanet;
+                            
+                            if (planet != null)
                             {
-                                Waters[planet.EntityId] = new Water(planet, config.WaterSettings);
-                                SyncClients();
+                                AddWater(planet, water.Settings, water);
                             }
                         }
-                        else
-                        {
-                            //Obsolete but has to stay :(
-                            foreach (var weather in planet.Generator.WeatherGenerators)
-                            {
-                                if (weather.Voxel == "WATERMODDATA")
-                                {
-                                    WaterSettings settings;
-                                    settings = MyAPIGateway.Utilities.SerializeFromXML<WaterSettings>(weather.Weathers?[0]?.Name);
-
-                                    Waters[planet.EntityId] = new Water(planet, settings);
-                                    SyncClients();
-                                }
-                            }
-                        }
-
-                        return;
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Called when the world is loading
-        /// </summary>
         public override void LoadData()
         {
-            DragClientAPI.Init();
-
-            string packet;
-            MyAPIGateway.Utilities.GetVariable("JWater", out packet);
-            if (packet == null)
-                return;
-
-            if (packet.Contains("Dictionary"))
-            {
-                SerializableDictionary<long, Water> tempDictWaters = MyAPIGateway.Utilities.SerializeFromXML<SerializableDictionary<long, Water>>(packet);
-
-                if (tempDictWaters != null)
-                {
-                    Waters = tempDictWaters.Dictionary;
-                }
-            }
-            else
-            {
-                List<Water> tempWaters = MyAPIGateway.Utilities.SerializeFromXML<List<Water>>(packet);
-
-                if (tempWaters != null)
-                    foreach (var water in tempWaters)
-                    {
-                        Waters[water.PlanetID] = water;
-                    }
-            }
+            MyEntities.OnEntityRemove += MyEntities_OnEntityRemove;
+            MyEntities.OnEntityAdd += MyEntities_OnEntityAdd;
+            MyEntities.OnEntityCreate += MyEntities_OnEntityCreate;
         }
 
-        /// <summary>
-        /// Called when the world is saving
-        /// </summary>
-        public override void SaveData()
-        {
-            MyAPIGateway.Utilities.SetVariable("JWater", MyAPIGateway.Utilities.SerializeToXML(new SerializableDictionary<long, Water>(Waters)));
-        }
-
-        /// <summary>
-        /// Called when the world is unloading
-        /// </summary>
         public override void UnloadData()
         {
-            MyAPIGateway.Multiplayer.UnregisterMessageHandler(WaterData.ClientHandlerID, ClientHandler);
-            MyEntities.OnEntityAdd -= Entities_OnEntityCreate;
             MyEntities.OnEntityRemove -= MyEntities_OnEntityRemove;
+            MyEntities.OnEntityAdd -= MyEntities_OnEntityAdd;
+            MyEntities.OnEntityCreate -= MyEntities_OnEntityCreate;
+        }
 
-            if (MyAPIGateway.Session.IsServer)
+        private void MyEntities_OnEntityRemove(MyEntity entity)
+        {
+            MyPlanet planet = entity as MyPlanet;
+
+            if(planet != null && _waters.ContainsKey(planet))
             {
-                MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
-                MyEntities.OnEntityAdd -= Entities_OnEntityAdd;
-            }
-
-            DragClientAPI.Close();
-        }
-
-        private void Entities_OnEntityCreate(MyEntity entity)
-        {
-            if (entity.IsPreview || entity.Closed)
-                return;
-
-            if(entity is MyPlanet)
-            {
-                Water water;
-                if (Waters != null && Waters.TryGetValue(entity.EntityId, out water))
-                {
-                    water.Init();
-                }
-            }
-
-            AddPhysicsComponentToEntity(entity);
-        }
-
-        private void AddPhysicsComponentToEntity(MyEntity entity)
-        {
-            if (entity is IMyCubeGrid && !entity.Components.Has<WaterPhysicsComponentGrid>())
-                entity.Components.Add(new WaterPhysicsComponentGrid(_managerComponent));
-            else if (entity is IMyFloatingObject && !entity.Components.Has<WaterPhysicsComponentFloatingObject>())
-                entity.Components.Add(new WaterPhysicsComponentFloatingObject(_managerComponent));
-            else if (entity is IMyCharacter && !entity.Components.Has<WaterPhysicsComponentCharacter>())
-                entity.Components.Add(new WaterPhysicsComponentCharacter(_managerComponent));
-            else if (entity is IMyInventoryBag && !entity.Components.Has<WaterPhysicsComponentInventoryBag>())
-                entity.Components.Add(new WaterPhysicsComponentInventoryBag(_managerComponent));
-        }
-
-        /// <summary>
-        /// Called once every tick after the simulation has run
-        /// </summary>
-        public override void UpdateAfterSimulation()
-        {
-            _tickTimerSecond--;
-            if (_tickTimerSecond <= 0)
-            {
-                UpdateAfter60?.Invoke();
-                _tickTimerSecond = 60;
-            }
-
-            SimulatePhysics();
-
-            UpdateAfter1?.Invoke();
-        }
-
-        /// <summary>
-        /// Simulates water physics
-        /// </summary>
-        public void SimulatePhysics()
-        {
-            if(Waters != null)
-                foreach (var water in Waters.Values)
-                {
-                    water.Simulate();
-                }
-        }
-
-        /// <summary>
-        /// Player connects to server event
-        /// </summary>
-        private void PlayerConnected(long playerId)
-        {
-            if (MyAPIGateway.Session.IsServer)
-                SyncClients();
-        }
-
-        /// <summary>
-        /// Syncs data between clients
-        /// </summary>
-        public void SyncClients()
-        {
-            if (MyAPIGateway.Session.IsServer && Waters != null)
-            {
-                MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
+                RemoveWater(planet);
             }
         }
 
-        public void SyncToServer()
+        public override void SaveData()
         {
-            if (Waters == null)
-                return;
-
-            if (MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator)
-            {
-                if (MyAPIGateway.Session.IsServer)
-                    SyncClients();
-                else
-                    MyAPIGateway.Multiplayer.SendMessageToServer(WaterData.ClientHandlerID, MyAPIGateway.Utilities.SerializeToBinary(new SerializableDictionary<long, Water>(Waters)));
-            }
+            MyAPIUtilities.Static.Variables[WaterData.SaveVariableName] = MyAPIGateway.Utilities.SerializeToXML(Serialize());
         }
+    }
 
-        /// <summary>
-        /// Client -> Server and Server -> Client communication
-        /// </summary>
-        /// <param name="packet"></param>
-        private void ClientHandler(byte[] packet)
-        {
-            Dictionary<long, Water> TempWaters = MyAPIGateway.Utilities.SerializeFromBinary<SerializableDictionary<long, Water>>(packet).Dictionary;
-
-            if (TempWaters != null)
-            {
-                Waters = TempWaters;
-
-                if (MyAPIGateway.Session.IsServer)
-                    SyncClients();
-            }
-        }
+    [ProtoContract]
+    public class WaterModComponentObjectBuilder
+    {
+        [XmlElement]
+        public List<WaterComponentObjectBuilder> Waters;
     }
 }

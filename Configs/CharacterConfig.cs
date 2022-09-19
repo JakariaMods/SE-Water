@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using VRage.Game.ModAPI;
 
 namespace Jakaria.Configs
 {
@@ -35,12 +36,12 @@ namespace Jakaria.Configs
             SubtypeId = subtypeId;
         }
 
-        public override void Init()
+        public override void Init(IMyModContext modContext = null)
         {
+            base.Init(modContext);
+
             if (MaximumPressure == -1)
                 MaximumPressure = float.MaxValue;
-
-            base.Init();
         }
 
         public CharacterConfig() { }

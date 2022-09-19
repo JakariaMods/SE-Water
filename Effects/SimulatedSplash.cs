@@ -12,19 +12,20 @@ using Jakaria;
 using VRageRender;
 using VRage.Game;
 using Sandbox.ModAPI;
-using Jakaria.Components;
 using Jakaria.Utils;
 using Jakaria.SessionComponents;
+using Jakaria.Components;
 
 namespace Jakaria
 {
     public class SimulatedSplash : AnimatedPointBillboard
     {
-        public SimulatedSplash() { }
 
         private Vector3D _gravity;
 
-        public SimulatedSplash(Vector3D position, Vector3D velocity, float radius, Water water)
+        private readonly WaterRenderSessionComponent _renderComponent;
+
+        public SimulatedSplash(Vector3D position, Vector3D velocity, float radius, WaterComponent water)
         {
             Position = position;
             Velocity = velocity * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
@@ -33,11 +34,13 @@ namespace Jakaria
             Radius = radius;
             Angle = MyUtils.GetRandomInt(0,360);
 
+            _renderComponent = Session.Instance.Get<WaterRenderSessionComponent>();
+
             Billboard = new MyBillboard()
             {
                 Color = WaterData.WhiteColor,
                 CustomViewProjection = -1,
-                ColorIntensity = water.PlanetConfig.ColorIntensity,
+                ColorIntensity = water.PlanetConfig.ColorIntensity * _renderComponent.AmbientColorIntensity,
                 Material = WaterData.PhysicalSplashMaterial,
                 UVSize = Vector2.One,
                 UVOffset = Vector2.Zero,
@@ -49,7 +52,7 @@ namespace Jakaria
             MyTransparentGeometry.AddBillboard(Billboard, true);
 
             float grav;
-            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(position, out grav) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(position, out grav) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 10f;
         }
 
         public override void Simulate()
@@ -57,14 +60,13 @@ namespace Jakaria
             Position += Velocity;
             Velocity += _gravity;
 
-            if (WaterRenderComponent.Static.ClosestWater != null)
+            if (_renderComponent.ClosestWater != null)
             {
-                //Optimized method for determining if the particle is underwater
-                if ((WaterRenderComponent.Static.ClosestWater.Position - Position).LengthSquared() - (WaterRenderComponent.Static.ClosestWater.Position - WaterRenderComponent.Static.CameraClosestWaterPosition).LengthSquared() + (Radius * Radius) < 0)
+                if (_renderComponent.ClosestWater.IsUnderwaterGlobal(ref Position))
                 {
                     MarkedForClose = true;
 
-                    WaterEffectsComponent.Static.CreateSplash(Position, Radius * 2, true);
+                    Session.Instance.Get<WaterEffectsComponent>().CreateSplash(Position, Radius * 2, true);
                 }
             }
             else
@@ -76,7 +78,7 @@ namespace Jakaria
             {
                 MyQuadD quad;
 
-                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, WaterRenderComponent.Static.CameraPosition);
+                MyUtils.GetBillboardQuadAdvancedRotated(out quad, Position, Radius, Angle, _renderComponent.CameraPosition);
                 Billboard.Position0 = quad.Point0;
                 Billboard.Position1 = quad.Point1;
                 Billboard.Position2 = quad.Point2;
