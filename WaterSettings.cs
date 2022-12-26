@@ -102,10 +102,10 @@ namespace Jakaria
             if(Default != null)
             {
                 Radius = Default.Radius;
-                WaveHeight = Default.WaveHeight;
-                WaveSpeed = Default.WaveSpeed;
+                WaveHeight = Session.CONSOLE_MODE ? 0 : Default.WaveHeight;
+                WaveSpeed = Session.CONSOLE_MODE ? 0 : Default.WaveSpeed;
                 Buoyancy = Default.Buoyancy;
-                WaveScale = Default.WaveScale;
+                WaveScale = Session.CONSOLE_MODE ? 0 : Default.WaveScale;
                 EnableFish = Default.EnableFish;
                 EnableSeagulls = Default.EnableSeagulls;
                 Texture = Default.Texture;
@@ -136,20 +136,24 @@ namespace Jakaria
         {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.AppendLine($"{nameof(Radius)}: {Radius}");
-            stringBuilder.AppendLine($"{nameof(WaveHeight)}: {WaveHeight}");
-            stringBuilder.AppendLine($"{nameof(WaveSpeed)}: {WaveSpeed}");
+            if (!Session.CONSOLE_MODE)
+            {
+                stringBuilder.AppendLine($"{nameof(WaveHeight)}: {WaveHeight}");
+                stringBuilder.AppendLine($"{nameof(WaveSpeed)}: {WaveSpeed}");
+                stringBuilder.AppendLine($"{nameof(WaveScale)}: {WaveScale}");
+                stringBuilder.AppendLine($"{nameof(EnableFoam)}: {EnableFoam}");
+                stringBuilder.AppendLine($"{nameof(EnableFish)}: {EnableFish}");
+                stringBuilder.AppendLine($"{nameof(EnableSeagulls)}: {EnableSeagulls}");
+                stringBuilder.AppendLine($"{nameof(Texture)}: {Texture}");
+                stringBuilder.AppendLine($"{nameof(Transparent)}: {Transparent}");
+                stringBuilder.AppendLine($"{nameof(Lit)}: {Lit}");
+                stringBuilder.AppendLine($"{nameof(FogColor)}: {FogColor}");
+            }
+            
             stringBuilder.AppendLine($"{nameof(Buoyancy)}: {Buoyancy}");
-            stringBuilder.AppendLine($"{nameof(WaveScale)}: {WaveScale}");
-            stringBuilder.AppendLine($"{nameof(EnableFish)}: {EnableFish}");
-            stringBuilder.AppendLine($"{nameof(EnableSeagulls)}: {EnableSeagulls}");
-            stringBuilder.AppendLine($"{nameof(Texture)}: {Texture}");
-            stringBuilder.AppendLine($"{nameof(Transparent)}: {Transparent}");
-            stringBuilder.AppendLine($"{nameof(Lit)}: {Lit}");
-            stringBuilder.AppendLine($"{nameof(FogColor)}: {FogColor}");
             stringBuilder.AppendLine($"{nameof(CollectionRate)}: {CollectionRate}");
             stringBuilder.AppendLine($"{nameof(TideHeight)}: {TideHeight}");
             stringBuilder.AppendLine($"{nameof(TideSpeed)}: {TideSpeed}");
-            stringBuilder.AppendLine($"{nameof(EnableFoam)}: {EnableFoam}");
             stringBuilder.AppendLine($"{nameof(CrushDamage)}: {CrushDamage}");
             stringBuilder.AppendLine($"{nameof(PlayerDrag)}: {PlayerDrag}");
             stringBuilder.AppendLine($"{nameof(MaterialId)}: {MaterialId}");

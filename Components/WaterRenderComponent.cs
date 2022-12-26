@@ -39,6 +39,8 @@ namespace Jakaria.Components
 
         public override void OnAddedToContainer()
         {
+            base.OnAddedToContainer();
+
             _renderSessionComponent = Session.Instance.Get<WaterRenderSessionComponent>();
             _settingsComponent = Session.Instance.Get<WaterSettingsComponent>();
 
@@ -137,19 +139,17 @@ namespace Jakaria.Components
                     _renderFace = renderFace;
                     _localPosition = localPosition;
 
-                    ConstructTree();
-                }
+                    if (!_renderComponent.Water.InScene)
+                        return;
 
-                private void ConstructTree()
-                {
-                    if (_radius > WaterData.MinWaterSplitRadius &&  (_depth <= WaterData.MinWaterSplitDepth || ((Vector3D.Normalize(_localPosition + (-_renderFace._perpendicularA + -_renderFace._perpendicularB) * _radius) * _renderComponent.Water.Radius) - _renderComponent.LocalCameraPosition).AbsMax() < _radius * (3f + (_renderComponent._settingsComponent.Settings.Quality * 2))))
+                    if (_radius > WaterData.MinWaterSplitRadius && (_depth <= WaterData.MinWaterSplitDepth || ((Vector3D.Normalize(_localPosition + (-_renderFace._perpendicularA + -_renderFace._perpendicularB) * _radius) * _renderComponent.Water.Radius) - _renderComponent.LocalCameraPosition).AbsMax() < _radius * (3f + (_renderComponent._settingsComponent.Settings.Quality * 2))))
                     {
                         double halfRadius = _radius / 2;
                         int detailPlusOne = _depth + 1;
 
                         Vector3D axisAPremultiplied = _renderFace._perpendicularA * halfRadius;
                         Vector3D axisBPremultiplied = _renderFace._perpendicularB * halfRadius;
-                        
+
                         _children = new RenderChunk[4]
                         {
                             new RenderChunk(_renderComponent, detailPlusOne, halfRadius, _renderFace, _localPosition + (-axisAPremultiplied + -axisBPremultiplied)),
@@ -183,16 +183,13 @@ namespace Jakaria.Components
 
                             if (Vector3D.DistanceSquared(localPosition, _renderComponent.LocalCameraPosition) > _renderComponent.DistanceToHorizon * _renderComponent.DistanceToHorizon)
                                 return;
-                            
-                            /*if (!_renderComponent.Water.Planet.ContentChanged && _renderComponent.CameraAltitude < 7500 && !MyAPIGateway.Session.Camera.IsInFrustum(ref worldSphere))
-                                return;*/
                         }
 
                         Vector3D normal1 = Vector3D.Normalize(_localPosition + ((-_renderFace._perpendicularA + -_renderFace._perpendicularB) * _radius));
 
                         MyQuadD quad = new MyQuadD()
                         {
-                            Point0 = _renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal1),
+                            Point0 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal1), _renderComponent.Water.WorldMatrix),
                         };
 
                         if (_altitude == null && _renderComponent.Water.Settings.Transparent)
@@ -200,11 +197,6 @@ namespace Jakaria.Components
 
                         if (_altitude != null)
                         {
-                            if (_altitude < -_radius * 2)
-                            {
-                                return;
-                            }
-
                             _altitude = Math.Max(_altitude.Value, 0);
                         }
 
@@ -212,9 +204,15 @@ namespace Jakaria.Components
                         Vector3D normal3 = Vector3D.Normalize(_localPosition + ((-_renderFace._perpendicularA + _renderFace._perpendicularB) * _radius));
                         Vector3D normal4 = Vector3D.Normalize(_localPosition + ((_renderFace._perpendicularA + -_renderFace._perpendicularB) * _radius));
 
-                        quad.Point1 = _renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal3);
-                        quad.Point2 = _renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal2);
-                        quad.Point3 = _renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal4);
+                        quad.Point1 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal3), _renderComponent.Water.WorldMatrix);
+                        quad.Point2 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal2), _renderComponent.Water.WorldMatrix);
+                        quad.Point3 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal4), _renderComponent.Water.WorldMatrix);
+
+                        //Horizontal wave offset?
+                        /*quad.Point0 += _renderComponent.Water.GetCurrentDirectionLocal(normal1) * _renderComponent.Water.GetWaveVelocityLocal(normal1).LengthSquared() * _renderComponent.Water.Settings.CurrentSpeed;
+                        quad.Point1 += _renderComponent.Water.GetCurrentDirectionLocal(normal3) * _renderComponent.Water.GetWaveVelocityLocal(normal3).LengthSquared() * _renderComponent.Water.Settings.CurrentSpeed;
+                        quad.Point2 += _renderComponent.Water.GetCurrentDirectionLocal(normal2) * _renderComponent.Water.GetWaveVelocityLocal(normal2).LengthSquared() * _renderComponent.Water.Settings.CurrentSpeed;
+                        quad.Point3 += _renderComponent.Water.GetCurrentDirectionLocal(normal4) * _renderComponent.Water.GetWaveVelocityLocal(normal4).LengthSquared() * _renderComponent.Water.Settings.CurrentSpeed;*/
 
                         Vector3 quadNormal;
                         if (_renderComponent.Water.Settings.WaveHeight == 0)
@@ -229,14 +227,14 @@ namespace Jakaria.Components
                         quad.Point1 += normal3 * scaleOffset;
                         quad.Point2 += normal2 * scaleOffset;
                         quad.Point3 += normal4 * scaleOffset;
-
+                        
                         Vector3 halfVector = Vector3.Normalize((_renderComponent._renderSessionComponent.SunDirection + Vector3.Normalize(_renderComponent.LocalCameraPosition - ((quad.Point0 + quad.Point1) / 2))) / 2);
                         float sunDot = _renderComponent.Water.Settings.Lit ? Vector3.Dot(quadNormal, _renderComponent._renderSessionComponent.SunDirection) : 1;
                         float colorIntensity = _renderComponent.Water.Settings.Lit ? Math.Max(sunDot, _renderComponent.Water.PlanetConfig.AmbientColorIntensity) * _renderComponent.Water.PlanetConfig.ColorIntensity : _renderComponent.Water.PlanetConfig.ColorIntensity;
                         float specularity = sunDot > 0 ? Math.Max((float)Math.Pow(Vector3.Dot(quadNormal, halfVector), _renderComponent.Water.PlanetConfig.Specularity), 0) * _renderComponent.Water.PlanetConfig.SpecularIntensity : 0;
                         float fresnel = (float)Math.Pow(Math.Max(1f - Math.Abs(Vector3.Dot(quadNormal, Vector3.Normalize(_renderComponent._renderSessionComponent.CameraPosition - quad.Point0))), 0), _renderComponent.Water.Settings.Material.Fresnel);
                         float reflectivity = _renderComponent.Water.Settings.Material.Reflectivity * fresnel;
-
+                        
                         softnessOffset += WaterData.WaterVisibility * fresnel;
 
                         //Bottom Billboard
@@ -256,7 +254,7 @@ namespace Jakaria.Components
                             Vector3D seperator = normal1 * WaterData.WaterVisibility;
 
                             _bottomBillboard.Color = WaterData.WhiteColor;
-
+                            
                             _bottomBillboard.ColorIntensity = colorIntensity + specularity;
                             _bottomBillboard.Position0 = quad.Point0 - seperator;
                             _bottomBillboard.Position1 = quad.Point1 - seperator;
@@ -338,14 +336,14 @@ namespace Jakaria.Components
                                     {
                                         _seaFoamBillboard.Color = WaterData.WhiteColor * intensity;
                                         _seaFoamBillboard.UVOffset.Y = 0.0f;
-                                        _renderFace._billboards.Add(_seaFoamBillboard);
                                     }
                                     else
                                     {
                                         _seaFoamBillboard.Color = WaterData.WhiteColor * (1f - intensity);
                                         _seaFoamBillboard.UVOffset.Y = 0.5f;
-                                        _renderFace._billboards.Add(_seaFoamBillboard);
                                     }
+
+                                    _renderFace._billboards.Add(_seaFoamBillboard);
                                 }
                             }
                         }

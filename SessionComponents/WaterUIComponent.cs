@@ -78,14 +78,14 @@ namespace Jakaria.SessionComponents
         public override void BeforeStart()
         {
             string version = WaterUtils.GetVersionString();
-            string text = string.Format(WaterLocalization.CurrentLanguage.WaterModVersion, version);
+            string text = string.Format(WaterTexts.WaterModVersion, version);
 
             WaterUtils.ShowMessage(text);
             WaterUtils.WriteLog(text);
 
             if (!string.IsNullOrEmpty(WaterData.StartMessage))
             {
-                MyAPIGateway.Utilities.ShowMissionScreen(WaterLocalization.ModChatName, version, null, WaterData.StartMessage);
+                MyAPIGateway.Utilities.ShowMissionScreen(WaterTexts.ModChatName, version, null, WaterData.StartMessage);
             }
         }
 
@@ -109,52 +109,52 @@ namespace Jakaria.SessionComponents
                     _depthMeter = new HudAPIv2.HUDMessage(new StringBuilder(""), Vector2D.Zero);
 
                     //Admin
-                    _adminMenuRoot = new HudAPIv2.MenuRootCategory(WaterLocalization.ModChatName + " " + WaterData.Version, HudAPIv2.MenuRootCategory.MenuFlag.AdminMenu, "Water Mod Admin Settings");
+                    _adminMenuRoot = new HudAPIv2.MenuRootCategory(WaterTexts.ModChatName + " " + WaterData.Version, HudAPIv2.MenuRootCategory.MenuFlag.AdminMenu, "Water Mod Admin Settings");
 
                     _showFog = new HudAPIv2.MenuItem("Not yet implemented", _adminMenuRoot);
-                    /*showFog = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIShowFog, WaterMod.Settings.ShowFog), adminMenuRoot, ToggleShowFog);
-                    refreshAdmin = new HudAPIv2.MenuItem(WaterLocalization.CurrentLanguage.UIRefreshData, adminMenuRoot, RefreshAdminValues);
-                    waterSubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterSettings, adminMenuRoot, "Water Settings");
+                    /*showFog = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowFog, WaterMod.Settings.ShowFog), adminMenuRoot, ToggleShowFog);
+                    refreshAdmin = new HudAPIv2.MenuItem(WaterTexts.UIRefreshData, adminMenuRoot, RefreshAdminValues);
+                    waterSubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterSettings, adminMenuRoot, "Water Settings");
 
-                    waterWaveSubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterWaveSettings, waterSubcategory, WaterLocalization.CurrentLanguage.UIWaterWaveSettings);
-                    waveHeight = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveHeight, WaterMod.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA), OnSubmitWaveHeight);
-                    waveScale = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveScale, WaterMod.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA), OnSubmitWaveScale);
-                    waveSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveSpeed, WaterMod.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA), OnSubmitWaveSpeed);
+                    waterWaveSubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterWaveSettings, waterSubcategory, WaterTexts.UIWaterWaveSettings);
+                    waveHeight = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterWaveHeight, WaterMod.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.WaveHeight.ToString() ?? NO_DATA), OnSubmitWaveHeight);
+                    waveScale = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterWaveScale, WaterMod.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.WaveScale.ToString() ?? NO_DATA), OnSubmitWaveScale);
+                    waveSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterWaveSpeed, WaterMod.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA), waterWaveSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.WaveSpeed.ToString() ?? NO_DATA), OnSubmitWaveSpeed);
 
-                    waterCurrentsSubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterCurrentSettings, waterSubcategory, WaterLocalization.CurrentLanguage.UIWaterCurrentSettings);
-                    currentScale = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentScale, WaterMod.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA), waterCurrentsSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA), OnSubmitCurrentScale);
-                    currentSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentSpeed, WaterMod.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA), waterCurrentsSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA), OnSubmitCurrentSpeed);
+                    waterCurrentsSubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterCurrentSettings, waterSubcategory, WaterTexts.UIWaterCurrentSettings);
+                    currentScale = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterCurrentScale, WaterMod.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA), waterCurrentsSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.CurrentScale.ToString() ?? NO_DATA), OnSubmitCurrentScale);
+                    currentSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterCurrentSpeed, WaterMod.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA), waterCurrentsSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.CurrentSpeed.ToString() ?? NO_DATA), OnSubmitCurrentSpeed);
 
-                    waterTideSubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterTideSettings, waterSubcategory, WaterLocalization.CurrentLanguage.UIWaterTideSettings);
-                    tideHeight = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterTideHeight, WaterMod.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA), waterTideSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA), OnSubmtTideHeight);
-                    tideSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterTideSpeed, WaterMod.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA), waterTideSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA), OnSubmitTideSpeed);
+                    waterTideSubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterTideSettings, waterSubcategory, WaterTexts.UIWaterTideSettings);
+                    tideHeight = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterTideHeight, WaterMod.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA), waterTideSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.TideHeight.ToString() ?? NO_DATA), OnSubmtTideHeight);
+                    tideSpeed = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterTideSpeed, WaterMod.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA), waterTideSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.TideSpeed.ToString() ?? NO_DATA), OnSubmitTideSpeed);
 
-                    waterVisualsSubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterVisualSettings, waterSubcategory, WaterLocalization.CurrentLanguage.UIWaterVisualSettings);
-                    enableFish = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFish, WaterMod.Session.ClosestWater?.EnableFish.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableFish);
-                    enableFoam = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFoam, WaterMod.Session.ClosestWater?.EnableFoam.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableFoam);
-                    enableSeagulls = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableSeagulls, WaterMod.Session.ClosestWater?.EnableSeagulls.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableSeagulls);
-                    fogColorSelector = new HudAPIv2.MenuColorPickerInput(WaterLocalization.CurrentLanguage.UIWaterFogColor, waterVisualsSubcategory, WaterSettings.Default.FogColor, "Select fog color", OnSubmitFogColor);
-                    lit = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterLit, WaterMod.Session.ClosestWater?.Lit.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableLighting);
-                    transparent = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterTransparent, WaterMod.Session.ClosestWater?.Transparent.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableTransparency);
-                    textureInput = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterTexture, WaterMod.Session.ClosestWater?.Texture.ToString() ?? NO_DATA), waterVisualsSubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.Texture ?? NO_DATA), OnSubmitTexture);
+                    waterVisualsSubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterVisualSettings, waterSubcategory, WaterTexts.UIWaterVisualSettings);
+                    enableFish = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterEnableFish, WaterMod.Session.ClosestWater?.EnableFish.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableFish);
+                    enableFoam = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterEnableFoam, WaterMod.Session.ClosestWater?.EnableFoam.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableFoam);
+                    enableSeagulls = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterEnableSeagulls, WaterMod.Session.ClosestWater?.EnableSeagulls.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableSeagulls);
+                    fogColorSelector = new HudAPIv2.MenuColorPickerInput(WaterTexts.UIWaterFogColor, waterVisualsSubcategory, WaterSettings.Default.FogColor, "Select fog color", OnSubmitFogColor);
+                    lit = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterLit, WaterMod.Session.ClosestWater?.Lit.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableLighting);
+                    transparent = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterTransparent, WaterMod.Session.ClosestWater?.Transparent.ToString() ?? NO_DATA), waterVisualsSubcategory, OnSubmitEnableTransparency);
+                    textureInput = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterTexture, WaterMod.Session.ClosestWater?.Texture.ToString() ?? NO_DATA), waterVisualsSubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.Texture ?? NO_DATA), OnSubmitTexture);
 
-                    waterGameplaySubcategory = new HudAPIv2.MenuSubCategory(WaterLocalization.CurrentLanguage.UIWaterGameplaySettings, waterSubcategory, WaterLocalization.CurrentLanguage.UIWaterGameplaySettings);
-                    buoyancySlider = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterBuoyancy, WaterMod.Session.ClosestWater?.Buoyancy.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitBuoyancy);
-                    CollectionRateSlider = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterCollectionRate, WaterMod.Session.ClosestWater?.CollectionRate.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitCollectorRate);
-                    CrushDamageSlider = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterCrushDamage, WaterMod.Session.ClosestWater?.CrushDamage.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitCrushDamage);
-                    materialIdInput = new HudAPIv2.MenuTextInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterMaterialId, WaterMod.Session.ClosestWater?.MaterialId.ToString() ?? NO_DATA), waterGameplaySubcategory, string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, WaterMod.Session.ClosestWater?.MaterialId ?? NO_DATA), OnSubmitMaterial);
-                    playerDrag = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIWaterPlayerDrag, WaterMod.Session.ClosestWater?.PlayerDrag.ToString() ?? NO_DATA), waterGameplaySubcategory, OnSubmitPlayerDrag);
-                    radiusSlider = new HudAPIv2.MenuSliderInput(string.Format(WaterLocalization.CurrentLanguage.UIWaterRadius, WaterMod.Session.ClosestWater?.Radius.ToString() ?? NO_DATA), waterGameplaySubcategory, RadiusValueToSlider(WaterSettings.Default.Radius), OnSubmitAction: OnSubmitRadius, SliderPercentToValue: RadiusSliderToValue);*/
+                    waterGameplaySubcategory = new HudAPIv2.MenuSubCategory(WaterTexts.UIWaterGameplaySettings, waterSubcategory, WaterTexts.UIWaterGameplaySettings);
+                    buoyancySlider = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterBuoyancy, WaterMod.Session.ClosestWater?.Buoyancy.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitBuoyancy);
+                    CollectionRateSlider = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterCollectionRate, WaterMod.Session.ClosestWater?.CollectionRate.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitCollectorRate);
+                    CrushDamageSlider = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterCrushDamage, WaterMod.Session.ClosestWater?.CrushDamage.ToString() ?? NO_DATA), waterGameplaySubcategory, onSubmit: OnSubmitCrushDamage);
+                    materialIdInput = new HudAPIv2.MenuTextInput(string.Format(WaterTexts.UIWaterMaterialId, WaterMod.Session.ClosestWater?.MaterialId.ToString() ?? NO_DATA), waterGameplaySubcategory, string.Format(WaterTexts.UIInputNumber, WaterMod.Session.ClosestWater?.MaterialId ?? NO_DATA), OnSubmitMaterial);
+                    playerDrag = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIWaterPlayerDrag, WaterMod.Session.ClosestWater?.PlayerDrag.ToString() ?? NO_DATA), waterGameplaySubcategory, OnSubmitPlayerDrag);
+                    radiusSlider = new HudAPIv2.MenuSliderInput(string.Format(WaterTexts.UIWaterRadius, WaterMod.Session.ClosestWater?.Radius.ToString() ?? NO_DATA), waterGameplaySubcategory, RadiusValueToSlider(WaterSettings.Default.Radius), OnSubmitAction: OnSubmitRadius, SliderPercentToValue: RadiusSliderToValue);*/
 
                     //Client
-                    _clientMenuRoot = new HudAPIv2.MenuRootCategory(WaterLocalization.ModChatName + " " + WaterData.Version, HudAPIv2.MenuRootCategory.MenuFlag.PlayerMenu, "Water Mod Client Settings");
+                    _clientMenuRoot = new HudAPIv2.MenuRootCategory(WaterTexts.ModChatName + " " + WaterData.Version, HudAPIv2.MenuRootCategory.MenuFlag.PlayerMenu, "Water Mod Client Settings");
 
-                    _qualitySlider = new HudAPIv2.MenuSliderInput(string.Format(WaterLocalization.CurrentLanguage.UIQuality, _settingsComponent.Settings.Quality), _clientMenuRoot, 0.5f, "Adjust slider to modify value", OnSetQualitySlider, QualitySliderToValue);
-                    _volumeSlider = new HudAPIv2.MenuSliderInput(string.Format(WaterLocalization.CurrentLanguage.UIVolume, _settingsComponent.Settings.Volume), _clientMenuRoot, 1f, "Adjust slider to modify value", OnSetVolumeSlider);
-                    _showCenterOfBuoyancy = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy), _clientMenuRoot, ToggleShowCenterOfBuoyancy);
-                    _showDepth = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIShowDepth, _settingsComponent.Settings.ShowDepth), _clientMenuRoot, ToggleShowDepth);
-                    _showAltitude = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, _settingsComponent.Settings.ShowAltitude), _clientMenuRoot, ToggleShowAltitude);
-                    _showDebug = new HudAPIv2.MenuItem(string.Format(WaterLocalization.CurrentLanguage.UIShowDebug, _settingsComponent.Settings.ShowDebug), _clientMenuRoot, ToggleShowDebug);
+                    _qualitySlider = new HudAPIv2.MenuSliderInput(string.Format(WaterTexts.UIQuality, _settingsComponent.Settings.Quality), _clientMenuRoot, 0.5f, "Adjust slider to modify value", OnSetQualitySlider, QualitySliderToValue);
+                    _volumeSlider = new HudAPIv2.MenuSliderInput(string.Format(WaterTexts.UIVolume, _settingsComponent.Settings.Volume), _clientMenuRoot, 1f, "Adjust slider to modify value", OnSetVolumeSlider);
+                    _showCenterOfBuoyancy = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy), _clientMenuRoot, ToggleShowCenterOfBuoyancy);
+                    _showDepth = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowDepth, _settingsComponent.Settings.ShowDepth), _clientMenuRoot, ToggleShowDepth);
+                    _showAltitude = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowAltitude, _settingsComponent.Settings.ShowAltitude), _clientMenuRoot, ToggleShowAltitude);
+                    _showDebug = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowDebug, _settingsComponent.Settings.ShowDebug), _clientMenuRoot, ToggleShowDebug);
                 }
 
                 _depthMeter.Visible = _settingsComponent.Settings.ShowDepth && (_renderComponent.CameraDepth < 0 || (_settingsComponent.Settings.ShowAltitude && ((MyAPIGateway.Session.Player?.Controller?.ControlledEntity is IMyCharacter) == false && _renderComponent.CameraDepth < 500)));
@@ -166,9 +166,9 @@ namespace Jakaria.SessionComponents
                         double crushDepth = WaterUtils.GetCrushDepth(_renderComponent.ClosestWater, MyAPIGateway.Session.Player.Character);
                         string message;
                         if (_renderComponent.CameraDepth < 0)
-                            message = string.Format(WaterLocalization.CurrentLanguage.Depth, Math.Round(-_renderComponent.CameraDepth));
+                            message = string.Format(WaterTexts.Depth, Math.Round(-_renderComponent.CameraDepth));
                         else
-                            message = string.Format(WaterLocalization.CurrentLanguage.Altitude, Math.Round(_renderComponent.CameraDepth));
+                            message = string.Format(WaterTexts.Altitude, Math.Round(_renderComponent.CameraDepth));
 
                         if (_renderComponent.CameraDepth < -crushDepth)
                             message = "- " + message + " -";
@@ -204,43 +204,43 @@ namespace Jakaria.SessionComponents
 
         private void RefreshClientValues()
         {
-            _qualitySlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIQuality, _settingsComponent.Settings.Quality);
-            _volumeSlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIVolume, _settingsComponent.Settings.Volume);
-            _showDebug.Text = string.Format(WaterLocalization.CurrentLanguage.UIShowDebug, _settingsComponent.Settings.ShowDebug);
-            _showDepth.Text = string.Format(WaterLocalization.CurrentLanguage.UIShowDepth, _settingsComponent.Settings.ShowDepth);
-            _showCenterOfBuoyancy.Text = string.Format(WaterLocalization.CurrentLanguage.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy);
-            _showAltitude.Text = string.Format(WaterLocalization.CurrentLanguage.UIShowAltitude, _settingsComponent.Settings.ShowAltitude);
+            _qualitySlider.Text = string.Format(WaterTexts.UIQuality, _settingsComponent.Settings.Quality);
+            _volumeSlider.Text = string.Format(WaterTexts.UIVolume, _settingsComponent.Settings.Volume);
+            _showDebug.Text = string.Format(WaterTexts.UIShowDebug, _settingsComponent.Settings.ShowDebug);
+            _showDepth.Text = string.Format(WaterTexts.UIShowDepth, _settingsComponent.Settings.ShowDepth);
+            _showCenterOfBuoyancy.Text = string.Format(WaterTexts.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy);
+            _showAltitude.Text = string.Format(WaterTexts.UIShowAltitude, _settingsComponent.Settings.ShowAltitude);
         }
 
         private void RefreshAdminValues()
         {
-            _showFog.Text = string.Format(WaterLocalization.CurrentLanguage.UIShowFog, _settingsComponent.Settings.ShowFog);
-            _waveHeight.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveHeight, _renderComponent.ClosestWater.Settings?.WaveHeight.ToString() ?? NO_DATA);
-            _waveScale.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveScale, _renderComponent.ClosestWater.Settings?.WaveScale.ToString() ?? NO_DATA);
-            _waveSpeed.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterWaveSpeed, _renderComponent.ClosestWater.Settings?.WaveSpeed.ToString() ?? NO_DATA);
-            _currentScale.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentScale, _renderComponent.ClosestWater.Settings?.CurrentScale.ToString() ?? NO_DATA);
-            _currentSpeed.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterCurrentSpeed, _renderComponent.ClosestWater.Settings?.CurrentSpeed.ToString() ?? NO_DATA);
-            _tideHeight.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterTideHeight, _renderComponent.ClosestWater.Settings?.TideHeight.ToString() ?? NO_DATA);
-            _tideSpeed.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterTideSpeed, _renderComponent.ClosestWater.Settings?.TideSpeed.ToString() ?? NO_DATA);
-            _enableFish.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFish, _renderComponent.ClosestWater.Settings?.EnableFish.ToString() ?? NO_DATA);
-            _enableFoam.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableFoam, _renderComponent.ClosestWater.Settings?.EnableFoam.ToString() ?? NO_DATA);
-            _enableSeagulls.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterEnableSeagulls, _renderComponent.ClosestWater.Settings?.EnableSeagulls.ToString() ?? NO_DATA);
-            _lit.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterLit, _renderComponent.ClosestWater.Settings?.Lit.ToString() ?? NO_DATA);
-            _transparent.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterTransparent, _renderComponent.ClosestWater.Settings?.Transparent.ToString() ?? NO_DATA);
-            _textureInput.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterTexture, _renderComponent.ClosestWater.Settings?.Texture.ToString() ?? NO_DATA);
-            _buoyancySlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterBuoyancy, _renderComponent.ClosestWater.Settings?.Buoyancy.ToString() ?? NO_DATA);
-            _collectionRateSlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterCollectionRate, _renderComponent.ClosestWater.Settings?.CollectionRate.ToString() ?? NO_DATA);
-            _crushDamageSlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterCrushDamage, _renderComponent.ClosestWater.Settings?.CrushDamage.ToString() ?? NO_DATA);
-            _materialIdInput.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterMaterialId, _renderComponent.ClosestWater.Settings?.MaterialId.ToString() ?? NO_DATA);
-            _playerDrag.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterPlayerDrag, _renderComponent.ClosestWater.Settings?.PlayerDrag.ToString() ?? NO_DATA);
+            _showFog.Text = string.Format(WaterTexts.UIShowFog, _settingsComponent.Settings.ShowFog);
+            _waveHeight.Text = string.Format(WaterTexts.UIWaterWaveHeight, _renderComponent.ClosestWater.Settings?.WaveHeight.ToString() ?? NO_DATA);
+            _waveScale.Text = string.Format(WaterTexts.UIWaterWaveScale, _renderComponent.ClosestWater.Settings?.WaveScale.ToString() ?? NO_DATA);
+            _waveSpeed.Text = string.Format(WaterTexts.UIWaterWaveSpeed, _renderComponent.ClosestWater.Settings?.WaveSpeed.ToString() ?? NO_DATA);
+            _currentScale.Text = string.Format(WaterTexts.UIWaterCurrentScale, _renderComponent.ClosestWater.Settings?.CurrentScale.ToString() ?? NO_DATA);
+            _currentSpeed.Text = string.Format(WaterTexts.UIWaterCurrentSpeed, _renderComponent.ClosestWater.Settings?.CurrentSpeed.ToString() ?? NO_DATA);
+            _tideHeight.Text = string.Format(WaterTexts.UIWaterTideHeight, _renderComponent.ClosestWater.Settings?.TideHeight.ToString() ?? NO_DATA);
+            _tideSpeed.Text = string.Format(WaterTexts.UIWaterTideSpeed, _renderComponent.ClosestWater.Settings?.TideSpeed.ToString() ?? NO_DATA);
+            _enableFish.Text = string.Format(WaterTexts.UIWaterEnableFish, _renderComponent.ClosestWater.Settings?.EnableFish.ToString() ?? NO_DATA);
+            _enableFoam.Text = string.Format(WaterTexts.UIWaterEnableFoam, _renderComponent.ClosestWater.Settings?.EnableFoam.ToString() ?? NO_DATA);
+            _enableSeagulls.Text = string.Format(WaterTexts.UIWaterEnableSeagulls, _renderComponent.ClosestWater.Settings?.EnableSeagulls.ToString() ?? NO_DATA);
+            _lit.Text = string.Format(WaterTexts.UIWaterLit, _renderComponent.ClosestWater.Settings?.Lit.ToString() ?? NO_DATA);
+            _transparent.Text = string.Format(WaterTexts.UIWaterTransparent, _renderComponent.ClosestWater.Settings?.Transparent.ToString() ?? NO_DATA);
+            _textureInput.Text = string.Format(WaterTexts.UIWaterTexture, _renderComponent.ClosestWater.Settings?.Texture.ToString() ?? NO_DATA);
+            _buoyancySlider.Text = string.Format(WaterTexts.UIWaterBuoyancy, _renderComponent.ClosestWater.Settings?.Buoyancy.ToString() ?? NO_DATA);
+            _collectionRateSlider.Text = string.Format(WaterTexts.UIWaterCollectionRate, _renderComponent.ClosestWater.Settings?.CollectionRate.ToString() ?? NO_DATA);
+            _crushDamageSlider.Text = string.Format(WaterTexts.UIWaterCrushDamage, _renderComponent.ClosestWater.Settings?.CrushDamage.ToString() ?? NO_DATA);
+            _materialIdInput.Text = string.Format(WaterTexts.UIWaterMaterialId, _renderComponent.ClosestWater.Settings?.MaterialId.ToString() ?? NO_DATA);
+            _playerDrag.Text = string.Format(WaterTexts.UIWaterPlayerDrag, _renderComponent.ClosestWater.Settings?.PlayerDrag.ToString() ?? NO_DATA);
 
-            _radiusSlider.Text = string.Format(WaterLocalization.CurrentLanguage.UIWaterRadius, (_renderComponent.ClosestWater.Settings?.Radius / _renderComponent.ClosestPlanet?.MinimumRadius).ToString() ?? NO_DATA);
+            _radiusSlider.Text = string.Format(WaterTexts.UIWaterRadius, (_renderComponent.ClosestWater.Settings?.Radius / _renderComponent.ClosestPlanet?.MinimumRadius).ToString() ?? NO_DATA);
 
             if (_renderComponent.ClosestWater != null)
             {
-                _waveHeight.InputDialogTitle = string.Format(string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveHeight), _renderComponent.ClosestWater.Settings.WaveHeight);
-                _waveScale.InputDialogTitle = string.Format(string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveScale), _renderComponent.ClosestWater.Settings.WaveScale);
-                _waveSpeed.InputDialogTitle = string.Format(string.Format(WaterLocalization.CurrentLanguage.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveSpeed), _renderComponent.ClosestWater.Settings.WaveSpeed);
+                _waveHeight.InputDialogTitle = string.Format(string.Format(WaterTexts.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveHeight), _renderComponent.ClosestWater.Settings.WaveHeight);
+                _waveScale.InputDialogTitle = string.Format(string.Format(WaterTexts.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveScale), _renderComponent.ClosestWater.Settings.WaveScale);
+                _waveSpeed.InputDialogTitle = string.Format(string.Format(WaterTexts.UIInputNumber, _renderComponent.ClosestWater.Settings.WaveSpeed), _renderComponent.ClosestWater.Settings.WaveSpeed);
 
                 _fogColorSelector.InitialColor = _renderComponent.ClosestWater.Settings.FogColor;
                 _radiusSlider.InitialPercent = RadiusValueToSlider(_renderComponent.ClosestWater.Settings.Radius / _renderComponent.ClosestPlanet.MinimumRadius);
@@ -559,7 +559,7 @@ namespace Jakaria.SessionComponents
 
         private object QualitySliderToValue(float percentage)
         {
-            return Math.Round(0.4f + (percentage * 2.6f), 1);
+            return (float)Math.Round(0.4f + (percentage * 2.6f), 1);
         }
 
         private void OnSetQualitySlider(float percentage)

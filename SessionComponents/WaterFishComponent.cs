@@ -286,13 +286,13 @@ namespace Jakaria.SessionComponents
                     if (Vector3D.Dot(_renderComponent.CameraDirection, Vector3D.Normalize(fish.Position - _renderComponent.CameraPosition)) > 0)
                     {
                         MatrixD matrixD = MatrixD.CreateFromTransformScale(fish.MoveDirection * Quaternion.CreateFromYawPitchRoll(axisAngles.X, axisAngles.Y, axisAngles.Z), fish.Position, Vector3D.One);
-                        fish.Entity.PositionComp.SetWorldMatrix(ref matrixD, updateChildren:false, skipTeleportCheck:true);
-
+                        fish.Entity.PositionComp.SetWorldMatrix(ref matrixD, null, false, false, false, true, false, true);
+                        
                         if (fish.Child != null)
                         {
                             MatrixD hatMatrix = matrixD;
                             hatMatrix.Translation += Vector3.TransformNormal(fish.Config.ChildOffset, hatMatrix);
-                            fish.Child.PositionComp.SetWorldMatrix(ref hatMatrix, updateChildren: false, skipTeleportCheck: true);
+                            fish.Child.PositionComp.SetWorldMatrix(ref hatMatrix, null, false, false, false, true, false, true);
                         }
                     }
 
@@ -379,6 +379,12 @@ namespace Jakaria.SessionComponents
                 {
                     fish.Entity.Close();
                     MyEntities.Remove(fish.Entity);
+
+                    if(fish.Child != null)
+                    {
+                        fish.Child.Close();
+                        MyEntities.Remove(fish.Child);
+                    }
                 }
             }
         }

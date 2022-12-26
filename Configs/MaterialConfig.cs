@@ -32,11 +32,31 @@ namespace Jakaria.Configs
             set
             {
                 _collectedItemSubtypeId = value;
-                CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = _collectedItemSubtypeId };
 
-                WaterUtils.WriteLog($"Identified CollectedItem '{_collectedItemSubtypeId}' Null? '{CollectedItem == null}'");
+                if (string.IsNullOrEmpty(value))
+                {
+                    CollectedItem = null;
+                    WaterUtils.WriteLog($"Null collected item for material {DefinitionId}");
+                }
+                else
+                {
+                    CollectedItem = new MyObjectBuilder_Ore() { SubtypeName = _collectedItemSubtypeId };
+                    WaterUtils.WriteLog($"Identified CollectedItem '{_collectedItemSubtypeId}' Null? '{CollectedItem == null}'");
+                }
             }
         }
+
+        [ProtoMember(30)]
+        public double MinFogDensity = 0.06;
+
+        [ProtoMember(31)]
+        public double FogDensityDepth = 0.00125;
+
+        [ProtoMember(32)]
+        public double FogDensityDepthScalar = 100;
+
+        [ProtoMember(33)]
+        public float InitialSunIntensity = 8;
 
         private string _collectedItemSubtypeId = "Ice";
 

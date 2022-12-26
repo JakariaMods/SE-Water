@@ -42,7 +42,7 @@ namespace Jakaria.SessionComponents
             {
                 MyPlanet planet = MyGamePruningStructure.GetClosestPlanet(grid.GetPosition());
                 WaterComponent water = _modComponent.GetClosestWater(grid.GetPosition());
-                WaterUtils.ShowMessage(respawnShipPrefabName);
+                //WaterUtils.ShowMessage(respawnShipPrefabName); TODO?
                 RespawnPodConfig config;
                 if (water != null && planet != null && grid.Physics != null && WaterData.RespawnPodConfigs.TryGetValue(MyDefinitionId.Parse("RespawnShipDefinition/" + respawnShipPrefabName), out config))
                 {

@@ -30,11 +30,11 @@ namespace Jakaria.Components
         /// </summary>
         public override void OnAddedToContainer()
         {
+            FloatingObject = Entity as MyFloatingObject;
+
             base.OnAddedToContainer();
 
-            NeedsRecalculateBuoyancy = true;
-
-            FloatingObject = Entity as MyFloatingObject;
+            NeedsRecalculateBuoyancy = !Entity.Transparent;
         }
 
         /// <summary>
@@ -43,6 +43,9 @@ namespace Jakaria.Components
         public override void UpdateAfter60()
         {
             base.UpdateAfter60();
+
+            if (!IsValid)
+                return;
 
             if (ClosestWater != null)
             {
@@ -59,7 +62,10 @@ namespace Jakaria.Components
         {
             base.UpdateAfter1();
 
-            if (Entity.Physics == null || ClosestWater == null || ClosestWater.Settings.Material == null)
+            if (!IsValid)
+                return;
+
+            if (ClosestWater == null || ClosestWater.Settings.Material == null)
                 return;
 
             if (SimulatePhysics)
@@ -69,7 +75,7 @@ namespace Jakaria.Components
 
                 if (!_airtight && FluidDepth < 0)
                 {
-                    if (FloatingObject.Item.Content?.SubtypeId != null && ClosestWater.Settings.Material?.CollectedItem?.SubtypeId != null)
+                    if (FloatingObject.Item.Content?.SubtypeId != null && !string.IsNullOrEmpty(ClosestWater.Settings.Material.CollectedItemSubtypeId))
                     {
                         if (FloatingObject.Item.Content.SubtypeId == ClosestWater.Settings.Material.CollectedItem.SubtypeId)
                         {

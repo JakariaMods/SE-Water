@@ -21,7 +21,10 @@ namespace Jakaria
     [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
     public class Session : MySessionComponentBase
     {
-        public const bool XBOX_MODE = false;
+        public readonly bool IsDedicated;
+        public readonly bool IsClient;
+
+        public const bool CONSOLE_MODE = false;
 
         private readonly Dictionary<Type, SessionComponentBase> _sessionComponents = new Dictionary<Type, SessionComponentBase>();
 
@@ -38,24 +41,47 @@ namespace Jakaria
             
             try
             {
-                if(XBOX_MODE)
+                IsDedicated = ((IMyUtilities)MyAPIUtilities.Static).IsDedicated;
+                IsClient = !IsDedicated;
+
+                if (CONSOLE_MODE)
                 {
-                    AddComponent(new WaterConfigComponent());
-                    AddComponent(new WaterModComponent());
-                    AddComponent(new WaterRespawnPodComponent());
-                    AddComponent(new BlockDamageComponent());
-                    AddComponent(new XboxRenderComponent());
-                    AddComponent(new XboxCommandComponent());
+                    if (IsDedicated)
+                    {
+                        AddComponent(new WaterConfigComponent());
+                        AddComponent(new WaterModComponent());
+                        AddComponent(new WaterRespawnPodComponent());
+                        AddComponent(new BlockDamageComponent());
+                        AddComponent(new WaterCommandComponent());
+                        AddComponent(new ConsoleRenderSessionComponent());
+                        AddComponent(new ConsoleCommandComponent());
+                        AddComponent(new WaterAPIComponent());
+                        AddComponent(new WaterSyncComponent());
+                    }
+                    else
+                    {
+                        AddComponent(new WaterConfigComponent());
+                        AddComponent(new WaterModComponent());
+                        AddComponent(new WaterRespawnPodComponent());
+                        AddComponent(new BlockDamageComponent());
+                        AddComponent(new WaterCommandComponent());
+                        AddComponent(new ConsoleRenderSessionComponent());
+                        AddComponent(new ConsoleCommandComponent());
+                        AddComponent(new WaterSyncComponent());
+                        AddComponent(new WaterAPIComponent());
+                        AddComponent(new WaterSettingsComponent());
+                    }
                 }
                 else
                 {
-                    if (((IMyUtilities)MyAPIUtilities.Static).IsDedicated)
+                    if (IsDedicated)
                     {
                         AddComponent(new WaterConfigComponent());
                         AddComponent(new WaterModComponent());
                         AddComponent(new BackwardsCompatibilityComponent());
                         AddComponent(new WaterRespawnPodComponent());
                         AddComponent(new BlockDamageComponent());
+                        AddComponent(new WaterCommandComponent());
                         AddComponent(new WaterAPIComponent());
                         AddComponent(new WaterSyncComponent());
                     }
@@ -146,12 +172,14 @@ namespace Jakaria
         {
             if (_exception != null)
             {
-                WaterUtils.WriteLog(_exception.ToString());
-                WaterUtils.ShowMessage(_exception.ToString());
+                string exception = _exception.ToString();
+
+                WaterUtils.WriteLog(exception);
+                WaterUtils.ShowMessage(exception);
 
                 _sessionComponents.Clear();
             }
-
+                
             foreach (var componentPair in _sessionComponents)
             {
                 componentPair.Value.Init();
@@ -169,6 +197,9 @@ namespace Jakaria
             return null;
         }
 
+        /// <summary>
+        /// Gets a component and throws <exception cref="KeyNotFoundException"/> if it is not found
+        /// </summary>
         public T Get<T>() where T : SessionComponentBase
         {
             T component = TryGet<T>();

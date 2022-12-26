@@ -42,7 +42,7 @@ namespace Jakaria.Utils
         }
 
         /// <summary>
-        /// Sends a chat message using WaterMod as the sender, not synced
+        /// Sends a chat message using WaterMod as the sender, optionally synced
         /// </summary>
         public static void ShowMessage(object message, bool sync = false)
         {
@@ -54,11 +54,19 @@ namespace Jakaria.Utils
         /// </summary>
         public static void ShowMessage(string message, bool sync = false)
         {
-            if (MyAPIGateway.Utilities.IsDedicated && sync)
-                MyVisualScriptLogicProvider.SendChatMessage(message, WaterLocalization.ModChatName);
+            if (MyAPIGateway.Session.IsServer && sync)
+                MyVisualScriptLogicProvider.SendChatMessage(message, WaterTexts.ModChatName);
             else
-                MyAPIGateway.Utilities.ShowMessage(WaterLocalization.ModChatName, message);
+                MyAPIGateway.Utilities.ShowMessage(WaterTexts.ModChatName, message);
 
+        }
+
+        public static void SendMessage(string message, long id)
+        {
+            if (MyAPIGateway.Utilities.IsDedicated)
+                MyVisualScriptLogicProvider.SendChatMessage(message, WaterTexts.ModChatName, id);
+            else
+                ShowMessage(message);
         }
 
         /// <summary>
@@ -66,7 +74,7 @@ namespace Jakaria.Utils
         /// </summary>
         public static void WriteLog(string message)
         {
-            MyLog.Default.WriteLine(WaterLocalization.ModChatName + ": " + message);
+            MyLog.Default.WriteLine(WaterTexts.ModChatName + ": " + message);
         }
 
         /// <summary>
@@ -252,9 +260,9 @@ namespace Jakaria.Utils
                     if (characterConfig == null)
                         return double.MaxValue;
 
-                    float gravity;
-                    MyAPIGateway.Physics.CalculateNaturalGravityAt(character.GetPosition(), out gravity);
-                    return (characterConfig.MaximumPressure * 1000) / (water.Settings.Material.Density * gravity);
+                    float gravityInfluence;
+                    Vector3 gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(character.GetPosition(), out gravityInfluence);
+                    return (characterConfig.MaximumPressure * 1000) / (water.Settings.Material.Density * gravity.Length());
                 }
             }
 

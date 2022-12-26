@@ -40,8 +40,8 @@ namespace Jakaria.SessionComponents
         public override void UpdateAfterSimulation()
         {
             _timer++;
-
-            if(_timer % MyEngineConstants.UPDATE_STEPS_PER_SECOND == 0)
+            
+            if (_timer % MyEngineConstants.UPDATE_STEPS_PER_SECOND == 0)
             {
                 UpdateActionSparse?.Invoke();
             }
@@ -146,6 +146,9 @@ namespace Jakaria.SessionComponents
 
         private void TryAddPhysicsComponentToEntity(MyEntity entity)
         {
+            if (entity.Render != null && entity.Render.Transparency != 0)
+                return;
+
             if (entity is IMyCubeGrid && !entity.Components.Has<WaterPhysicsComponentGrid>())
                 entity.Components.Add(new WaterPhysicsComponentGrid());
             else if (entity is IMyFloatingObject && !entity.Components.Has<WaterPhysicsComponentFloatingObject>())

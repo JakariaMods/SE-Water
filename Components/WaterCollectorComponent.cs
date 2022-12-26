@@ -43,22 +43,24 @@ namespace Jakaria.Components
         {
             if(_waterComponent == null)
                 _collector.CubeGrid.Components.TryGet<WaterPhysicsComponentGrid>(out _waterComponent);
-
-            if (_collector.CubeGrid.Physics == null || !_collector.HasInventory)
-                return;
-
-            if (_collector.IsWorking && _waterComponent?.ClosestWater?.Settings.Material?.CollectedItem != null)
+            else
             {
-                Vector3D worldPosition = _collector.GetPosition();
-                if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition))
+                if (_waterComponent.Grid.IsPreview || !_collector.HasInventory || _waterComponent.ClosestWater == null || !_collector.IsWorking)
+                    return;
+                
+                if (_waterComponent.ClosestWater.Settings.Material.CollectedItem != null)
                 {
-                    IMyInventory inventory = _collector.GetInventory();
-                    if (inventory != null)
+                    Vector3D worldPosition = _collector.GetPosition();
+                    if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition))
                     {
-                        if(_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                            inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
-                        else
-                            inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                        IMyInventory inventory = _collector.GetInventory();
+                        if (inventory != null)
+                        {
+                            if (_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
+                                inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                            else
+                                inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                        }
                     }
                 }
             }

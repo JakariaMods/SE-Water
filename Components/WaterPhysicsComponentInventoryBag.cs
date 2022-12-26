@@ -30,11 +30,11 @@ namespace Jakaria.Components
         /// </summary>
         public override void OnAddedToContainer()
         {
+            InventoryBag = Entity as IMyInventoryBag;
+
             base.OnAddedToContainer();
 
             NeedsRecalculateBuoyancy = true;
-
-            InventoryBag = Entity as IMyInventoryBag;
         }
 
         /// <summary>

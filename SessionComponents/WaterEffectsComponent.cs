@@ -225,7 +225,7 @@ namespace Jakaria.SessionComponents
         /// </summary>
         public void CreateBubble(ref Vector3D position, float radius)
         {
-            if (MyAPIGateway.Utilities.IsDedicated || _renderComponent.ClosestWater?.Settings?.Material?.DrawBubbles != true)
+            if (_renderComponent.ClosestWater == null || !_renderComponent.ClosestWater.Settings.Material.DrawSplashes)
                 return;
 
             lock (Bubbles)
@@ -234,7 +234,7 @@ namespace Jakaria.SessionComponents
 
         public void CreateSplash(Vector3D Position, float Radius, bool Audible)
         {
-            if (MyAPIGateway.Utilities.IsDedicated || _renderComponent.ClosestWater?.Settings?.Material?.DrawSplashes != true)
+            if (_renderComponent.ClosestWater == null || !_renderComponent.ClosestWater.Settings.Material.DrawSplashes)
                 return;
 
             lock (SurfaceSplashes)

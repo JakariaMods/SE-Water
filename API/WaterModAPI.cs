@@ -21,7 +21,7 @@ namespace Jakaria.API
     {
         public static string ModName = "";
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 19;
+        public const int ModAPIVersion = 20;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -192,7 +192,7 @@ namespace Jakaria.API
         }
 
         /// <summary>
-        /// Do not use. This is for the session component to register automatically
+        /// Do not use. This is for the session component to unregister automatically
         /// </summary>
         protected override void UnloadData()
         {
@@ -234,7 +234,7 @@ namespace Jakaria.API
             if (obj is Dictionary<string, Delegate>)
             {
                 ModAPIMethods = (Dictionary<string, Delegate>)obj;
-                _VerifyVersion = (Func<int, string, bool>)ModAPIMethods["VerifyVersion"];
+                _VerifyVersion = TryGetMethod<Func<int, string, bool>>(ModAPIMethods, "VerifyVersion");
 
                 Registered = VerifyVersion(ModAPIVersion, ModName);
 
@@ -244,38 +244,56 @@ namespace Jakaria.API
                 {
                     try
                     {
-                        _IsUnderwater = (Func<Vector3D, MyPlanet, bool>)ModAPIMethods["IsUnderwater"];
-                        _GetClosestWater = (Func<Vector3D, MyPlanet>)ModAPIMethods["GetClosestWater"];
-                        _SphereIntersectsWater = (Func<BoundingSphereD, MyPlanet, int>)ModAPIMethods["SphereIntersectsWater"];
-                        _SphereIntersectsWaterList = (Action<List<BoundingSphereD>, ICollection<int>, MyPlanet>)ModAPIMethods["SphereIntersectsWaterList"];
-                        _GetClosestSurfacePoint = (Func<Vector3D, MyPlanet, Vector3D>)ModAPIMethods["GetClosestSurfacePoint"];
-                        _GetClosestSurfacePointList = (Action<List<Vector3D>, ICollection<Vector3D>, MyPlanet>)ModAPIMethods["GetClosestSurfacePointList"];
-                        _LineIntersectsWater = (Func<LineD, MyPlanet, int>)ModAPIMethods["LineIntersectsWater"];
-                        _LineIntersectsWaterList = (Action<List<LineD>, ICollection<int>, MyPlanet>)ModAPIMethods["LineIntersectsWaterList"];
-                        _GetDepth = (Func<Vector3D, MyPlanet, float?>)ModAPIMethods["GetDepth"];
-                        _CreateSplash = (Action<Vector3D, float, bool>)ModAPIMethods["CreateSplash"];
-                        _CreatePhysicsSplash = (Action<Vector3D, Vector3D, float, int>)ModAPIMethods["CreatePhysicsSplash"];
-                        _CreateBubble = (Action<Vector3D, float>)ModAPIMethods["CreateBubble"];
-                        _ForceSync = (Action)ModAPIMethods["ForceSync"];
-                        _RunCommand = (Action<string>)ModAPIMethods["RunCommand"];
-                        _GetUpDirection = (Func<Vector3D, MyPlanet, Vector3D>)ModAPIMethods["GetUpDirection"];
-                        _HasWater = (Func<MyPlanet, bool>)ModAPIMethods["HasWater"];
-                        _GetBuoyancyMultiplier = (Func<Vector3D, MyCubeSize, MyPlanet, float>)ModAPIMethods["GetBuoyancyMultiplier"];
-                        _GetCrushDepth = (Func<MyPlanet, int>)ModAPIMethods["GetCrushDepth"];
-                        _GetPhysicalData = (Func<MyPlanet, MyTuple<Vector3D, float, float, float>>)ModAPIMethods["GetPhysicalData"];
-                        _GetWaveData = (Func<MyPlanet, MyTuple<float, float, float, int>>)ModAPIMethods["GetWaveData"];
-                        _GetRenderData = (Func<MyPlanet, MyTuple<Vector3D, bool, bool>>)ModAPIMethods["GetRenderData"];
-                        _GetPhysicsData = (Func<MyPlanet, MyTuple<float, float>>)ModAPIMethods["GetPhysicsData"];
-                        _GetTideData = (Func<MyPlanet, MyTuple<float, float>>)ModAPIMethods["GetTideData"];
-                        _GetTideDirection = (Func<MyPlanet, Vector3D>)ModAPIMethods["GetTideDirection"];
+                        _IsUnderwater = TryGetMethod<Func<Vector3D, MyPlanet, bool>>(ModAPIMethods, "IsUnderwater");
+                        _GetClosestWater = TryGetMethod<Func<Vector3D, MyPlanet>>(ModAPIMethods, "GetClosestWater");
+                        _SphereIntersectsWater = TryGetMethod<Func<BoundingSphereD, MyPlanet, int>>(ModAPIMethods, "SphereIntersectsWater");
+                        _SphereIntersectsWaterList = TryGetMethod<Action<List<BoundingSphereD>, ICollection<int>, MyPlanet>>(ModAPIMethods, "SphereIntersectsWaterList");
+                        _GetClosestSurfacePoint = TryGetMethod<Func<Vector3D, MyPlanet, Vector3D>>(ModAPIMethods, "GetClosestSurfacePoint");
+                        _GetClosestSurfacePointList = TryGetMethod<Action<List<Vector3D>, ICollection<Vector3D>, MyPlanet>>(ModAPIMethods, "GetClosestSurfacePointList");
+                        _LineIntersectsWater = TryGetMethod<Func<LineD, MyPlanet, int>>(ModAPIMethods, "LineIntersectsWater");
+                        _LineIntersectsWaterList = TryGetMethod<Action<List<LineD>, ICollection<int>, MyPlanet>>(ModAPIMethods, "LineIntersectsWaterList");
+                        _GetDepth = TryGetMethod<Func<Vector3D, MyPlanet, float?>>(ModAPIMethods, "GetDepth");
+                        _CreateSplash = TryGetMethod<Action<Vector3D, float, bool>>(ModAPIMethods, "CreateSplash");
+                        _CreatePhysicsSplash = TryGetMethod<Action<Vector3D, Vector3D, float, int>>(ModAPIMethods, "CreatePhysicsSplash");
+                        _CreateBubble = TryGetMethod<Action<Vector3D, float>>(ModAPIMethods, "CreateBubble");
+                        _ForceSync = TryGetMethod<Action>(ModAPIMethods, "ForceSync");
+                        _RunCommand = TryGetMethod<Action<string>>(ModAPIMethods, "RunCommand");
+                        _GetUpDirection = TryGetMethod<Func<Vector3D, MyPlanet, Vector3D>>(ModAPIMethods, "GetUpDirection");
+                        _HasWater = TryGetMethod<Func<MyPlanet, bool>>(ModAPIMethods, "HasWater");
+                        _GetBuoyancyMultiplier = TryGetMethod<Func<Vector3D, MyCubeSize, MyPlanet, float>>(ModAPIMethods, "GetBuoyancyMultiplier");
+                        _GetCrushDepth = TryGetMethod<Func<MyPlanet, int>>(ModAPIMethods, "GetCrushDepth");
+                        _GetPhysicalData = TryGetMethod<Func<MyPlanet, MyTuple<Vector3D, float, float, float>>>(ModAPIMethods, "GetPhysicalData");
+                        _GetWaveData = TryGetMethod<Func<MyPlanet, MyTuple<float, float, float, int>>>(ModAPIMethods, "GetWaveData");
+                        _GetRenderData = TryGetMethod<Func<MyPlanet, MyTuple<Vector3D, bool, bool>>>(ModAPIMethods, "GetRenderData");
+                        _GetPhysicsData = TryGetMethod<Func<MyPlanet, MyTuple<float, float>>>(ModAPIMethods, "GetPhysicsData");
+                        _GetTideData = TryGetMethod<Func<MyPlanet, MyTuple<float, float>>>(ModAPIMethods, "GetTideData");
+                        _GetTideDirection = TryGetMethod<Func<MyPlanet, Vector3D>>(ModAPIMethods, "GetTideDirection");
                     }
                     catch (Exception e)
                     {
                         MyAPIGateway.Utilities.ShowMessage("WaterMod", "Mod '" + ModName + "' encountered an error when registering the Water Mod API, see log for more info.");
                         MyLog.Default.WriteLine("WaterMod: " + e);
+
+                        Registered = false;
                     }
                 }
             }
+            else
+            {
+                MyAPIGateway.Utilities.ShowMessage("WaterMod", $"Received a message with completely unrelated content? {obj.GetType()}");
+                MyLog.Default.WriteLine("WaterMod: " + $"Received a message with completely unrelated content? {obj.GetType()}");
+            }
+        }
+
+        private T TryGetMethod<T>(Dictionary<string, Delegate> modContent, string methodName) where T : class
+        {
+            Delegate method;
+            if(modContent.TryGetValue(methodName, out method))
+            {
+                return method as T;
+            }
+
+            return null;
         }
     }
 }

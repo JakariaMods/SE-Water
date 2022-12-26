@@ -13,7 +13,7 @@ namespace Jakaria.Components
         /// <summary>
         /// The Water that the entity will use to simulate with, can be null
         /// </summary>
-        public WaterComponent ClosestWater { get; protected set; }
+        public WaterComponent ClosestWater;
 
         /// <summary>
         /// If this it true, it will recalculate buoyancy the next frame
@@ -28,12 +28,12 @@ namespace Jakaria.Components
         /// <summary>
         /// Hydrostatcic Pressure of the fluid the entity is at. The Unit is kPa (KiloPascals)
         /// </summary>
-        public float FluidPressure { get; protected set; }
+        public float FluidPressure;
 
         /// <summary>
         /// Depth of the entity in the fluid. Unit is m (Meters) Positive is above water, negative is below water
         /// </summary>
-        public double FluidDepth { get; protected set; }
+        public double FluidDepth;
 
         /// <summary>
         /// Velocity of the fluid (Currents, Wave Oscillation)
@@ -79,6 +79,8 @@ namespace Jakaria.Components
         protected WaterRenderSessionComponent _renderComponent;
         protected WaterEffectsComponent _effectsComponent;
 
+        protected bool IsValid => Entity.Physics != null && !Entity.Transparent && !Entity.MarkedForClose;
+
         public WaterPhysicsComponentBase()
         {
             _modComponent = Session.Instance.Get<WaterModComponent>();
@@ -88,14 +90,16 @@ namespace Jakaria.Components
 
         public override void OnAddedToContainer()
         {
+            if (Entity.Transparent)
+                return;
+            
             _modComponent.UpdateAction += UpdateAfter1;
             _modComponent.UpdateActionSparse += UpdateAfter60;
             Entity.OnPhysicsChanged += Entity_OnPhysicsChanged;
 
             _position = Entity.PositionComp.WorldVolume.Center;
 
-            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
-            _gravityDirection = Vector3.Normalize(_gravity);
+            UpdateGravity();
         }
 
         public override void OnBeforeRemovedFromContainer()
@@ -107,7 +111,7 @@ namespace Jakaria.Components
 
         public virtual void UpdateAfter60()
         {
-            if (ClosestWater != null && Entity.Physics != null)
+            if (IsValid && ClosestWater != null && Entity.Physics != null)
             {
                 FluidPressure = (ClosestWater.Settings.Material.Density * _gravityStrength * (float)Math.Max(-FluidDepth, 0)) / 1000;
 
@@ -117,18 +121,27 @@ namespace Jakaria.Components
                     FluidPressure += ClosestWater.Planet.GetOxygenForPosition(_position) * (101325 / 1000);
                 }
 
-                _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
-                _gravityDirection = Vector3.Normalize(_gravity);
+                UpdateGravity();
             }
+        }
+
+        private void UpdateGravity()
+        {
+            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
+            _gravityDirection = _gravity;
+            _gravityStrength = _gravityDirection.Normalize();
         }
 
         public virtual void UpdateAfter1()
         {
+            if (!IsValid)
+                return;
+
             _position = Entity.PositionComp.WorldVolume.Center;
 
             UpdateClosestWater();
 
-            if (Entity.Physics == null || ClosestWater == null)
+            if (ClosestWater == null)
                 return;
 
             FluidDepth = ClosestWater.GetDepthGlobal(ref _position);

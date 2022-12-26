@@ -98,8 +98,6 @@ namespace Jakaria.SessionComponents
 
                 entity.Components.Remove<WaterRenderComponent>();
             }
-
-            WaterUtils.ShowMessage("Water was removed");
         }
 
         private void OnWaterAdded(MyEntity entity)
@@ -301,11 +299,11 @@ namespace Jakaria.SessionComponents
                 {
                     DistanceToHorizon = float.PositiveInfinity;
                 }
-
+                
                 if (CameraUnderwater)
                 {
                     if (_settingsComponent.Settings.ShowFog || !MyAPIGateway.Session.CreativeMode)
-                        _weatherComponent.FogDensityOverride = (float)(0.06 + (0.00125 * (1.0 + (-CameraDepth / 100))));
+                        _weatherComponent.FogDensityOverride = (float)(ClosestWater.Settings.Material.MinFogDensity + (ClosestWater.Settings.Material.FogDensityDepth * (1.0 + (-CameraDepth / ClosestWater.Settings.Material.FogDensityDepthScalar))));
                     else
                         _weatherComponent.FogDensityOverride = 0.001f;
 
@@ -319,7 +317,7 @@ namespace Jakaria.SessionComponents
                     WhiteColor.Z = 1;
 
                     _weatherComponent.FogColorOverride = Vector3.Lerp(ClosestWater.Settings.FogColor, Vector3.Zero, (float)Math.Min(-Math.Min(CameraDepth + 200, 0) / 400, 1)) * Math.Min(_nightValue + 0.3f, 1f);
-                    _weatherComponent.SunIntensityOverride = Math.Max(MathHelper.Lerp(8, MIN_SUN_INTENSITY, (float)Math.Min(-CameraDepth / (400 / (ClosestWater.Settings.Material.Density / 1000)), 1)) * Math.Min(_nightValue + 0.3f, 1f), MIN_SUN_INTENSITY);
+                    _weatherComponent.SunIntensityOverride = Math.Max(MathHelper.Lerp(ClosestWater.Settings.Material.InitialSunIntensity, MIN_SUN_INTENSITY, (float)Math.Min(-CameraDepth / (400 / (ClosestWater.Settings.Material.Density / 1000)), 1)) * Math.Min(_nightValue + 0.3f, 1f), MIN_SUN_INTENSITY);
                 }
 
                 //Only Change fog once above water and all the time underwater

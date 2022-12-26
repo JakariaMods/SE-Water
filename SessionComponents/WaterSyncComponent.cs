@@ -22,6 +22,7 @@ namespace Jakaria.SessionComponents
     public class WaterSyncComponent : SessionComponentBase
     {
         private WaterModComponent _modComponent;
+        private WaterCommandComponent _commandComponent;
 
         public event Action<WaterComponent> OnWaterUpdated;
 
@@ -46,7 +47,7 @@ namespace Jakaria.SessionComponents
             }
         }
 
-        public void SendSignalToServer(WaterPacket packet)
+        public void SendSignalToServer(Packet packet)
         {
             if (!MyAPIGateway.Utilities.IsDedicated)
             {
@@ -58,20 +59,6 @@ namespace Jakaria.SessionComponents
         {
             if (MyAPIGateway.Session.IsServer)
             {
-                if(packet is WaterUpdateAddPacket)
-                {
-                    MyPlanet planet = MyAPIGateway.Entities.GetEntityById(packet.EntityId) as MyPlanet;
-                    WaterComponent component;
-                    planet.Components.TryGet<WaterComponent>(out component);
-
-                    packet = new WaterUpdateAddPacket
-                    {
-                        EntityId = packet.EntityId,
-                        Settings = (packet as WaterUpdateAddPacket).Settings,
-                        Timer = component?.WaveTimer ?? 0,
-                    };
-                }
-
                 byte[] data = MyAPIGateway.Utilities.SerializeToBinary(packet);
                 MyAPIGateway.Multiplayer.SendMessageToOthers(WaterData.ClientHandlerID, data);
 
@@ -93,15 +80,21 @@ namespace Jakaria.SessionComponents
 
         private void Server_OnMessageRecieved(ushort channel, byte[] packet, ulong sender, bool isArrivedFromServer)
         {
-            var serializedPacket = MyAPIGateway.Utilities.SerializeFromBinary<WaterPacket>(packet);
-            if(serializedPacket != null)
+            try
             {
-                if(MyAPIGateway.Session.GetUserPromoteLevel(sender) >= serializedPacket.RequiredPromotionLevel)
+                var serializedPacket = MyAPIGateway.Utilities.SerializeFromBinary<Packet>(packet);
+                if (serializedPacket != null)
                 {
-                    ComputeConfirmedPacket(packet);
-
-                    SendSignalToClients(serializedPacket);
+                    if(serializedPacket is CommandPacket)
+                    {
+                        ComputeConfirmedPacket(packet, sender);
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                WaterUtils.WriteLog($"Received malformed packet from {sender}");
+                WaterUtils.WriteLog(e.ToString());
             }
         }
 
@@ -109,50 +102,60 @@ namespace Jakaria.SessionComponents
         {
             if (isArrivedFromServer)
             {
-                ComputeConfirmedPacket(packet);
+                ComputeConfirmedPacket(packet, sender);
             }
         }
 
-        private void ComputeConfirmedPacket(byte[] packet)
+        private void ComputeConfirmedPacket(byte[] packet, ulong sender)
         {
-            var serializedPacket = MyAPIGateway.Utilities.SerializeFromBinary<WaterPacket>(packet);
+            var serializedPacket = MyAPIGateway.Utilities.SerializeFromBinary<Packet>(packet);
             if (serializedPacket != null)
             {
-                MyPlanet planet = MyAPIGateway.Entities.GetEntityById(serializedPacket.EntityId) as MyPlanet;
-                if (planet != null)
+                CommandPacket commandPacket = serializedPacket as CommandPacket;
+                if(commandPacket != null)
                 {
-                    if (serializedPacket is WaterRemovePacket)
+                    _commandComponent.SendCommand(commandPacket.Message, sender);
+                }
+
+                WaterPacket waterPacket = serializedPacket as WaterPacket;
+                if(waterPacket != null)
+                {
+                    MyPlanet planet = MyAPIGateway.Entities.GetEntityById(waterPacket.EntityId) as MyPlanet;
+                    if (planet != null)
                     {
-                        _modComponent.RemoveWater(planet);
-                    }
-                    else if (serializedPacket is WaterUpdateAddPacket)
-                    {
-                        WaterSettings settings = ((WaterUpdateAddPacket)serializedPacket).Settings;
-                        double timer = ((WaterUpdateAddPacket)serializedPacket).Timer;
-                        WaterComponent waterComponent;
-                        if (planet.Components.TryGet<WaterComponent>(out waterComponent))
+                        if (serializedPacket is WaterRemovePacket)
                         {
-                            Assert.NotNull(waterComponent.Settings);
-
-                            waterComponent.Settings = settings;
-                            waterComponent.WaveTimer = timer;
-
-                            OnWaterUpdated?.Invoke(waterComponent);
+                            _modComponent.RemoveWater(planet);
                         }
-                        else
+                        else if (serializedPacket is WaterUpdateAddPacket)
                         {
-                            _modComponent.AddWater(planet, settings);
-                        }
-                    }
-                    else if (serializedPacket is WaterSyncPacket)
-                    {
-                        var syncPacket = (WaterSyncPacket)serializedPacket;
-                        var water = _modComponent.GetWaterById(syncPacket.EntityId);
+                            WaterSettings settings = ((WaterUpdateAddPacket)serializedPacket).Settings;
+                            double timer = ((WaterUpdateAddPacket)serializedPacket).Timer;
+                            WaterComponent waterComponent;
+                            if (planet.Components.TryGet<WaterComponent>(out waterComponent))
+                            {
+                                Assert.NotNull(waterComponent.Settings);
 
-                        if (water != null)
+                                waterComponent.Settings = settings;
+                                waterComponent.WaveTimer = timer;
+
+                                OnWaterUpdated?.Invoke(waterComponent);
+                            }
+                            else
+                            {
+                                _modComponent.AddWater(planet, settings);
+                            }
+                        }
+                        else if (serializedPacket is WaterSyncPacket)
                         {
-                            water.WaveTimer = syncPacket.WaveTimer;
-                            water.TideTimer = syncPacket.TideTimer;
+                            var syncPacket = (WaterSyncPacket)serializedPacket;
+                            var water = _modComponent.GetWaterById(syncPacket.EntityId);
+
+                            if (water != null)
+                            {
+                                water.WaveTimer = syncPacket.WaveTimer;
+                                water.TideTimer = syncPacket.TideTimer;
+                            }
                         }
                     }
                 }
@@ -170,24 +173,34 @@ namespace Jakaria.SessionComponents
             {
                 foreach (var water in _modComponent.Waters)
                 {
-                    SendSignalToClients(new WaterUpdateAddPacket
-                    {
-                        EntityId = water.Planet.EntityId,
-                        Settings = water.Settings,
-                        Timer = water.WaveTimer,
-                    });
+                    SyncClients(water);
                 }
             }
+        }
+
+        public void SyncClients(WaterComponent water)
+        {
+            Assert.True(MyAPIGateway.Session.IsServer, "Sync Clients should never be called from client!");
+
+            SendSignalToClients(new WaterUpdateAddPacket
+            {
+                EntityId = water.Planet.EntityId,
+                Settings = water.Settings,
+                Timer = water.WaveTimer,
+            });
         }
 
         public override void LoadData()
         {
             _modComponent = Session.Instance.Get<WaterModComponent>();
+            _commandComponent = Session.Instance.Get<WaterCommandComponent>();
 
             if (MyAPIGateway.Session.IsServer)
             {
                 MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(WaterData.ServerHandlerID, Server_OnMessageRecieved);
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
+                _modComponent.OnWaterRemoved += OnWaterRemoved;
+                _modComponent.OnWaterAdded += OnWaterAdded;
             }
 
             if(!MyAPIGateway.Utilities.IsDedicated)
@@ -196,12 +209,27 @@ namespace Jakaria.SessionComponents
             }
         }
 
+        private void OnWaterAdded(MyEntity entity)
+        {
+            SyncClients(entity.Components.Get<WaterComponent>());
+        }
+
+        private void OnWaterRemoved(MyEntity entity)
+        {
+            SendSignalToClients(new WaterRemovePacket
+            {
+                EntityId = entity.EntityId,
+            });
+        }
+
         public override void UnloadData()
         {
             if (MyAPIGateway.Session.IsServer)
             {
                 MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(WaterData.ServerHandlerID, Server_OnMessageRecieved);
                 MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
+                _modComponent.OnWaterAdded -= OnWaterAdded;
+                _modComponent.OnWaterRemoved -= OnWaterRemoved;
             }
 
             if (!MyAPIGateway.Utilities.IsDedicated)
@@ -211,6 +239,17 @@ namespace Jakaria.SessionComponents
         }
     }
 
+    /*[ProtoInclude(1001, typeof(WaterUpdateAddPacket))]
+    [ProtoInclude(1002, typeof(WaterRemovePacket))]
+    [ProtoInclude(1003, typeof(WaterSyncPacket))]*/
+    [ProtoInclude(1004, typeof(WaterPacket))]
+    [ProtoInclude(1005, typeof(CommandPacket))]
+    [ProtoContract]
+    public abstract class Packet
+    {
+        public Packet() { }
+    }
+
     /// <summary>
     /// Base packet for syncing water components
     /// </summary>
@@ -218,19 +257,13 @@ namespace Jakaria.SessionComponents
     [ProtoInclude(1002, typeof(WaterRemovePacket))]
     [ProtoInclude(1003, typeof(WaterSyncPacket))]
     [ProtoContract]
-    public abstract class WaterPacket
+    public abstract class WaterPacket : Packet
     {
         /// <summary>
         /// The ID of the entity with the water component
         /// </summary>
         [ProtoMember(1)]
         public long EntityId;
-
-        /// <summary>
-        /// The required promotion level the sender requires for the server to accept the packet
-        /// </summary>
-        [ProtoIgnore]
-        public abstract MyPromoteLevel RequiredPromotionLevel { get; }
 
         public WaterPacket() { }
     }
@@ -247,9 +280,6 @@ namespace Jakaria.SessionComponents
         [ProtoMember(10)]
         public double Timer;
 
-        [ProtoIgnore]
-        public override MyPromoteLevel RequiredPromotionLevel => MyPromoteLevel.SpaceMaster;
-
         public WaterUpdateAddPacket() { }
     }
 
@@ -265,9 +295,6 @@ namespace Jakaria.SessionComponents
         [ProtoMember(10)]
         public double TideTimer;
 
-        [ProtoIgnore]
-        public override MyPromoteLevel RequiredPromotionLevel => MyPromoteLevel.SpaceMaster;
-
         public WaterSyncPacket() { }
     }
 
@@ -277,9 +304,18 @@ namespace Jakaria.SessionComponents
     [ProtoContract]
     public class WaterRemovePacket : WaterPacket
     {
-        [ProtoIgnore]
-        public override MyPromoteLevel RequiredPromotionLevel => MyPromoteLevel.SpaceMaster;
-
         public WaterRemovePacket() { }
+    }
+
+    /// <summary>
+    /// Packet for sending command messages to server
+    /// </summary>
+    [ProtoContract]
+    public class CommandPacket : Packet
+    {
+        [ProtoMember(5)]
+        public string Message;
+
+        public CommandPacket() { }
     }
 }

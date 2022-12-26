@@ -25,129 +25,148 @@ namespace Jakaria.SessionComponents
 
             LoadBlockConfigs();
         }
-
+        
         private void LoadConfigFiles()
         {
             WaterUtils.WriteLog("Beginning load water configs");
-
+            
             TextReader reader = null;
-            try
+
+            int configsLoaded = 0;
+            foreach (var mod in MyAPIGateway.Session.Mods)
             {
-                foreach (var Mod in MyAPIGateway.Session.Mods)
+                try
                 {
-                    IMyModContext modContext = Mod.GetModContext();
-                    
-                    if (MyAPIGateway.Utilities.FileExistsInModLocation("Data/WaterConfig.xml", Mod))
+                    IMyModContext modContext = mod.GetModContext();
+                    string relativePath = "Data\\WaterConfig.xml";
+
+                    if (MyAPIGateway.Utilities.FileExistsInModLocation(relativePath, mod))
                     {
-                        reader = MyAPIGateway.Utilities.ReadFileInModLocation("Data/WaterConfig.xml", Mod);
+                        WaterUtils.WriteLog($"Found Water Config for mod '{mod.FriendlyName}'");
+
+                        reader = MyAPIGateway.Utilities.ReadFileInModLocation(relativePath, mod);
+
                         if (reader != null)
                         {
                             string xml = reader.ReadToEnd();
 
-                            if (xml.Length > 0)
+                            if (!string.IsNullOrEmpty(xml))
                             {
-                                WaterConfigAPI WaterConfig = MyAPIGateway.Utilities.SerializeFromXML<WaterConfigAPI>(xml);
+                                configsLoaded++;
 
-                                if (WaterConfig.BlockConfigs != null)
-                                    foreach (var BlockConfig in WaterConfig.BlockConfigs)
-                                    {
-                                        if (BlockConfig.TypeId == "" && BlockConfig.SubtypeId == "")
-                                        {
-                                            WaterUtils.WriteLog("Empty block definition, skipping...");
-                                            continue;
-                                        }
-
-                                        BlockConfig.Init(modContext);
-
-                                        if (!BlockConfig.DefinitionId.TypeId.IsNull)
-                                        {
-                                            WaterData.BlockConfigs[BlockConfig.DefinitionId] = BlockConfig;
-                                            WaterUtils.WriteLog("Loaded Block Config '" + BlockConfig.DefinitionId + "'");
-                                        }
-                                    }
-
-                                if (WaterConfig.PlanetConfigs != null)
-                                    foreach (var PlanetConfig in WaterConfig.PlanetConfigs)
-                                    {
-                                        if (PlanetConfig.TypeId == "" && PlanetConfig.SubtypeId == "")
-                                        {
-                                            WaterUtils.WriteLog("Empty planet definition, skipping...");
-                                            continue;
-                                        }
-
-                                        PlanetConfig.Init(modContext);
-
-                                        if (!PlanetConfig.DefinitionId.TypeId.IsNull)
-                                        {
-                                            WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
-                                            WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
-                                        }
-                                    }
-
-                                if (WaterConfig.CharacterConfigs != null)
-                                    foreach (var CharacterConfig in WaterConfig.CharacterConfigs)
-                                    {
-                                        CharacterConfig.Init(modContext);
-
-                                        if (!CharacterConfig.DefinitionId.TypeId.IsNull)
-                                        {
-                                            WaterData.CharacterConfigs[CharacterConfig.DefinitionId] = CharacterConfig;
-                                            WaterUtils.WriteLog("Loaded Character Config '" + CharacterConfig.DefinitionId + "'");
-                                        }
-                                    }
-
-                                if (WaterConfig.RespawnPodConfigs != null)
-                                    foreach (var RespawnPodConfig in WaterConfig.RespawnPodConfigs)
-                                    {
-                                        RespawnPodConfig.Init(modContext);
-
-                                        if (!RespawnPodConfig.DefinitionId.TypeId.IsNull)
-                                        {
-                                            WaterData.RespawnPodConfigs[RespawnPodConfig.DefinitionId] = RespawnPodConfig;
-                                            WaterUtils.WriteLog("Loaded Respawn Pod Config '" + RespawnPodConfig.DefinitionId + "'");
-                                        }
-                                    }
-
-                                if (WaterConfig.WaterTextures != null)
-                                    foreach (var Texture in WaterConfig.WaterTextures)
-                                    {
-                                        WaterData.WaterTextures.Add(Texture);
-                                        WaterUtils.WriteLog("Loaded Water Texture '" + Texture + "'");
-                                    }
-
-                                if (WaterConfig.MaterialConfigs != null)
-                                    foreach (var Material in WaterConfig.MaterialConfigs)
-                                    {
-                                        Material.Init(modContext);
-
-                                        WaterData.MaterialConfigs[Material.SubtypeId] = Material;
-                                        WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
-                                    }
-
-                                if (WaterConfig.FishConfigs != null)
-                                    foreach (var Fish in WaterConfig.FishConfigs)
-                                    {
-                                        Fish.Init(modContext);
-
-                                        WaterData.FishConfigs[Fish.SubtypeId] = Fish;
-                                        WaterUtils.WriteLog("Loaded Fish Config '" + Fish.SubtypeId + "'");
-                                    }
+                                LoadConfig(xml, modContext);
                             }
                         }
                     }
                 }
+                catch (Exception e)
+                {
+                    WaterUtils.WriteLog($"Exception loading water config for mod '{mod.FriendlyName}'");
+                    WaterUtils.WriteLog(e.ToString());
+                }
+                finally
+                {
+                    reader?.Dispose();
+                }
             }
-            catch (Exception e)
+
+            if (configsLoaded == 0)
             {
-                WaterUtils.WriteLog("Exception loading water configs");
-                WaterUtils.WriteLog(e.ToString());
-            }
-            finally
-            {
-                reader?.Dispose();
+                WaterUtils.WriteLog("Unable to locate any water config files. This is likely due to the -path parameter in your server's setup. If you are using a service provider, this is likely not fixable until Keen fixes the issue. A backup config file has been loaded instead.");
+                LoadConfig(WaterData.BackupConfig, null);
             }
 
             WaterUtils.WriteLog("Finished loading water configs");
+        }
+
+        private void LoadConfig(string xml, IMyModContext modContext)
+        {
+            WaterConfigAPI WaterConfig = MyAPIGateway.Utilities.SerializeFromXML<WaterConfigAPI>(xml);
+
+            if (WaterConfig.BlockConfigs != null)
+                foreach (var BlockConfig in WaterConfig.BlockConfigs)
+                {
+                    if (BlockConfig.TypeId == "" && BlockConfig.SubtypeId == "")
+                    {
+                        WaterUtils.WriteLog("Empty block definition, skipping...");
+                        continue;
+                    }
+
+                    BlockConfig.Init(modContext);
+
+                    if (!BlockConfig.DefinitionId.TypeId.IsNull)
+                    {
+                        WaterData.BlockConfigs[BlockConfig.DefinitionId] = BlockConfig;
+                        WaterUtils.WriteLog("Loaded Block Config '" + BlockConfig.DefinitionId + "'");
+                    }
+                }
+
+            if (WaterConfig.PlanetConfigs != null)
+                foreach (var PlanetConfig in WaterConfig.PlanetConfigs)
+                {
+                    if (PlanetConfig.TypeId == "" && PlanetConfig.SubtypeId == "")
+                    {
+                        WaterUtils.WriteLog("Empty planet definition, skipping...");
+                        continue;
+                    }
+
+                    PlanetConfig.Init(modContext);
+
+                    if (!PlanetConfig.DefinitionId.TypeId.IsNull)
+                    {
+                        WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
+                        WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
+                    }
+                }
+
+            if (WaterConfig.CharacterConfigs != null)
+                foreach (var CharacterConfig in WaterConfig.CharacterConfigs)
+                {
+                    CharacterConfig.Init(modContext);
+
+                    if (!CharacterConfig.DefinitionId.TypeId.IsNull)
+                    {
+                        WaterData.CharacterConfigs[CharacterConfig.DefinitionId] = CharacterConfig;
+                        WaterUtils.WriteLog("Loaded Character Config '" + CharacterConfig.DefinitionId + "'");
+                    }
+                }
+
+            if (WaterConfig.RespawnPodConfigs != null)
+                foreach (var RespawnPodConfig in WaterConfig.RespawnPodConfigs)
+                {
+                    RespawnPodConfig.Init(modContext);
+
+                    if (!RespawnPodConfig.DefinitionId.TypeId.IsNull)
+                    {
+                        WaterData.RespawnPodConfigs[RespawnPodConfig.DefinitionId] = RespawnPodConfig;
+                        WaterUtils.WriteLog("Loaded Respawn Pod Config '" + RespawnPodConfig.DefinitionId + "'");
+                    }
+                }
+
+            if (WaterConfig.WaterTextures != null)
+                foreach (var Texture in WaterConfig.WaterTextures)
+                {
+                    WaterData.WaterTextures.Add(Texture);
+                    WaterUtils.WriteLog("Loaded Water Texture '" + Texture + "'");
+                }
+
+            if (WaterConfig.MaterialConfigs != null)
+                foreach (var Material in WaterConfig.MaterialConfigs)
+                {
+                    Material.Init(modContext);
+
+                    WaterData.MaterialConfigs[Material.SubtypeId] = Material;
+                    WaterUtils.WriteLog("Loaded Water Material '" + Material.SubtypeId + "'");
+                }
+
+            if (WaterConfig.FishConfigs != null)
+                foreach (var Fish in WaterConfig.FishConfigs)
+                {
+                    Fish.Init(modContext);
+
+                    WaterData.FishConfigs[Fish.SubtypeId] = Fish;
+                    WaterUtils.WriteLog("Loaded Fish Config '" + Fish.SubtypeId + "'");
+                }
         }
 
         private void LoadBlockConfigs()

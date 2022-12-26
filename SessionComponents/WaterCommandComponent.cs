@@ -2,6 +2,7 @@
 using Jakaria.Configs;
 using Jakaria.Utils;
 using Sandbox.Game;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.Game.ModAPI.Ingame;
 using VRage.Utils;
 using VRageMath;
 
@@ -21,78 +23,83 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public class WaterCommandComponent : SessionComponentBase
     {
-        private WaterRenderSessionComponent _renderComponent;
-        private WaterUIComponent _uiComponent;
-        private WaterSettingsComponent _settingsComponent;
+        public const char COMMAND_PREFIX = '/';
+
         private WaterSyncComponent _syncComponent;
+        private WaterModComponent _modComponent;
 
         private Dictionary<string, Command> _commands = new Dictionary<string, Command>();
 
         public override void LoadData()
         {
             _syncComponent = Session.Instance.Get<WaterSyncComponent>();
-            _renderComponent = Session.Instance.Get<WaterRenderSessionComponent>();
-            _uiComponent = Session.Instance.TryGet<WaterUIComponent>();
-            _settingsComponent = Session.Instance.Get<WaterSettingsComponent>();
+            _modComponent = Session.Instance.Get<WaterModComponent>();
 
             _commands["whelp"] = new Command(CommandHelp)
             {
                 Description = "Opens the steam help guide or provides extended information on a specific command.",
                 MinArgs = 1,
                 MaxArgs = 2,
+                Console = true,
+                Client = true,
             };
             _commands["wcommandlist"] = _commands["wcommands"] = new Command(CommandCommandList)
             {
                 Description = "Lists all available commands.",
+                Console = true,
+                Client = true,
             };
             _commands["wdiscord"] = new Command(CommandDiscord)
             {
                 Description = "Opens the invite link to the Water Mod Discord.",
+                Client = true,
             };
             _commands["wversion"] = new Command(CommandVersion)
             {
                 Description = "Tells the current mod version.",
-            };
-            _commands["wlanguage"] = new Command(CommandLanguage)
-            {
-                Description = "Sets the language",
-                MinArgs = 2,
-                MaxArgs = 2,
+                Console = true,
+                Client = true,
             };
             _commands["wquality"] = new Command(CommandQuality)
             {
                 Description = "Gets or sets the render quality.",
                 MinArgs = 1,
                 MaxArgs = 2,
-
+                Client = true,
             };
             _commands["wvolume"] = new Command(CommandVolume)
             {
                 Description = "Gets or sets the volume of water sounds.",
                 MinArgs = 1,
                 MaxArgs = 2,
+                Client = true,
             };
             _commands["wcob"] = new Command(CommandCenterOfBuoyancy)
             {
                 Description = "Toggles rendering of a center of buoyancy indicator.",
+                Client = true,
             };
             _commands["wdebug"] = new Command(CommandDebug)
             {
                 Description = "Toggles debug mode.",
+                Client = true,
             };
             _commands["wdepth"] = new Command(CommandDepth)
             {
                 Description = "Toggles depth indicator underwater. Requires Text Hud API.",
+                Client = true,
             };
             _commands["waltitude"] = new Command(CommandAltitude)
             {
                 Description = "Toggles sea-level altitude indicator in cockpits. Requires Text Hud API.",
+                Client = true,
             };
             _commands["wfog"] = new Command(CommandFog)
             {
                 Description = "Toggles fog.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Client = true,
             };
             _commands["wbird"] = new Command(CommandBird)
             {
@@ -119,11 +126,13 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wrelativeradius"] = _commands["wrradius"] = new Command(CommandRelativeRadius)
             {
-                Description = "Calculates a radius relative the position of the camera.",
-                RequireWater = true,
+                Description = "Calculates a radius relative to the player's position.",
+                Console = true,
+                Client = true,
             };
             _commands["wradius"] = new Command(CommandRadius)
             {
@@ -132,6 +141,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wcurrentspeed"] = new Command(CommandCurrentSpeed)
             {
@@ -140,6 +150,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wcurrentscale"] = new Command(CommandCurrentScale)
             {
@@ -148,6 +159,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wwaveheight"] = new Command(CommandWaveHeight)
             {
@@ -180,6 +192,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wtidespeed"] = new Command(CommandTideSpeed)
             {
@@ -188,6 +201,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wfogcolor"] = _commands["wcolor"] = new Command(CommandFogColor)
             {
@@ -202,6 +216,7 @@ namespace Jakaria.SessionComponents
                 Description = "Resets all settings of the closest water, only preserving radius.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wcreate"] = new Command(CommandCreate)
             {
@@ -210,18 +225,21 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequirePlanet = true,
+                Console = true,
             };
             _commands["wremove"] = new Command(CommandRemove)
             {
                 Description = "Removes the closest water.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wpdrag"] = new Command(CommandPlayerDrag)
             {
                 Description = "Toggles player drag.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wtransparent"] = new Command(CommandTransparent)
             {
@@ -238,10 +256,13 @@ namespace Jakaria.SessionComponents
             _commands["wtexturelist"] = _commands["wtextures"] = new Command(CommandTextures)
             {
                 Description = "Gets a list of all available textures.",
+                Client = true,
             };
             _commands["wmateriallist"] = _commands["wmaterials"] = new Command(CommandMaterials)
             {
                 Description = "Gets a list of all available physics materials.",
+                Console = true,
+                Client = true,
             };
             _commands["wtexture"] = new Command(CommandTexture)
             {
@@ -258,18 +279,22 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wexport"] = new Command(CommandExport)
             {
                 Description = "Serializes a copy of the Water Settings to the Clipboard. Used for ModAPI.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Client = true,
             };
             _commands["wsettings"] = new Command(CommandSettings)
             {
                 Description = "Prints all the current settings of the Water.",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                Console = true,
+                Client = true,
             };
             _commands["wcrush"] = new Command(CommandCrush)
             {
@@ -278,6 +303,7 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
             _commands["wrate"] = new Command(CommandRate)
             {
@@ -286,19 +312,10 @@ namespace Jakaria.SessionComponents
                 MinArgs = 1,
                 MaxArgs = 2,
                 RequireWater = true,
+                Console = true,
             };
 
             MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
-        }
-
-        private void SendWaterToServer(WaterComponent water)
-        {
-            _syncComponent.SendSignalToServer(new WaterUpdateAddPacket
-            {
-                EntityId = water.Planet.EntityId,
-                Settings = water.Settings,
-                Timer = water.WaveTimer,
-            });
         }
 
         public override void UnloadData()
@@ -306,14 +323,66 @@ namespace Jakaria.SessionComponents
             MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
         }
 
-        public void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
+        private bool ValidateCommand(string messageText, out string[] args)
         {
-            if (!messageText.StartsWith("/") || messageText.Length == 0)
+            args = null;
+
+            if (messageText.Length == 0 || messageText[0] != COMMAND_PREFIX)
+                return false;
+
+            args = messageText.TrimStart(COMMAND_PREFIX).Split(new char[1] {' '}, StringSplitOptions.RemoveEmptyEntries);
+            
+            if (args.Length == 0)
+                return false;
+
+            return true;
+        }
+
+        public void SendCommand(string messageText, ulong sender = 0)
+        {
+            string[] args;
+            if (!ValidateCommand(messageText, out args))
                 return;
 
-            string[] args = messageText.TrimStart('/').Split(' ');
+            if (MyAPIGateway.Session.IsServer)
+            {
+                List<IMyPlayer> players = new List<IMyPlayer>();
+                MyAPIGateway.Players.GetPlayers(players);
+                foreach (var player in players)
+                {
+                    if(player != null && player.Identity != null)
+                    {
+                        if(player.SteamUserId == sender)
+                        {
+                            Vector3D position = player.GetPosition();
+                            RunCommand(messageText, new CommandArgs
+                            {
+                                Planet = MyGamePruningStructure.GetClosestPlanet(position),
+                                Position = position,
+                                User = player.IdentityId,
+                                Sender = player.SteamUserId,
+                                PromoteLevel = player.PromoteLevel,
+                                Water = _modComponent.GetClosestWater(position),
+                            });
 
-            if (args.Length == 0)
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _syncComponent.SendSignalToServer(new CommandPacket
+                {
+                    Message = messageText
+                });
+            }
+        }
+
+        private void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
+        {
+            string[] args;
+            if (!ValidateCommand(messageText, out args))
                 return;
 
             Command command;
@@ -321,107 +390,143 @@ namespace Jakaria.SessionComponents
             {
                 sendToOthers = false;
 
-                if (MyAPIGateway.Session.PromoteLevel >= command.PromoteLevel)
+                if (command.Client)
                 {
-                    if (command.RequirePlanet && _renderComponent.ClosestPlanet == null)
+                    Vector3D position = MyAPIGateway.Session.Camera.Position;
+                    RunCommand(messageText, new CommandArgs
                     {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                        Planet = MyGamePruningStructure.GetClosestPlanet(position),
+                        Position = position,
+                        User = MyAPIGateway.Session.Player.IdentityId,
+                        Sender = MyAPIGateway.Session.Player.SteamUserId,
+                        PromoteLevel = MyAPIGateway.Session.Player.PromoteLevel,
+                        Water = _modComponent.GetClosestWater(position),
+                    });
+                }
+                else
+                {
+                    SendCommand(messageText, MyAPIGateway.Session.Player.SteamUserId);
+                }
+            }
+        }
+
+        private void RunCommand(string messageText, CommandArgs commandArgs)
+        {
+            string[] args;
+            if (!ValidateCommand(messageText, out args))
+                return;
+
+            if (args == null || args.Length == 0)
+                return;
+
+            Command command;
+            if (_commands.TryGetValue(args[0], out command))
+            {
+                if (commandArgs.PromoteLevel >= command.PromoteLevel)
+                {
+                    if(!command.Console && Session.CONSOLE_MODE)
+                    {
+                        WaterUtils.SendMessage(WaterTexts.NoConsoleSupport, commandArgs.User);
                         return;
                     }
 
-                    if (command.RequireWater && _renderComponent.ClosestWater == null)
+                    if (!command.Client && Session.Instance.IsClient && !MyAPIGateway.Session.IsServer)
                     {
-                        WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoWater);
+                        WaterUtils.SendMessage(WaterTexts.NoClientSupport, commandArgs.User);
+                        return;
+                    }
+
+                    if (command.RequirePlanet && commandArgs.Planet == null)
+                    {
+                        WaterUtils.SendMessage(WaterTexts.NoPlanet, commandArgs.User);
+                        return;
+                    }
+
+                    if (command.RequireWater && commandArgs.Water == null)
+                    {
+                        WaterUtils.SendMessage(WaterTexts.NoWater, commandArgs.User);
                         return;
                     }
 
                     if (args.Length < command.MinArgs)
                     {
-                        WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GenericMinArgs, command.MinArgs));
+                        WaterUtils.SendMessage(string.Format(WaterTexts.GenericMinArgs, command.MinArgs - 1), commandArgs.User);
                         return;
                     }
 
                     if (args.Length > command.MaxArgs)
                     {
-                        WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GenericMaxArgs, command.MaxArgs));
+                        WaterUtils.SendMessage(string.Format(WaterTexts.GenericMaxArgs, command.MaxArgs - 1), commandArgs.User);
                         return;
                     }
 
-                    command.Action.Invoke(args);
+                    command.Action.Invoke(args, commandArgs);
                 }
                 else
                 {
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoPermissions);
+                    WaterUtils.SendMessage(WaterTexts.GenericNoPermissions, commandArgs.User);
                 }
             }
         }
 
-        private void CommandCommandList(string[] args)
+        private void CommandCommandList(string[] args, CommandArgs commandArgs)
         {
             string commands = "";
 
             foreach (var command in _commands)
             {
+                if (Session.CONSOLE_MODE && !command.Value.Console)
+                    continue;
+
                 commands += command.Key + ", ";
             }
 
             if (commands.Length > 2)
             {
                 commands = commands.Substring(0, commands.Length - 2) + "."; //remove end comma and space. add period
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ListCommands + commands);
+                WaterUtils.SendMessage(WaterTexts.ListCommands + commands, commandArgs.User);
             }
         }
 
-        private void CommandHelp(string[] args)
+        private void CommandHelp(string[] args, CommandArgs commandArgs)
         {
             if (args.Length == 1)
             {
                 MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://steamcommunity.com/sharedfiles/filedetails/?id=2574095672");
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.OpenGuide);
+                WaterUtils.SendMessage(WaterTexts.OpenGuide, commandArgs.User);
             }
 
             if (args.Length == 2)
             {
+                args[1].TrimStart(COMMAND_PREFIX);
+
                 Command command;
                 if (_commands.TryGetValue(args[1], out command))
                 {
-                    WaterUtils.ShowMessage($"/{args[1]}: {command.Description} Min Promote Level: {command.PromoteLevel}");
+                    WaterUtils.SendMessage($"{COMMAND_PREFIX}{args[1]}: {command.Description} Min Promote Level: {command.PromoteLevel}", commandArgs.User);
                 }
             }
         }
 
-        private void CommandDiscord(string[] args)
+        private void CommandDiscord(string[] args, CommandArgs commandArgs)
         {
             MyVisualScriptLogicProvider.OpenSteamOverlayLocal(@"https://steamcommunity.com/sharedfiles/filedetails/?id=2574095672");
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.OpenGuide);
+            WaterUtils.SendMessage(WaterTexts.OpenGuide, commandArgs.User);
         }
 
-        private void CommandVersion(string[] args)
+        private void CommandVersion(string[] args, CommandArgs commandArgs)
         {
-            WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.WaterModVersion, WaterData.Version));
+            WaterUtils.SendMessage(string.Format(WaterTexts.WaterModVersion, WaterData.Version), commandArgs.User);
         }
 
-        private void CommandLanguage(string[] args)
+        private void CommandQuality(string[] args, CommandArgs commandArgs)
         {
-            Language language;
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
 
-            if (WaterLocalization.Languages.TryGetValue(WaterUtils.ValidateCommandData(args[1]), out language))
-            {
-                WaterLocalization.CurrentLanguage = language;
-
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetLanguage, args[1], WaterLocalization.CurrentLanguage.TranslationAuthor));
-                _settingsComponent.SaveData();
-            }
-            else
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetLanguageNoParse, args[1]));
-        }
-
-        private void CommandQuality(string[] args)
-        {
             //Get Quality
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetQuality, _settingsComponent.Settings.Quality));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetQuality, settingsComponent.Settings.Quality), commandArgs.User);
             }
 
             //Set Quality
@@ -430,25 +535,27 @@ namespace Jakaria.SessionComponents
                 float quality;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out quality))
                 {
-                    if (_settingsComponent.Settings.ShowDebug)
-                        _settingsComponent.Settings.Quality = quality;
+                    if (settingsComponent.Settings.ShowDebug)
+                        settingsComponent.Settings.Quality = quality;
                     else
-                        _settingsComponent.Settings.Quality = MathHelper.Clamp(quality, 0.4f, 3f);
+                        settingsComponent.Settings.Quality = MathHelper.Clamp(quality, 0.4f, 3f);
 
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetQuality, _settingsComponent.Settings.Quality));
-                    _settingsComponent.SaveData();
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetQuality, settingsComponent.Settings.Quality), commandArgs.User);
+                    settingsComponent.SaveData();
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetQualityNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetQualityNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandVolume(string[] args)
+        private void CommandVolume(string[] args, CommandArgs commandArgs)
         {
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+
             //Get Volume
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetVolume, _settingsComponent.Settings.Volume));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetVolume, settingsComponent.Settings.Volume), commandArgs.User);
             }
 
             //Set Volume
@@ -458,97 +565,109 @@ namespace Jakaria.SessionComponents
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out volume))
                 {
                     volume = MathHelper.Clamp(volume, 0f, 1f);
-                    _settingsComponent.Settings.Volume = volume;
-                    _settingsComponent.SaveData();
+                    settingsComponent.Settings.Volume = volume;
+                    settingsComponent.SaveData();
 
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetVolume, _settingsComponent.Settings.Volume));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetVolume, settingsComponent.Settings.Volume), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetVolumeNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetVolumeNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandCenterOfBuoyancy(string[] args)
+        private void CommandCenterOfBuoyancy(string[] args, CommandArgs commandArgs)
         {
-            _settingsComponent.Settings.ShowCenterOfBuoyancy = !_settingsComponent.Settings.ShowCenterOfBuoyancy;
-            _settingsComponent.SaveData();
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
 
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleRenderCOB);
+            settingsComponent.Settings.ShowCenterOfBuoyancy = !settingsComponent.Settings.ShowCenterOfBuoyancy;
+            settingsComponent.SaveData();
+
+            WaterUtils.SendMessage(WaterTexts.ToggleRenderCOB, commandArgs.User);
         }
 
-        private void CommandDebug(string[] args)
+        private void CommandDebug(string[] args, CommandArgs commandArgs)
         {
-            _settingsComponent.Settings.ShowDebug = !_settingsComponent.Settings.ShowDebug;
-            _settingsComponent.SaveData();
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
 
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleDebug);
+            settingsComponent.Settings.ShowDebug = !settingsComponent.Settings.ShowDebug;
+            settingsComponent.SaveData();
+
+            WaterUtils.SendMessage(WaterTexts.ToggleDebug, commandArgs.User);
         }
 
-        private void CommandDepth(string[] args)
+        private void CommandDepth(string[] args, CommandArgs commandArgs)
         {
-            if (_uiComponent != null && _uiComponent.Heartbeat)
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+            WaterUIComponent uiComponent = Session.Instance.TryGet<WaterUIComponent>();
+
+            if (uiComponent != null && uiComponent.Heartbeat)
             {
-                _settingsComponent.Settings.ShowDepth = !_settingsComponent.Settings.ShowDepth;
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleShowDepth);
+                settingsComponent.Settings.ShowDepth = !settingsComponent.Settings.ShowDepth;
+                WaterUtils.SendMessage(WaterTexts.ToggleShowDepth, commandArgs.User);
 
-                _settingsComponent.SaveData();
+                settingsComponent.SaveData();
             }
             else
             {
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextAPI);
+                WaterUtils.SendMessage(WaterTexts.NoTextAPI, commandArgs.User);
             }
         }
 
-        private void CommandAltitude(string[] args)
+        private void CommandAltitude(string[] args, CommandArgs commandArgs)
         {
-            if (_uiComponent != null && _uiComponent.Heartbeat)
-            {
-                _settingsComponent.Settings.ShowAltitude = !_settingsComponent.Settings.ShowAltitude;
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleShowAltitude);
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+            WaterUIComponent uiComponent = Session.Instance.TryGet<WaterUIComponent>();
 
-                _settingsComponent.SaveData();
+            if (uiComponent != null && uiComponent.Heartbeat)
+            {
+                settingsComponent.Settings.ShowAltitude = !settingsComponent.Settings.ShowAltitude;
+                WaterUtils.SendMessage(WaterTexts.ToggleShowAltitude, commandArgs.User);
+
+                settingsComponent.SaveData();
             }
             else
             {
-                _settingsComponent.Settings.ShowAltitude = false;
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextAPI);
+                settingsComponent.Settings.ShowAltitude = false;
+                WaterUtils.SendMessage(WaterTexts.NoTextAPI, commandArgs.User);
             }
         }
 
-        private void CommandFog(string[] args)
+        private void CommandFog(string[] args, CommandArgs commandArgs)
         {
-            _settingsComponent.Settings.ShowFog = !_settingsComponent.Settings.ShowFog;
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
 
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFog);
+            settingsComponent.Settings.ShowFog = !settingsComponent.Settings.ShowFog;
+
+            WaterUtils.SendMessage(WaterTexts.ToggleFog, commandArgs.User);
         }
 
-        private void CommandBird(string[] args)
+        private void CommandBird(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.EnableSeagulls = !_renderComponent.ClosestWater.Settings.EnableSeagulls;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleBirds);
+            commandArgs.Water.Settings.EnableSeagulls = !commandArgs.Water.Settings.EnableSeagulls;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleBirds, commandArgs.User);
         }
 
-        private void CommandFish(string[] args)
+        private void CommandFish(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.EnableFish = !_renderComponent.ClosestWater.Settings.EnableFish;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFish);
+            commandArgs.Water.Settings.EnableFish = !commandArgs.Water.Settings.EnableFish;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleFish, commandArgs.User);
         }
 
-        private void CommandFoam(string[] args)
+        private void CommandFoam(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.EnableFoam = !_renderComponent.ClosestWater.Settings.EnableFoam;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleFoam);
+            commandArgs.Water.Settings.EnableFoam = !commandArgs.Water.Settings.EnableFoam;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleFoam, commandArgs.User);
         }
 
-        private void CommandBuoyancy(string[] args)
+        private void CommandBuoyancy(string[] args, CommandArgs commandArgs)
         {
             //Get Buoyancy
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetBuoyancy, _renderComponent.ClosestWater.Settings.Buoyancy));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetBuoyancy, commandArgs.Water.Settings.Buoyancy), commandArgs.User);
             }
 
             //Set Buoyancy
@@ -557,27 +676,27 @@ namespace Jakaria.SessionComponents
                 float buoyancy;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out buoyancy))
                 {
-                    _renderComponent.ClosestWater.Settings.Buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetBuoyancy, _renderComponent.ClosestWater.Settings.Buoyancy));
+                    commandArgs.Water.Settings.Buoyancy = MathHelper.Clamp(buoyancy, 0f, 10f);
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetBuoyancy, commandArgs.Water.Settings.Buoyancy), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetBuoyancyNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetBuoyancyNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandRelativeRadius(string[] args)
+        private void CommandRelativeRadius(string[] args, CommandArgs commandArgs)
         {
-            double radius = ((Vector3D.Distance(_renderComponent.CameraPosition, _renderComponent.ClosestWater.Planet.PositionComp.GetPosition()) - WaterSettings.Default.TideHeight) / _renderComponent.ClosestPlanet.MinimumRadius);
-            WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetRelativeRadius, radius.ToString("0.00000")));
+            double radius = ((Vector3D.Distance(commandArgs.Position, commandArgs.Planet.PositionComp.GetPosition()) - WaterSettings.Default.TideHeight) / commandArgs.Planet.MinimumRadius);
+            WaterUtils.SendMessage(string.Format(WaterTexts.GetRelativeRadius, radius.ToString("0.00000")), commandArgs.User);
         }
 
-        private void CommandRadius(string[] args)
+        private void CommandRadius(string[] args, CommandArgs commandArgs)
         {
             //Get Radius
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetRadius, _renderComponent.ClosestWater.Settings.Radius));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetRadius, commandArgs.Water.Settings.Radius), commandArgs.User);
             }
 
             //Set Radius
@@ -588,21 +707,21 @@ namespace Jakaria.SessionComponents
                 {
                     radius = MathHelper.Clamp(radius, 0.95f, 1.75f);
 
-                    _renderComponent.ClosestWater.Settings.Radius = radius;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetRadius, _renderComponent.ClosestWater.Settings.Radius));
+                    commandArgs.Water.Settings.Radius = radius;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetRadius, commandArgs.Water.Settings.Radius), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetRadiusNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetRadiusNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandCurrentSpeed(string[] args)
+        private void CommandCurrentSpeed(string[] args, CommandArgs commandArgs)
         {
             //Get Current Speed
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetCurrentSpeed, _renderComponent.ClosestWater.Settings.CurrentSpeed));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetCurrentSpeed, commandArgs.Water.Settings.CurrentSpeed), commandArgs.User);
             }
 
             //Set Current Speed
@@ -611,20 +730,20 @@ namespace Jakaria.SessionComponents
                 float currentSpeed;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out currentSpeed))
                 {
-                    _renderComponent.ClosestWater.Settings.CurrentSpeed = currentSpeed;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCurrentSpeed, _renderComponent.ClosestWater.Settings.CurrentSpeed));
+                    commandArgs.Water.Settings.CurrentSpeed = currentSpeed;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCurrentSpeed, commandArgs.Water.Settings.CurrentSpeed), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCurrentSpeedNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCurrentSpeedNoParse, args[1]), commandArgs.User);
             }
         }
-        private void CommandCurrentScale(string[] args)
+        private void CommandCurrentScale(string[] args, CommandArgs commandArgs)
         {
             //Get Current Scale
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetCurrentScale, _renderComponent.ClosestWater.Settings.CurrentScale));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetCurrentScale, commandArgs.Water.Settings.CurrentScale), commandArgs.User);
             }
 
             //Set Current Scale
@@ -633,21 +752,21 @@ namespace Jakaria.SessionComponents
                 float currentScale;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out currentScale))
                 {
-                    _renderComponent.ClosestWater.Settings.CurrentScale = currentScale;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCurrentScale, _renderComponent.ClosestWater.Settings.CurrentScale));
+                    commandArgs.Water.Settings.CurrentScale = currentScale;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCurrentScale, commandArgs.Water.Settings.CurrentScale), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCurrentScaleNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCurrentScaleNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandWaveHeight(string[] args)
+        private void CommandWaveHeight(string[] args, CommandArgs commandArgs)
         {
             //Get Wave Height
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetWaveHeight, _renderComponent.ClosestWater.Settings.WaveHeight));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetWaveHeight, commandArgs.Water.Settings.WaveHeight), commandArgs.User);
             }
 
             //Set Wave Height
@@ -656,21 +775,21 @@ namespace Jakaria.SessionComponents
                 float waveHeight;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveHeight))
                 {
-                    _renderComponent.ClosestWater.Settings.WaveHeight = Math.Abs(waveHeight);
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveHeight, _renderComponent.ClosestWater.Settings.WaveHeight));
+                    commandArgs.Water.Settings.WaveHeight = Math.Abs(waveHeight);
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveHeight, commandArgs.Water.Settings.WaveHeight), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveHeightNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveHeightNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandWaveSpeed(string[] args)
+        private void CommandWaveSpeed(string[] args, CommandArgs commandArgs)
         {
             //Get Wave Speed
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetWaveSpeed, _renderComponent.ClosestWater.Settings.WaveSpeed));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetWaveSpeed, commandArgs.Water.Settings.WaveSpeed), commandArgs.User);
             }
 
             //Set Wave Speed
@@ -679,21 +798,21 @@ namespace Jakaria.SessionComponents
                 float waveSpeed;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveSpeed))
                 {
-                    _renderComponent.ClosestWater.Settings.WaveSpeed = MathHelper.Clamp(waveSpeed, 0f, 1f);
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveSpeed, _renderComponent.ClosestWater.Settings.WaveSpeed));
+                    commandArgs.Water.Settings.WaveSpeed = MathHelper.Clamp(waveSpeed, 0f, 1f);
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveSpeed, commandArgs.Water.Settings.WaveSpeed), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveSpeedNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveSpeedNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandWaveScale(string[] args)
+        private void CommandWaveScale(string[] args, CommandArgs commandArgs)
         {
             //Get Wave Scale
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetWaveScale, _renderComponent.ClosestWater.Settings.WaveScale));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetWaveScale, commandArgs.Water.Settings.WaveScale), commandArgs.User);
             }
 
             //Set Wave Scale
@@ -702,22 +821,22 @@ namespace Jakaria.SessionComponents
                 float waveScale;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out waveScale))
                 {
-                    _renderComponent.ClosestWater.Settings.WaveScale = waveScale;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveScale, _renderComponent.ClosestWater.Settings.WaveScale));
+                    commandArgs.Water.Settings.WaveScale = waveScale;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveScale, commandArgs.Water.Settings.WaveScale), commandArgs.User);
 
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetWaveScaleNoParse, _renderComponent.ClosestWater.Settings.WaveScale));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetWaveScaleNoParse, commandArgs.Water.Settings.WaveScale), commandArgs.User);
             }
         }
 
-        private void CommandTideHeight(string[] args)
+        private void CommandTideHeight(string[] args, CommandArgs commandArgs)
         {
             //Get Tide Height
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetTideHeight, _renderComponent.ClosestWater.Settings.TideHeight));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetTideHeight, commandArgs.Water.Settings.TideHeight), commandArgs.User);
             }
 
             //Set Tide Height
@@ -726,25 +845,22 @@ namespace Jakaria.SessionComponents
                 float tideHeight;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideHeight))
                 {
-                    _renderComponent.ClosestWater.Settings.TideHeight = Math.Abs(tideHeight);
-                    _syncComponent.SendSignalToServer(new WaterUpdateAddPacket
-                    {
-                        EntityId = _renderComponent.ClosestWater.Planet.EntityId,
-                        Settings = _renderComponent.ClosestWater.Settings
-                    });
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTideHeight, _renderComponent.ClosestWater.Settings.TideHeight));
+                    commandArgs.Water.Settings.TideHeight = Math.Abs(tideHeight);
+                    _syncComponent.SyncClients(commandArgs.Water);
+
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTideHeight, commandArgs.Water.Settings.TideHeight), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTideHeightNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTideHeightNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandTideSpeed(string[] args)
+        private void CommandTideSpeed(string[] args, CommandArgs commandArgs)
         {
             //Get Tide Speed
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetTideSpeed, _renderComponent.ClosestWater.Settings.TideSpeed));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetTideSpeed, commandArgs.Water.Settings.TideSpeed), commandArgs.User);
             }
 
             //Set Tide Speed
@@ -753,44 +869,40 @@ namespace Jakaria.SessionComponents
                 float tideSpeed;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out tideSpeed))
                 {
-                    _renderComponent.ClosestWater.Settings.TideSpeed = MyMath.Clamp(tideSpeed, 0, 1000);
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTideSpeed, _renderComponent.ClosestWater.Settings.TideSpeed));
+                    commandArgs.Water.Settings.TideSpeed = MyMath.Clamp(tideSpeed, 0, 1000);
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTideSpeed, commandArgs.Water.Settings.TideSpeed), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTideSpeedNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTideSpeedNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandReset(string[] args)
+        private void CommandReset(string[] args, CommandArgs commandArgs)
         {
-            float radius = _renderComponent.ClosestWater.Settings.Radius;
+            float radius = commandArgs.Water.Settings.Radius;
 
-            _renderComponent.ClosestWater.Settings = new WaterSettings();
-            _renderComponent.ClosestWater.Settings.Radius = radius;
+            commandArgs.Water.Settings = new WaterSettings();
+            commandArgs.Water.Settings.Radius = radius;
 
-            SendWaterToServer(_renderComponent.ClosestWater);
+            _syncComponent.SyncClients(commandArgs.Water);
 
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.Reset);
+            WaterUtils.SendMessage(WaterTexts.Reset, commandArgs.User);
         }
 
-        private void CommandCreate(string[] args)
+        private void CommandCreate(string[] args, CommandArgs commandArgs)
         {
-            if (_renderComponent.ClosestPlanet.Components.Has<WaterComponent>())
+            if (commandArgs.Planet.Components.Has<WaterComponent>())
             {
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.HasWater);
+                WaterUtils.SendMessage(WaterTexts.HasWater, commandArgs.User);
                 return;
             }
             
             if (args.Length == 1)
             {
-                _syncComponent.SendSignalToServer(new WaterUpdateAddPacket
-                {
-                    EntityId = _renderComponent.ClosestPlanet.EntityId,
-                    Settings = new WaterSettings()
-                });
-
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
+                _modComponent.AddWater(commandArgs.Planet);
+                
+                WaterUtils.SendMessage(WaterTexts.CreateWater, commandArgs.User);
             }
 
             if (args.Length == 2)
@@ -798,53 +910,51 @@ namespace Jakaria.SessionComponents
                 float radius;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
                 {
-                    _syncComponent.SendSignalToServer(new WaterUpdateAddPacket
+                    _modComponent.AddWater(commandArgs.Planet, new WaterSettings
                     {
-                        EntityId = _renderComponent.ClosestPlanet.EntityId,
-                        Settings = new WaterSettings
-                        {
-                            Radius = radius,
-                        }
+                        Radius = radius
                     });
+                    _syncComponent.SyncClients();
 
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.CreateWater);
+                    WaterUtils.SendMessage(WaterTexts.CreateWater, commandArgs.User);
                 }
                 else
                 {
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNoParse);
+                    WaterUtils.SendMessage(WaterTexts.GenericNoParse, commandArgs.User);
                 }
             }
         }
 
-        private void CommandRemove(string[] args)
+        private void CommandRemove(string[] args, CommandArgs commandArgs)
         {
-            if(_renderComponent.ClosestPlanet.Components.Has<WaterComponent>())
+            if(commandArgs.Planet.Components.Has<WaterComponent>())
             {
-                _syncComponent.SendSignalToServer(new WaterRemovePacket { EntityId = _renderComponent.ClosestPlanet.EntityId });
+                WaterUtils.SendMessage(WaterTexts.RemoveWater, commandArgs.User);
+                _modComponent.RemoveWater(commandArgs.Planet);
             }
         }
 
-        private void CommandPlayerDrag(string[] args)
+        private void CommandPlayerDrag(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.PlayerDrag = !_renderComponent.ClosestWater.Settings.PlayerDrag;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.TogglePlayerDrag);
+            commandArgs.Water.Settings.PlayerDrag = !commandArgs.Water.Settings.PlayerDrag;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.TogglePlayerDrag, commandArgs.User);
         }
 
-        private void CommandTransparent(string[] args)
+        private void CommandTransparent(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.Transparent = !_renderComponent.ClosestWater.Settings.Transparent;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleTransparency);
+            commandArgs.Water.Settings.Transparent = !commandArgs.Water.Settings.Transparent;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleTransparency, commandArgs.User);
         }
-        private void CommandLit(string[] args)
+        private void CommandLit(string[] args, CommandArgs commandArgs)
         {
-            _renderComponent.ClosestWater.Settings.Lit = !_renderComponent.ClosestWater.Settings.Lit;
-            SendWaterToServer(_renderComponent.ClosestWater);
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ToggleLighting);
+            commandArgs.Water.Settings.Lit = !commandArgs.Water.Settings.Lit;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleLighting, commandArgs.User);
         }
 
-        private void CommandTextures(string[] args)
+        private void CommandTextures(string[] args, CommandArgs commandArgs)
         {
             if (WaterData.WaterTextures.Count > 0)
             {
@@ -858,15 +968,15 @@ namespace Jakaria.SessionComponents
                 if (textures.Length > 2)
                 {
                     textures = textures.Substring(0, textures.Length - 2) + "."; //remove end comma and space. add period
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ListTextures + textures);
+                    WaterUtils.SendMessage(WaterTexts.ListTextures + textures, commandArgs.User);
                 }
             }
             else
             {
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoTextures);
+                WaterUtils.SendMessage(WaterTexts.NoTextures, commandArgs.User);
             }
         }
-        private void CommandMaterials(string[] args)
+        private void CommandMaterials(string[] args, CommandArgs commandArgs)
         {
             if (WaterData.MaterialConfigs.Count > 0)
             {
@@ -880,20 +990,20 @@ namespace Jakaria.SessionComponents
                 if (materials.Length > 2)
                 {
                     materials = materials.Substring(0, materials.Length - 2) + "."; //remove end comma and space. add period
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ListMaterials + materials);
+                    WaterUtils.SendMessage(WaterTexts.ListMaterials + materials, commandArgs.User);
                 }
             }
             else
             {
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoMaterials);
+                WaterUtils.SendMessage(WaterTexts.NoMaterials, commandArgs.User);
             }
         }
-        private void CommandTexture(string[] args)
+        private void CommandTexture(string[] args, CommandArgs commandArgs)
         {
             //Get Texture
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetTexture, _renderComponent.ClosestWater.Settings.Texture));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetTexture, commandArgs.Water.Settings.Texture), commandArgs.User);
             }
 
             //Set Texture
@@ -901,30 +1011,30 @@ namespace Jakaria.SessionComponents
             {
                 if (WaterData.WaterTextures.Contains(args[1]))
                 {
-                    _renderComponent.ClosestWater.Settings.Texture = SerializableStringId.Create(MyStringId.GetOrCompute(args[1]));
+                    commandArgs.Water.Settings.Texture = SerializableStringId.Create(MyStringId.GetOrCompute(args[1]));
 
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTexture, _renderComponent.ClosestWater.Settings.Texture));
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTexture, commandArgs.Water.Settings.Texture), commandArgs.User);
                 }
                 else
                 {
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetTextureNoFind, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetTextureNoFind, args[1]), commandArgs.User);
                 }
             }
         }
 
-        private void CommandMaterial(string[] args)
+        private void CommandMaterial(string[] args, CommandArgs commandArgs)
         {
             //Get Material
             if (args.Length == 1)
             {
-                if (_renderComponent.ClosestPlanet == null)
+                if (commandArgs.Planet == null)
                 {
-                    WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.NoPlanet);
+                    WaterUtils.SendMessage(WaterTexts.NoPlanet, commandArgs.User);
                     return;
                 }
 
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetMaterial, _renderComponent.ClosestWater.Settings.Material.SubtypeId));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetMaterial, commandArgs.Water.Settings.Material.SubtypeId), commandArgs.User);
             }
 
             //Set Material
@@ -932,36 +1042,35 @@ namespace Jakaria.SessionComponents
             {
                 if (WaterData.MaterialConfigs.ContainsKey(args[1]))
                 {
-                    _renderComponent.ClosestWater.Settings.MaterialId = args[1];
-                    WaterUtils.ShowMessage($"{args[1]}");
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetMaterial, _renderComponent.ClosestWater.Settings.Material.SubtypeId));
+                    commandArgs.Water.Settings.MaterialId = args[1];
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetMaterial, commandArgs.Water.Settings.Material.SubtypeId), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetMaterialNoFind, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetMaterialNoFind, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandExport(string[] args)
+        private void CommandExport(string[] args, CommandArgs commandArgs)
         {
-            PlanetConfig config = new PlanetConfig(_renderComponent.ClosestWater.Planet.Generator.Id);
-            config.WaterSettings = _renderComponent.ClosestWater.Settings;
+            PlanetConfig config = new PlanetConfig(commandArgs.Water.Planet.Generator.Id);
+            config.WaterSettings = commandArgs.Water.Settings;
 
             MyClipboardHelper.SetClipboard(MyAPIGateway.Utilities.SerializeToXML(config));
-            WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.ExportWater);
+            WaterUtils.SendMessage(WaterTexts.ExportWater, commandArgs.User);
         }
 
-        private void CommandSettings(string[] args)
+        private void CommandSettings(string[] args, CommandArgs commandArgs)
         {
-            WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetWaterSettings, _renderComponent.ClosestWater.Settings.ToString()));
+            WaterUtils.SendMessage(string.Format(WaterTexts.GetWaterSettings, commandArgs.Water.Settings), commandArgs.User);
         }
 
-        private void CommandCrush(string[] args)
+        private void CommandCrush(string[] args, CommandArgs commandArgs)
         {
             //Get Crush Damage
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetCrushDamage, _renderComponent.ClosestWater.Settings.CrushDamage));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetCrushDamage, commandArgs.Water.Settings.CrushDamage), commandArgs.User);
             }
 
             //Set Crush Damage
@@ -970,21 +1079,21 @@ namespace Jakaria.SessionComponents
                 float crushDepth;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out crushDepth))
                 {
-                    _renderComponent.ClosestWater.Settings.CrushDamage = crushDepth;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCrushDamage, _renderComponent.ClosestWater.Settings.CrushDamage));
+                    commandArgs.Water.Settings.CrushDamage = crushDepth;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCrushDamage, commandArgs.Water.Settings.CrushDamage), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCrushDamageNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCrushDamageNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandRate(string[] args)
+        private void CommandRate(string[] args, CommandArgs commandArgs)
         {
             //Get Collection Rate
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetCollectRate, _renderComponent.ClosestWater.Settings.CollectionRate));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetCollectRate, commandArgs.Water.Settings.CollectionRate), commandArgs.User);
             }
 
             //Set Collect Rate
@@ -993,26 +1102,26 @@ namespace Jakaria.SessionComponents
                 float collectRate;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out collectRate))
                 {
-                    _renderComponent.ClosestWater.Settings.CollectionRate = collectRate;
-                    SendWaterToServer(_renderComponent.ClosestWater);
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCollectRate, _renderComponent.ClosestWater.Settings.CollectionRate));
+                    commandArgs.Water.Settings.CollectionRate = collectRate;
+                    _syncComponent.SyncClients(commandArgs.Water);
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRate, commandArgs.Water.Settings.CollectionRate), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCollectRateNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRateNoParse, args[1]), commandArgs.User);
             }
         }
 
-        private void CommandFogColor(string[] args)
+        private void CommandFogColor(string[] args, CommandArgs commandArgs)
         {
             //Get Fog Color
             if (args.Length == 1)
             {
-                WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.GetFogColor, _renderComponent.ClosestWater.Settings.FogColor));
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetFogColor, commandArgs.Water.Settings.FogColor), commandArgs.User);
             }
 
             if (args.Length == 2 || args.Length == 3)
             {
-                WaterUtils.ShowMessage(WaterLocalization.CurrentLanguage.GenericNotEnoughArgs);
+                WaterUtils.SendMessage(WaterTexts.GenericNotEnoughArgs, commandArgs.User);
                 return;
             }
 
@@ -1026,21 +1135,57 @@ namespace Jakaria.SessionComponents
                     {
                         if (float.TryParse(WaterUtils.ValidateCommandData(args[3]), out b))
                         {
-                            _renderComponent.ClosestWater.Settings.FogColor = new Vector3(r, g, b);
-                            SendWaterToServer(_renderComponent.ClosestWater);
-                            WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetFogColor, _renderComponent.ClosestWater.Settings.FogColor));
+                            commandArgs.Water.Settings.FogColor = new Vector3(r, g, b);
+                            _syncComponent.SyncClients(commandArgs.Water);
+                            WaterUtils.SendMessage(string.Format(WaterTexts.SetFogColor, commandArgs.Water.Settings.FogColor), commandArgs.User);
                             return;
                         }
                         else
-                            WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCollectRateNoParse, args[3]));
+                            WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRateNoParse, args[3]), commandArgs.User);
                     }
                     else
-                        WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCollectRateNoParse, args[2]));
+                        WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRateNoParse, args[2]), commandArgs.User);
                 }
                 else
-                    WaterUtils.ShowMessage(string.Format(WaterLocalization.CurrentLanguage.SetCollectRateNoParse, args[1]));
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRateNoParse, args[1]), commandArgs.User);
             }
         }
+    }
+
+    /// <summary>
+    /// Arguments and information about the command sender
+    /// </summary>
+    public struct CommandArgs
+    {
+        /// <summary>
+        /// The IdentityID of the command sender
+        /// </summary>
+        public long User;
+
+        /// <summary>
+        /// The SteamUserID of the command sender
+        /// </summary>
+        public ulong Sender;
+
+        /// <summary>
+        /// The promotion level of the command sender
+        /// </summary>
+        public MyPromoteLevel PromoteLevel;
+
+        /// <summary>
+        /// The position of the command sender, may be of player or spectator
+        /// </summary>
+        public Vector3D Position;
+
+        /// <summary>
+        /// The water closest to the command sender's position, may be null
+        /// </summary>
+        public WaterComponent Water;
+
+        /// <summary>
+        /// The planet closest to the command sender's position, may be null
+        /// </summary>
+        public MyPlanet Planet;
     }
 
     /// <summary>
@@ -1048,29 +1193,63 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public struct Command
     {
-        public readonly Action<string[]> Action;
+        /// <summary>
+        /// The action that will be invoked when the command is run
+        /// </summary>
+        public readonly Action<string[], CommandArgs> Action;
+
+        /// <summary>
+        /// The /help descriptor of the command
+        /// </summary>
         public string Description;
+        
+        /// <summary>
+        /// The minimum promotion level for the command to be run
+        /// </summary>
         public MyPromoteLevel PromoteLevel;
 
+        /// <summary>
+        /// The minimum number of args
+        /// </summary>
         public int MinArgs;
+
+        /// <summary>
+        /// The maximum number of args
+        /// </summary>
         public int MaxArgs;
 
+        /// <summary>
+        /// If true, the user must be near a planet for the command to run
+        /// </summary>
         public bool RequirePlanet;
+
+        /// <summary>
+        /// If true, the user must be near water for the command to run
+        /// </summary>
         public bool RequireWater;
 
-        public bool SyncWater;
+        /// <summary>
+        /// Whether the command should be allowed to run on Console edition 
+        /// </summary>
+        public bool Console;
 
-        public Command(Action<string[]> action)
+        /// <summary>
+        /// Whether the command should be run client-side
+        /// </summary>
+        public bool Client;
+
+        public Command(Action<string[], CommandArgs> action)
         {
             Action = action;
 
-            Description = "Empty Description";
+            Description = "No descriptor provided";
             PromoteLevel = MyPromoteLevel.None;
             MinArgs = 1;
             MaxArgs = 1;
             RequirePlanet = false;
             RequireWater = false;
-            SyncWater = false;
+            Console = false;
+            Client = false;
         }
     }
 }
