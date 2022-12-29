@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Jakaria.Components;
+using Sandbox.Game.Entities;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,16 +11,33 @@ using VRageMath;
 
 namespace Jakaria.Utils
 {
-    public class SphereTree<T>
+    /// <summary>
+    /// Spherical quad-tree-like structure for volumetric water simulation
+    /// </summary>
+    public class SphereTree
     {
-        public readonly QuadTree<T> Forward = new QuadTree<T>(Base6Directions.Direction.Forward);
-        public readonly QuadTree<T> Back = new QuadTree<T>(Base6Directions.Direction.Backward);
-        public readonly QuadTree<T> Right = new QuadTree<T>(Base6Directions.Direction.Right);
-        public readonly QuadTree<T> Left = new QuadTree<T>(Base6Directions.Direction.Left);
-        public readonly QuadTree<T> Up = new QuadTree<T>(Base6Directions.Direction.Up);
-        public readonly QuadTree<T> Down = new QuadTree<T>(Base6Directions.Direction.Down);
+        public WaterComponent Water;
 
-        public IEnumerable<QuadTree<T>> GetFaces()
+        public readonly QuadTree Forward;
+        public readonly QuadTree Back;
+        public readonly QuadTree Right;
+        public readonly QuadTree Left;
+        public readonly QuadTree Up;
+        public readonly QuadTree Down;
+
+        public SphereTree(WaterComponent water)
+        {
+            Water = water;
+
+            Forward = new QuadTree(this, Base6Directions.Direction.Forward);
+            Back = new QuadTree(this, Base6Directions.Direction.Backward);
+            Right = new QuadTree(this, Base6Directions.Direction.Right);
+            Left = new QuadTree(this, Base6Directions.Direction.Left);
+            Up = new QuadTree(this, Base6Directions.Direction.Up);
+            Down = new QuadTree(this, Base6Directions.Direction.Down);
+        }
+
+        public IEnumerable<QuadTree> GetFaces()
         {
             yield return Forward;
             yield return Back;
@@ -45,51 +64,51 @@ namespace Jakaria.Utils
 
         private MatrixD _transform;
 
-        public const int MAX_DEPTH = QuadTree<T>.MAX_DEPTH;
+        public const int MAX_DEPTH = QuadTree.MAX_DEPTH;
 
-        public T GetValueGlobal(Vector3 worldNormal, int maxDepth = MAX_DEPTH)
+        public WaterNode GetValueGlobal(Vector3D worldNormal, int maxDepth = MAX_DEPTH)
         {
-            Vector3 localNormal = Vector3.Transform(worldNormal, TransformInv);
+            Vector3D localNormal = Vector3D.Transform(worldNormal, TransformInv);
 
             return GetValueLocal(localNormal, maxDepth);
         }
 
-        public T GetValueLocal(Vector3 localNormal, int maxDepth = MAX_DEPTH)
+        public WaterNode GetValueLocal(Vector3D localNormal, int maxDepth = MAX_DEPTH)
         {
-            localNormal = Vector3Extensions.ProjectOntoUnitCube(localNormal);
+            localNormal = Vector3DExtensions.ProjectOntoUnitCube(localNormal);
             return GetFaceLocal(localNormal).GetValue(localNormal, maxDepth);
         }
 
-        public void InsertValueGlobal(Vector3 worldNormal, T value)
+        public void InsertValueGlobal(Vector3D worldNormal, WaterNode value)
         {
-            Vector3 localNormal = Vector3.Transform(worldNormal, TransformInv);
+            Vector3D localNormal = Vector3.Transform(worldNormal, TransformInv);
             InsertValueLocal(localNormal, value);
         }
 
-        public void InsertValueLocal(Vector3 localNormal, T value)
+        public void InsertValueLocal(Vector3D localNormal, WaterNode value)
         {
-            localNormal = Vector3Extensions.ProjectOntoUnitCube(localNormal);
+            localNormal = Vector3DExtensions.ProjectOntoUnitCube(localNormal);
             GetFaceLocal(localNormal).InsertValue(localNormal, value);
         }
 
-        public void SetValueGlobal(Vector3 worldNormal, T value, int depth = MAX_DEPTH)
+        public void SetValueGlobal(Vector3D worldNormal, WaterNode value, int depth = MAX_DEPTH)
         {
-            Vector3 localNormal = Vector3.Transform(worldNormal, TransformInv);
+            Vector3D localNormal = Vector3.Transform(worldNormal, TransformInv);
             SetValueLocal(localNormal, value, depth);
         }
 
-        public void SetValueLocal(Vector3 localNormal, T value, int depth = MAX_DEPTH)
+        public void SetValueLocal(Vector3D localNormal, WaterNode value, int depth = MAX_DEPTH)
         {
-            localNormal = Vector3Extensions.ProjectOntoUnitCube(localNormal);
+            localNormal = Vector3DExtensions.ProjectOntoUnitCube(localNormal);
             GetFaceLocal(localNormal).SetValue(localNormal, value, depth);
         }
 
-        public void SetValue(Vector3 position, Base6Directions.Direction direction, T value, int depth = MAX_DEPTH)
+        public void SetValue(Vector3D position, Base6Directions.Direction direction, WaterNode value, int depth = MAX_DEPTH)
         {
             GetFace(direction).SetValue(position, value, depth);
         }
 
-        public QuadTree<T> GetFace(Base6Directions.Direction direction)
+        public QuadTree GetFace(Base6Directions.Direction direction)
         {
             switch (direction)
             {
@@ -110,16 +129,16 @@ namespace Jakaria.Utils
             }
         }
 
-        public QuadTree<T> GetFaceGlobal(Vector3 worldNormal)
+        public QuadTree GetFaceGlobal(Vector3D worldNormal)
         {
-            Vector3 localNormal = Vector3.Transform(worldNormal, TransformInv);
+            Vector3D localNormal = Vector3.Transform(worldNormal, TransformInv);
             return GetFaceLocal(localNormal);
         }
 
-        public QuadTree<T> GetFaceLocal(Vector3 localNormal)
+        public QuadTree GetFaceLocal(Vector3D localNormal)
         {
-            localNormal = Vector3Extensions.ProjectOntoUnitCube(localNormal);
-            Vector3 dominantDirection = localNormal.MaxComponentSign();
+            localNormal = Vector3DExtensions.ProjectOntoUnitCube(localNormal);
+            Vector3D dominantDirection = localNormal.MaxComponentSign();
 
             if (dominantDirection.X < 0)
                 return Left;
@@ -139,9 +158,9 @@ namespace Jakaria.Utils
             throw new ArgumentException();
         }
 
-        public void GetNeighbors(QuadTree<T> tree, List<QuadTree<T>> neighbors) 
+        public void GetNeighbors(QuadTree tree, List<QuadTree> neighbors) 
         {
-            QuadTree<T> neighbor;
+            QuadTree neighbor;
 
             neighbor = GetNeighborOfGreaterOrEqualSize(tree, Direction.Top);
             if (neighbor != null)
@@ -160,55 +179,55 @@ namespace Jakaria.Utils
                 GetNeighborsOfSmallerSize(neighbor, neighbors, Direction.Right);
         }
 
-        private QuadTree<T> GetNeighborOfGreaterOrEqualSize(QuadTree<T> tree, Direction direction)
+        private QuadTree GetNeighborOfGreaterOrEqualSize(QuadTree tree, Direction direction)
         {
             if (tree.Parent == null)
             {
                 switch (direction)
                 {
                     case Direction.Top:
-                        if (tree.Normal == Base6Directions.Direction.Forward ||
-                            tree.Normal == Base6Directions.Direction.Right ||
-                            tree.Normal == Base6Directions.Direction.Backward ||
-                            tree.Normal == Base6Directions.Direction.Left)
+                        if (tree.Direction == Base6Directions.Direction.Forward ||
+                            tree.Direction == Base6Directions.Direction.Right ||
+                            tree.Direction == Base6Directions.Direction.Backward ||
+                            tree.Direction == Base6Directions.Direction.Left)
                             return GetFace(Base6Directions.Direction.Up);
-                        else if (tree.Normal == Base6Directions.Direction.Up)
+                        else if (tree.Direction == Base6Directions.Direction.Up)
                             return GetFace(Base6Directions.Direction.Backward); //TODO VERIFY
                         else
                             return GetFace(Base6Directions.Direction.Up); //TODO VERIFY
                     case Direction.Bottom:
-                        if (tree.Normal == Base6Directions.Direction.Forward ||
-                            tree.Normal == Base6Directions.Direction.Right ||
-                            tree.Normal == Base6Directions.Direction.Backward ||
-                            tree.Normal == Base6Directions.Direction.Left)
+                        if (tree.Direction == Base6Directions.Direction.Forward ||
+                            tree.Direction == Base6Directions.Direction.Right ||
+                            tree.Direction == Base6Directions.Direction.Backward ||
+                            tree.Direction == Base6Directions.Direction.Left)
                             return GetFace(Base6Directions.Direction.Down);
-                        else if (tree.Normal == Base6Directions.Direction.Up)
+                        else if (tree.Direction == Base6Directions.Direction.Up)
                             return GetFace(Base6Directions.Direction.Forward); //TODO VERIFY
                         else
                             return GetFace(Base6Directions.Direction.Backward); //TODO VERIFY
                     case Direction.Left:
-                        if (tree.Normal == Base6Directions.Direction.Forward)
+                        if (tree.Direction == Base6Directions.Direction.Forward)
                             return GetFace(Base6Directions.Direction.Left);
-                        else if (tree.Normal == Base6Directions.Direction.Left)
+                        else if (tree.Direction == Base6Directions.Direction.Left)
                             return GetFace(Base6Directions.Direction.Backward);
-                        else if (tree.Normal == Base6Directions.Direction.Backward)
+                        else if (tree.Direction == Base6Directions.Direction.Backward)
                             return GetFace(Base6Directions.Direction.Right);
-                        else if (tree.Normal == Base6Directions.Direction.Right)
+                        else if (tree.Direction == Base6Directions.Direction.Right)
                             return GetFace(Base6Directions.Direction.Forward);
-                        else if (tree.Normal == Base6Directions.Direction.Up)
+                        else if (tree.Direction == Base6Directions.Direction.Up)
                             return GetFace(Base6Directions.Direction.Left);
                         else
                             return GetFace(Base6Directions.Direction.Right);
                     case Direction.Right:
-                        if (tree.Normal == Base6Directions.Direction.Forward)
+                        if (tree.Direction == Base6Directions.Direction.Forward)
                             return GetFace(Base6Directions.Direction.Right);
-                        else if (tree.Normal == Base6Directions.Direction.Left)
+                        else if (tree.Direction == Base6Directions.Direction.Left)
                             return GetFace(Base6Directions.Direction.Forward);
-                        else if (tree.Normal == Base6Directions.Direction.Backward)
+                        else if (tree.Direction == Base6Directions.Direction.Backward)
                             return GetFace(Base6Directions.Direction.Left);
-                        else if (tree.Normal == Base6Directions.Direction.Right)
+                        else if (tree.Direction == Base6Directions.Direction.Right)
                             return GetFace(Base6Directions.Direction.Backward);
-                        else if (tree.Normal == Base6Directions.Direction.Up)
+                        else if (tree.Direction == Base6Directions.Direction.Up)
                             return GetFace(Base6Directions.Direction.Right);
                         else
                             return GetFace(Base6Directions.Direction.Left);
@@ -219,15 +238,15 @@ namespace Jakaria.Utils
 
             ulong mask = (ulong)3 << tree.Depth * 2; //0b11
             ulong index = (tree.Id & mask) >> tree.Depth * 2;
-            QuadTree<T> node;
+            QuadTree node;
 
             switch (direction)
             {
                 case Direction.Top:
-                    if (index == QuadTree<T>.BOTTOM_LEFT)
-                        return tree.Parent.Children[QuadTree<T>.TOP_LEFT];
-                    else if (index == QuadTree<T>.BOTTOM_RIGHT)
-                        return tree.Parent.Children[QuadTree<T>.TOP_RIGHT];
+                    if (index == QuadTree.BOTTOM_LEFT)
+                        return tree.Parent.Children[QuadTree.TOP_LEFT];
+                    else if (index == QuadTree.BOTTOM_RIGHT)
+                        return tree.Parent.Children[QuadTree.TOP_RIGHT];
 
                     node = GetNeighborOfGreaterOrEqualSize(tree.Parent, direction);
                     if (node == null)
@@ -235,15 +254,15 @@ namespace Jakaria.Utils
                     if (node.Children == null)
                         return node;
 
-                    if (index == QuadTree<T>.TOP_LEFT)
-                        return node.Children[QuadTree<T>.BOTTOM_LEFT];
+                    if (index == QuadTree.TOP_LEFT)
+                        return node.Children[QuadTree.BOTTOM_LEFT];
                     else
-                        return node.Children[QuadTree<T>.BOTTOM_RIGHT];
+                        return node.Children[QuadTree.BOTTOM_RIGHT];
                 case Direction.Bottom:
-                    if (index == QuadTree<T>.TOP_LEFT)
-                        return tree.Parent.Children[QuadTree<T>.BOTTOM_LEFT];
-                    else if (index == QuadTree<T>.TOP_RIGHT)
-                        return tree.Parent.Children[QuadTree<T>.BOTTOM_RIGHT];
+                    if (index == QuadTree.TOP_LEFT)
+                        return tree.Parent.Children[QuadTree.BOTTOM_LEFT];
+                    else if (index == QuadTree.TOP_RIGHT)
+                        return tree.Parent.Children[QuadTree.BOTTOM_RIGHT];
 
                     node = GetNeighborOfGreaterOrEqualSize(tree.Parent, direction);
                     if (node == null)
@@ -251,15 +270,15 @@ namespace Jakaria.Utils
                     if (node.Children == null)
                         return node;
 
-                    if (index == QuadTree<T>.BOTTOM_LEFT)
-                        return node.Children[QuadTree<T>.TOP_LEFT];
+                    if (index == QuadTree.BOTTOM_LEFT)
+                        return node.Children[QuadTree.TOP_LEFT];
                     else
-                        return node.Children[QuadTree<T>.TOP_RIGHT];
+                        return node.Children[QuadTree.TOP_RIGHT];
                 case Direction.Left:
-                    if (index == QuadTree<T>.TOP_RIGHT)
-                        return tree.Parent.Children[QuadTree<T>.TOP_LEFT];
-                    else if (index == QuadTree<T>.BOTTOM_RIGHT)
-                        return tree.Parent.Children[QuadTree<T>.BOTTOM_LEFT];
+                    if (index == QuadTree.TOP_RIGHT)
+                        return tree.Parent.Children[QuadTree.TOP_LEFT];
+                    else if (index == QuadTree.BOTTOM_RIGHT)
+                        return tree.Parent.Children[QuadTree.BOTTOM_LEFT];
 
                     node = GetNeighborOfGreaterOrEqualSize(tree.Parent, direction);
                     if (node == null)
@@ -267,15 +286,15 @@ namespace Jakaria.Utils
                     if (node.Children == null)
                         return node;
 
-                    if (index == QuadTree<T>.TOP_LEFT)
-                        return node.Children[QuadTree<T>.TOP_RIGHT];
+                    if (index == QuadTree.TOP_LEFT)
+                        return node.Children[QuadTree.TOP_RIGHT];
                     else
-                        return node.Children[QuadTree<T>.BOTTOM_RIGHT];
+                        return node.Children[QuadTree.BOTTOM_RIGHT];
                 case Direction.Right:
-                    if (index == QuadTree<T>.TOP_LEFT)
-                        return tree.Parent.Children[QuadTree<T>.TOP_RIGHT];
-                    else if (index == QuadTree<T>.BOTTOM_LEFT)
-                        return tree.Parent.Children[QuadTree<T>.BOTTOM_RIGHT];
+                    if (index == QuadTree.TOP_LEFT)
+                        return tree.Parent.Children[QuadTree.TOP_RIGHT];
+                    else if (index == QuadTree.BOTTOM_LEFT)
+                        return tree.Parent.Children[QuadTree.BOTTOM_RIGHT];
 
                     node = GetNeighborOfGreaterOrEqualSize(tree.Parent, direction);
                     if (node == null)
@@ -283,16 +302,16 @@ namespace Jakaria.Utils
                     if (node.Children == null)
                         return node;
 
-                    if (index == QuadTree<T>.TOP_RIGHT)
-                        return node.Children[QuadTree<T>.TOP_LEFT];
+                    if (index == QuadTree.TOP_RIGHT)
+                        return node.Children[QuadTree.TOP_LEFT];
                     else
-                        return node.Children[QuadTree<T>.BOTTOM_LEFT];
+                        return node.Children[QuadTree.BOTTOM_LEFT];
                 default:
                     throw new Exception();
             }
         }
 
-        private void GetNeighborsOfSmallerSize(QuadTree<T> neighbor, List<QuadTree<T>> neighbors, Direction direction)
+        private void GetNeighborsOfSmallerSize(QuadTree neighbor, List<QuadTree> neighbors, Direction direction)
         {
             if (neighbor.Children == null)
             {
@@ -303,20 +322,20 @@ namespace Jakaria.Utils
                 switch (direction)
                 {
                     case Direction.Top:
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.BOTTOM_LEFT], neighbors, direction);
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.BOTTOM_RIGHT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.BOTTOM_LEFT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.BOTTOM_RIGHT], neighbors, direction);
                         break;
                     case Direction.Bottom:
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.TOP_LEFT], neighbors, direction);
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.TOP_RIGHT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.TOP_LEFT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.TOP_RIGHT], neighbors, direction);
                         break;
                     case Direction.Left:
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.TOP_RIGHT], neighbors, direction);
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.BOTTOM_RIGHT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.TOP_RIGHT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.BOTTOM_RIGHT], neighbors, direction);
                         break;
                     case Direction.Right:
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.TOP_LEFT], neighbors, direction);
-                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree<T>.BOTTOM_LEFT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.TOP_LEFT], neighbors, direction);
+                        GetNeighborsOfSmallerSize(neighbor.Children[QuadTree.BOTTOM_LEFT], neighbors, direction);
                         break;
                     default:
                         throw new Exception();
@@ -328,29 +347,20 @@ namespace Jakaria.Utils
         /// Copies the values of this tree to the other tree. Does not create new value objects for classes
         /// </summary>
         /// <param name="otherTree"></param>
-        public void CopyTo(SphereTree<T> otherTree)
+        public void CopyTo(SphereTree otherTree)
         {
             foreach (var face in GetFaces())
             {
-                CopyTree(face, otherTree.GetFace(face.Normal));
+                CopyTree(face, otherTree.GetFace(face.Direction));
             }
         }
 
         /// <summary>
         /// <see cref="SphereTree{T}.CopyTo(SphereTree{T})"/>
         /// </summary>
-        private void CopyTree(QuadTree<T> tree, QuadTree<T> otherTree)
+        private void CopyTree(QuadTree tree, QuadTree otherTree)
         {
-            if (tree.HasValue)
-            {
-                otherTree.Value = tree.Value;
-                otherTree.HasValue = true;
-            }
-            else
-            {
-                otherTree.Value = default(T);
-                otherTree.HasValue = false;
-            }
+            otherTree.Value = tree.Value;
 
             if (tree.Children == null)
             {
@@ -390,16 +400,16 @@ namespace Jakaria.Utils
         /// <summary>
         /// <see cref="SphereTree{T}.ToString"/>
         /// </summary>
-        private StringBuilder PrintTree(QuadTree<T> tree, string name)
+        private StringBuilder PrintTree(QuadTree tree, string name)
         {
             StringBuilder builder = new StringBuilder();
 
             string text;
 
             if (tree.Children == null)
-                text = $"{name.PadRight(6)}: TreeDepth: {tree.Depth}, Id: {Convert.ToString((int)tree.Id, 2).PadLeft(Math.Min(sizeof(ulong), (QuadTree<T>.MAX_DEPTH + 1) * 2), '0')}, Value: {tree.Value.ToString().PadRight(6)}";
+                text = $"{name.PadRight(6)}: TreeDepth: {tree.Depth}, Id: {Convert.ToString((int)tree.Id, 2).PadLeft(Math.Min(sizeof(ulong), (QuadTree.MAX_DEPTH + 1) * 2), '0')}, Value: {tree.Value.ToString().PadRight(6)}";
             else
-                text = $"{name.PadRight(6)}: TreeDepth: {tree.Depth}, Id: {Convert.ToString((int)tree.Id, 2).PadLeft(Math.Min(sizeof(ulong), (QuadTree<T>.MAX_DEPTH + 1) * 2), '0')}";
+                text = $"{name.PadRight(6)}: TreeDepth: {tree.Depth}, Id: {Convert.ToString((int)tree.Id, 2).PadLeft(Math.Min(sizeof(ulong), (QuadTree.MAX_DEPTH + 1) * 2), '0')}";
 
             builder.AppendLine(text.PadLeft(text.Length + (tree.Depth * 2)));
 

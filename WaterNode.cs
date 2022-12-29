@@ -8,8 +8,8 @@ namespace Jakaria
 {
     public struct WaterNode
     {
-        public float SurfaceDistanceFromCenter;
-        public float FluidHeight;
+        public double SurfaceDistanceFromCenter;
+        public double FluidHeight;
 
         public override string ToString()
         {

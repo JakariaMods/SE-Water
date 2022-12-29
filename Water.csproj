@@ -106,7 +106,7 @@
     <Compile Include="Utils\Base6DirectionsExtensions.cs" />
     <Compile Include="Utils\FastNoiseLite.cs" />
     <Compile Include="API\HudAPIv2.cs" />
-    <Compile Include="Language.cs" />
+    <Compile Include="WaterTexts.cs" />
     <Compile Include="Effects\Splash.cs" />
     <Compile Include="TSSScripts\TSSPressure.cs" />
     <Compile Include="Utils\PressurizationUtils.cs" />
@@ -114,10 +114,9 @@
     <Compile Include="Utils\SerializableStringId.cs" />
     <Compile Include="TSSScripts\TSSDepth.cs" />
     <Compile Include="Utils\SphereTree.cs" />
-    <Compile Include="Utils\Vector3Extensions.cs" />
+    <Compile Include="Utils\Vector3DExtensions.cs" />
     <Compile Include="WaterClientSettings.cs" />
     <Compile Include="WaterData.cs" />
-    <Compile Include="WaterLocalization.cs" />
     <Compile Include="WaterNode.cs" />
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Utils\WaterUtils.cs" />

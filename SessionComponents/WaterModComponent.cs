@@ -37,6 +37,8 @@ namespace Jakaria.SessionComponents
 
         private int _timer;
 
+        private bool _saveLoaded;
+
         public override void UpdateAfterSimulation()
         {
             _timer++;
@@ -123,24 +125,27 @@ namespace Jakaria.SessionComponents
 
         private void MyEntities_OnEntityAdd(MyEntity entity)
         {
+            if (MyAPIGateway.Session.IsServer && _saveLoaded)
+            {
+                MyPlanet planet = entity as MyPlanet;
+                if (planet != null && planet.Generator != null)
+                {
+                    if (!planet.Components.Has<WaterComponent>())
+                    {
+                        PlanetConfig planetConfig;
+                        if (WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out planetConfig) && planetConfig.WaterSettings != null)
+                        {
+                            AddWater(planet, planetConfig.WaterSettings);
+                        }
+                    }
+                }
+            }
+
             TryAddPhysicsComponentToEntity(entity);
         }
 
         private void MyEntities_OnEntityCreate(MyEntity entity)
         {
-            /*MyPlanet planet = entity as MyPlanet;
-            if(planet != null)
-            {
-                if (!planet.Components.Has<WaterComponent>())
-                {
-                    PlanetConfig planetConfig;
-                    if (WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out planetConfig) && planetConfig.WaterSettings != null)
-                    {
-                        AddWater(planet, planetConfig.WaterSettings);
-                    }
-                }
-            }*/
-
             TryAddPhysicsComponentToEntity(entity);
         }
 
@@ -181,6 +186,8 @@ namespace Jakaria.SessionComponents
                     }
                 }
             }
+
+            _saveLoaded = true;
         }
 
         public override void LoadData()

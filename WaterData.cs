@@ -11,7 +11,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.13";
+        public const string Version = "3.14";
         public const bool EarlyAccess = false;
 
         public const ushort ClientHandlerID = 50270;

@@ -116,6 +116,14 @@ namespace Jakaria.SessionComponents
                     {
                         WaterData.PlanetConfigs[PlanetConfig.DefinitionId] = PlanetConfig;
                         WaterUtils.WriteLog("Loaded Planet Config '" + PlanetConfig.DefinitionId + "'");
+                        if(PlanetConfig.WaterSettings != null)
+                        {
+                            if(string.IsNullOrEmpty(PlanetConfig.WaterSettings.Texture.String))
+                            {
+                                PlanetConfig.WaterSettings.Texture.String = "JWater";
+                                WaterUtils.WriteLog($"Planet config {PlanetConfig.DefinitionId} has a malformed texture! Setting to default.");
+                            }
+                        }
                     }
                 }
 

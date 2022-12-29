@@ -10,16 +10,16 @@ using VRageMath;
 namespace Jakaria.Utils
 {
     /// <summary>
-    /// Extension methods for <see cref="Vector3"/>
+    /// Extension methods for <see cref="Vector3D"/>
     /// </summary>
-    public static class Vector3Extensions
+    public static class Vector3DExtensions
     {
         /// <summary>
         /// Returns the sign of the vector with the greatest distance from zero. 
         /// EX: {-6, 5, 8} => {0, 0, 1 }
         /// EX: {-6, 5, 4} => {-1, 0, 0}
         /// </summary>
-        public static Vector3 MaxComponentSign(this Vector3 vector)
+        public static Vector3D MaxComponentSign(this Vector3D vector)
         {
             return vector * vector.MaxComponent();
         }
@@ -27,28 +27,28 @@ namespace Jakaria.Utils
         /// <summary>
         /// Returns the vector with the greatest distance from zero
         /// </summary>
-        public static Vector3 MaxComponent(this Vector3 vector)
+        public static Vector3D MaxComponent(this Vector3D vector)
         {
-            Vector3 abs = Vector3.Abs(vector);
+            Vector3D abs = Vector3D.Abs(vector);
 
             if (abs.X > abs.Y && abs.X > abs.Z)
-                return Vector3.UnitX;
+                return Vector3D.UnitX;
 
             if (abs.Y > abs.X && abs.Y > abs.Z)
-                return Vector3.UnitY;
+                return Vector3D.UnitY;
 
             if (abs.Z > abs.X && abs.Z > abs.Y)
-                return Vector3.UnitZ;
+                return Vector3D.UnitZ;
 
-            return Vector3.Zero;
+            return Vector3D.Zero;
         }
 
         /// <summary>
         /// Gets the sign of each vector
         /// </summary>
-        public static Vector3 Sign(this Vector3 vector)
+        public static Vector3D Sign(this Vector3D vector)
         {
-            return new Vector3
+            return new Vector3D
             {
                 X = Math.Sign(vector.X),
                 Y = Math.Sign(vector.Y),
@@ -61,9 +61,9 @@ namespace Jakaria.Utils
         /// </summary>
         /// <param name="vector"></param>
         /// <returns></returns>
-        public static Vector3 SignNonZero(this Vector3 vector)
+        public static Vector3D SignNonZero(this Vector3D vector)
         {
-            Vector3 signs = new Vector3
+            Vector3D signs = new Vector3D
             {
                 X = Math.Sign(vector.X),
                 Y = Math.Sign(vector.Y),
@@ -82,7 +82,7 @@ namespace Jakaria.Utils
             return signs;
         }
 
-        public static float Max(this Vector3 normal)
+        public static double Max(this Vector3D normal)
         {
             if (normal.X > normal.Y && normal.X > normal.Z)
                 return normal.X;
@@ -93,9 +93,9 @@ namespace Jakaria.Utils
             return normal.Z;
         }
 
-        public static Vector3 ProjectOntoUnitCube(Vector3 normal)
+        public static Vector3D ProjectOntoUnitCube(Vector3D normal)
         {
-            float max = Vector3.Abs(normal).Max();
+            double max = Vector3D.Abs(normal).Max();
 
             return normal / max;
         }
@@ -103,13 +103,13 @@ namespace Jakaria.Utils
         /// <summary>
         /// Creates a normal from latitude/longitude in radians
         /// </summary>
-        public static Vector3 FromLatitudeLongitude(float longitude, float latitude)
+        public static Vector3D FromLatitudeLongitude(double longitude, double latitude)
         {
-            return new Vector3
+            return new Vector3D
             {
-                X = (float)Math.Sin(longitude) * (float)Math.Cos(latitude),
-                Y = (float)Math.Sin(latitude),
-                Z = (float)Math.Cos(longitude) * (float)Math.Cos(latitude),
+                X = Math.Sin(longitude) * Math.Cos(latitude),
+                Y = Math.Sin(latitude),
+                Z = Math.Cos(longitude) * Math.Cos(latitude),
             };
         }
     }

@@ -42,11 +42,12 @@ namespace Jakaria.Components
 
         public bool InScene;
 
-        /*public SphereTree<WaterNode> Tree = new SphereTree<WaterNode>();
-        private SphereTree<WaterNode> _bufferTree = new SphereTree<WaterNode>();
+        //TODO VOLUMETRICS
+        /*public SphereTree Tree;
+        public SphereTree _bufferTree;
 
         public const float HEIGHT_EPSILON = 0.01f;
-        public const float FLOW_SPEED = 0.01f;
+        public const float FLOW_SPEED = 0.05f;
         public const float HEIGHT_OFFSET = 10f;*/
 
         public override string ComponentTypeDebugString => nameof(WaterComponent);
@@ -73,6 +74,12 @@ namespace Jakaria.Components
             {
                 Settings = settings;
             }
+
+            Radius = Planet.MinimumRadius * Settings.Radius;
+
+            //TODO VOLUMETRICS
+            /*Tree = new SphereTree(this);
+            _bufferTree = new SphereTree(this);*/
         }
 
         public WaterComponentObjectBuilder Serialize()
@@ -92,35 +99,17 @@ namespace Jakaria.Components
 
             WorldMatrix = Entity.WorldMatrix;
             WorldMatrixInv = Entity.WorldMatrixInvScaled;
-            Radius = Planet.MinimumRadius * Settings.Radius;
 
             InScene = true;
-
-            /*for (int i = 0; i < 20000; i++)
-            {
-                Vector3 normal = MyUtils.GetRandomVector3Normalized();
-                Vector3 surface = normal * Planet.AverageRadius;
-                float altitude = (float)Planet.GetClosestSurfacePointLocal(ref surface).Length();
-
-                float fluidHeight = Math.Max(9750 - altitude, 0);
-                if(fluidHeight > 0)
-                {
-                    Tree.SetValueLocal(normal, new WaterNode
-                    {
-                        FluidHeight = fluidHeight,
-                        SurfaceDistanceFromCenter = altitude
-                    }, Math.Min(FindBestDepth(fluidHeight) + 2, QuadTree<WaterNode>.MAX_DEPTH));
-                }
-            }*/
         }
 
-        /*private int FindBestDepth(float radius, int depth = 0)
+        private int FindBestDepth(double radius, int depth = 0)
         {
-            if (radius > (Radius / Math.Pow(2, QuadTree<WaterNode>.MAX_DEPTH)))
+            if (radius > (Radius / Math.Pow(2, QuadTree.MAX_DEPTH)))
                 return FindBestDepth(radius / 2, depth + 1);
 
-            return QuadTree<WaterNode>.MAX_DEPTH - depth;
-        }*/
+            return QuadTree.MAX_DEPTH - depth;
+        }
 
         public override void OnBeforeRemovedFromContainer()
         {
@@ -137,16 +126,15 @@ namespace Jakaria.Components
             TideDirection.X = Math.Cos(TideTimer);
             TideDirection.Z = Math.Sin(TideTimer);
 
+            //TODO VOLUMETRICS
             /*var camNormal = Vector3D.Normalize(MyAPIGateway.Session.Camera.Position - WorldMatrix.Translation);
 
-            List<QuadTree<WaterNode>> neigh = new List<QuadTree<WaterNode>>();
+            List<QuadTree> neigh = new List<QuadTree>();
             Tree.GetNeighbors(Tree.GetFaceGlobal(camNormal), neigh);
-
-            MyAPIGateway.Utilities.ShowNotification($"{Vector3D.Distance(MyAPIGateway.Session.Camera.Position, Planet.GetClosestSurfacePointGlobal(MyAPIGateway.Session.Camera.Position))}, {FindBestDepth((float)Vector3D.Distance(MyAPIGateway.Session.Camera.Position, Planet.GetClosestSurfacePointGlobal(MyAPIGateway.Session.Camera.Position)))}", 16);
 
             Stopwatch watch = Stopwatch.StartNew();
 
-            List<QuadTree<WaterNode>> neighbors = new List<QuadTree<WaterNode>>(4);
+            List<QuadTree> neighbors = new List<QuadTree>(4);
 
             Tree.CopyTo(_bufferTree);
 
@@ -155,116 +143,104 @@ namespace Jakaria.Components
                 SimulateDeepestNode(face, neighbors);
             }
 
-            _bufferTree.CopyTo(Tree);
+            if (MyAPIGateway.Input.IsAnyCtrlKeyPressed())
+            {
+                SphereTree temp = _bufferTree;
+                _bufferTree = Tree;
+                Tree = temp;
+            }
 
             watch.Stop();
             MyAPIGateway.Utilities.ShowNotification($"Simulation Time: {watch.Elapsed.TotalMilliseconds}ms", 16);*/
         }
 
-        /*private void SimulateDeepestNode(QuadTree<WaterNode> tree, List<QuadTree<WaterNode>> neighbors)
+        //TODO VOLUMETRICS
+        /*private void SimulateDeepestNode(QuadTree tree, List<QuadTree> neighbors)
         {
+            if(tree.Depth > 3 && tree.Depth < 5 && Vector3D.DistanceSquared(GetClosestSurfacePointGlobal(MyAPIGateway.Session.Camera.Position), Vector3D.Transform(Vector3D.Normalize(tree.Position) * (tree.Value.SurfaceDistanceFromCenter + tree.Value.FluidHeight), ref WorldMatrix)) > 1000 * 1000)
+            {
+                return;
+            }
+
             if (tree.Children == null)
             {
-                if (tree.Value.SurfaceDistanceFromCenter == 0)
+                QuadTree bufferFace = _bufferTree.GetFace(tree.Direction).GetNode(tree.Id);
+
+                List<QuadTree> tempNeighbors = new List<QuadTree>();
+                Tree.GetNeighbors(tree, tempNeighbors);
+                neighbors.EnsureCapacity(tempNeighbors.Count);
+
+                foreach (var neighbor in tempNeighbors)
                 {
-                    QuadTree<WaterNode> bufferNeighbor = _bufferTree.GetFace(tree.Normal).GetNode(tree.Id);
-
-                    Vector3 normal = Vector3.Normalize(tree.Position);
-                    Vector3 surface = normal * Planet.AverageRadius;
-
-
-                    bufferNeighbor.Value = new WaterNode
+                    if (((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (neighbor.Value.FluidHeight + neighbor.Value.SurfaceDistanceFromCenter)) > HEIGHT_EPSILON)
                     {
-                        FluidHeight = 0,
-                        SurfaceDistanceFromCenter = (float)Planet.GetClosestSurfacePointLocal(ref surface).Length()
+                        neighbors.Add(neighbor);
+                    }
+                }
+
+                if (neighbors.Count > 0)
+                {
+                    double maxFlowPerCell = tree.Value.FluidHeight / neighbors.Count;
+                    double actualRemoved = 0;
+
+                    foreach (var neighbor in neighbors)
+                    {
+                        QuadTree treeNeighbor = neighbor;
+                        QuadTree bufferNeighbor = _bufferTree.GetFace(neighbor.Direction).GetNode(neighbor.Id);
+
+                        double removedFromCell = Math.Min(((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (treeNeighbor.Value.FluidHeight + treeNeighbor.Value.SurfaceDistanceFromCenter)) * FLOW_SPEED, maxFlowPerCell);
+                        //removedFromCell *= Math.Min(tree.GetDiameter(), treeNeighbor.GetDiameter());
+
+                        bufferNeighbor.Value.FluidHeight += removedFromCell;
+                        actualRemoved += removedFromCell;
+                    }
+
+                    bufferFace.Value.FluidHeight -= actualRemoved;
+                    neighbors.Clear();
+                }
+
+                //draw
+                if(tree.Value.FluidHeight >= 0)
+                {
+                    Vector3D center = tree.Position;
+
+                    double size = tree.GetDiameter();
+                    Vector3D right = Base6Directions.GetIntVector(Base6DirectionsUtils.GetRight(tree.Direction)) * size;
+                    Vector3D up = Base6Directions.GetIntVector(Base6DirectionsUtils.GetUp(tree.Direction)) * size;
+
+                    MyQuadD quad = new MyQuadD
+                    {
+                        Point0 = center - right - up,
+                        Point1 = center - right + up,
+                        Point2 = center + right + up,
+                        Point3 = center + right - up,
                     };
-                    bufferNeighbor.HasValue = true;
 
-                    tree.Value = bufferNeighbor.Value;
-                    tree.HasValue = bufferNeighbor.HasValue;
-                }
+                    double radius = tree.Value.SurfaceDistanceFromCenter + tree.Value.FluidHeight;
 
-                if (tree.HasValue)
-                {
-                    QuadTree<WaterNode> bufferFace = _bufferTree.GetFace(tree.Normal).GetNode(tree.Id);
+                    quad.Point0 = Vector3D.Transform(Vector3D.Normalize(quad.Point0) * radius, ref WorldMatrix);
+                    quad.Point1 = Vector3D.Transform(Vector3D.Normalize(quad.Point1) * radius, ref WorldMatrix);
+                    quad.Point2 = Vector3D.Transform(Vector3D.Normalize(quad.Point2) * radius, ref WorldMatrix);
+                    quad.Point3 = Vector3D.Transform(Vector3D.Normalize(quad.Point3) * radius, ref WorldMatrix);
 
-                    List<QuadTree<WaterNode>> tempNeighbors = new List<QuadTree<WaterNode>>();
-                    Tree.GetNeighbors(tree, tempNeighbors);
-                    neighbors.EnsureCapacity(tempNeighbors.Count);
-                    
-                    foreach (var neighbor in tempNeighbors)
+                    Vector4 color = WaterData.BlueColor;
+
+                    if(tree.Value.FluidHeight < 1)
                     {
-                        if (((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (neighbor.Value.FluidHeight + neighbor.Value.SurfaceDistanceFromCenter - HEIGHT_OFFSET)) > HEIGHT_EPSILON)
-                        {
-                            neighbors.Add(neighbor);
-                        }
+                        color = WaterData.GreenColor;
                     }
 
-                    if (neighbors.Count > 0)
-                    {
-                        float maxFlowPerCell = tree.Value.FluidHeight / neighbors.Count;
-                        float actualRemoved = 0;
+                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref quad, color, ref Vector3D.Zero);
 
-                        foreach (var neighbor in neighbors)
-                        {
-                            QuadTree<WaterNode> treeNeighbor = neighbor;
-                            QuadTree<WaterNode> bufferNeighbor = _bufferTree.GetFace(neighbor.Normal).GetNode(neighbor.Id);
+                    MyQuadD side = quad;
+                    side.Point1 = WorldMatrix.Translation;
+                    side.Point2 = WorldMatrix.Translation;
+                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
 
-                            float removedFromCell = Math.Min(((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (treeNeighbor.Value.FluidHeight + treeNeighbor.Value.SurfaceDistanceFromCenter)) * FLOW_SPEED, maxFlowPerCell);
-                            //removedFromCell *= Math.Min(tree.GetDiameter(), treeNeighbor.GetDiameter());
-
-                            bufferNeighbor.Value.FluidHeight += removedFromCell;
-                            bufferNeighbor.HasValue = true;
-                            actualRemoved += removedFromCell;
-                        }
-                        
-                        bufferFace.Value.FluidHeight -= actualRemoved;
-                        neighbors.Clear();
-                    }
-                }
-                
-                if (tree.Value.FluidHeight > 1)
-                {
-                    Vector3D center = (Vector3D)tree.Position;
-
-                    if (Vector3D.Dot(Vector3D.Normalize(center), Vector3D.Normalize(MyAPIGateway.Session.Camera.Position - WorldMatrix.Translation)) > 0)
-                    {
-                        double size = tree.GetDiameter();
-                        Vector3D right = (Vector3D)Base6Directions.GetVector(Base6DirectionsUtils.GetRight(tree.Normal)) * size;
-                        Vector3D up = (Vector3D)Base6Directions.GetVector(Base6DirectionsUtils.GetUp(tree.Normal)) * size;
-
-                        MyQuadD quad = new MyQuadD
-                        {
-                            Point0 = center - right - up,
-                            Point1 = center - right + up,
-                            Point2 = center + right + up,
-                            Point3 = center + right - up,
-                        };
-
-                        double radius = tree.Value.SurfaceDistanceFromCenter + tree.Value.FluidHeight;
-
-                        quad.Point0 = Vector3D.Transform(Vector3D.Normalize(quad.Point0) * radius, ref WorldMatrix);
-                        quad.Point1 = Vector3D.Transform(Vector3D.Normalize(quad.Point1) * radius, ref WorldMatrix);
-                        quad.Point2 = Vector3D.Transform(Vector3D.Normalize(quad.Point2) * radius, ref WorldMatrix);
-                        quad.Point3 = Vector3D.Transform(Vector3D.Normalize(quad.Point3) * radius, ref WorldMatrix);
-
-                        if (Vector3D.Dot(Vector3D.Normalize(center), Vector3D.Normalize(MyAPIGateway.Session.Camera.Position - quad.Point0)) < 0)
-                            return;
-
-                        Vector4 color = WaterData.BlueColor;
-
-                        MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref quad, color, ref Vector3D.Zero);
-
-                        MyQuadD side = quad;
-                        side.Point1 = WorldMatrix.Translation;
-                        side.Point2 = WorldMatrix.Translation;
-                        MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
-
-                        side = quad;
-                        side.Point2 = WorldMatrix.Translation;
-                        side.Point3 = WorldMatrix.Translation;
-                        MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
-                    }
+                    side = quad;
+                    side.Point2 = WorldMatrix.Translation;
+                    side.Point3 = WorldMatrix.Translation;
+                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
                 }
             }
             else
