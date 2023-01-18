@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using VRage;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 
@@ -21,7 +22,7 @@ namespace Jakaria.API
     {
         public static string ModName = "";
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 20;
+        public const int ModAPIVersion = 21;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -54,6 +55,14 @@ namespace Jakaria.API
         private static Action<Vector3D, float, bool> _CreateSplash;
         private static Action<Vector3D, float> _CreateBubble;
         private static Action<Vector3D, Vector3D, float, int> _CreatePhysicsSplash;
+
+        private static Func<MyEntity, float> _Entity_FluidPressure;
+        private static Func<MyEntity, double> _Entity_FluidDepth;
+        private static Func<MyEntity, Vector3> _Entity_FluidVelocity;
+        private static Func<MyEntity, Vector3> _Entity_BuoyancyForce;
+        private static Func<MyEntity, Vector3D> _Entity_CenterOfBuoyancy;
+        private static Func<MyEntity, Vector3D> _Entity_DragForce;
+        private static Func<MyEntity, float> _Entity_PercentUnderwater;
 
         /// <summary>
         /// Returns true if the version is compatibile with the API Backend, this is automatically called
@@ -184,6 +193,41 @@ namespace Jakaria.API
         public static Vector3D GetTideDirection(MyPlanet planet) => (Vector3D)(_GetTideDirection?.Invoke(planet) ?? null);
 
         /// <summary>
+        /// Gets the hydrostatcic Pressure of the fluid the entity is at. The Unit is kPa (KiloPascals)
+        /// </summary>
+        public static float Entity_FluidPressure(MyEntity entity) => _Entity_FluidPressure?.Invoke(entity) ?? 0;
+
+        /// <summary>
+        /// Depth of the entity in the fluid. Unit is m (Meters) Positive is above water, negative is below water. Returns PositiveInfinity when no water is present
+        /// </summary>
+        public static double Entity_FluidDepth(MyEntity entity) => _Entity_FluidDepth?.Invoke(entity) ?? double.PositiveInfinity;
+
+        /// <summary>
+        /// Velocity of the fluid around the entity (Currents, Wave Oscillation)
+        /// </summary>
+        public static Vector3 Entity_FluidVelocity(MyEntity entity) => _Entity_FluidVelocity?.Invoke(entity) ?? Vector3.Zero;
+
+        /// <summary>
+        /// Force vector for buoyancy. Unit is N (Newtons)
+        /// </summary>
+        public static Vector3 Entity_BuoyancyForce(MyEntity entity) => _Entity_BuoyancyForce?.Invoke(entity) ?? Vector3.Zero;
+
+        /// <summary>
+        /// Center of buoyancy position of the entity in World Space
+        /// </summary>
+        public static Vector3D Entity_CenterOfBuoyancy(MyEntity entity) => _Entity_CenterOfBuoyancy?.Invoke(entity) ?? Vector3D.Zero;
+
+        /// <summary>
+        /// Force vector for drag. Unit is N (Newtons)
+        /// </summary>
+        public static Vector3D Entity_DragForce(MyEntity entity) => _Entity_DragForce?.Invoke(entity) ?? Vector3D.Zero;
+
+        /// <summary>
+        /// Percentage of the entity being underwater where 1 is 100%
+        /// </summary>
+        public static float Entity_PercentUnderwater(MyEntity entity) => _Entity_PercentUnderwater?.Invoke(entity) ?? 0;
+
+        /// <summary>
         /// Do not use. This is for the session component to register automatically
         /// </summary>
         public override void LoadData()
@@ -268,7 +312,15 @@ namespace Jakaria.API
                         _GetPhysicsData = TryGetMethod<Func<MyPlanet, MyTuple<float, float>>>(ModAPIMethods, "GetPhysicsData");
                         _GetTideData = TryGetMethod<Func<MyPlanet, MyTuple<float, float>>>(ModAPIMethods, "GetTideData");
                         _GetTideDirection = TryGetMethod<Func<MyPlanet, Vector3D>>(ModAPIMethods, "GetTideDirection");
-                    }
+
+                        _Entity_FluidPressure = TryGetMethod<Func<MyEntity, float>>(ModAPIMethods, "EntityGetFluidPressure");
+                        _Entity_FluidDepth = TryGetMethod<Func<MyEntity, double>>(ModAPIMethods, "EntityGetFluidDepth");
+                        _Entity_FluidVelocity = TryGetMethod<Func<MyEntity, Vector3>>(ModAPIMethods, "EntityGetFluidVelocity");
+                        _Entity_BuoyancyForce = TryGetMethod<Func<MyEntity, Vector3>>(ModAPIMethods, "EntityGetBuoyancyForce");
+                        _Entity_CenterOfBuoyancy = TryGetMethod<Func<MyEntity, Vector3D>>(ModAPIMethods, "EntityGetCenterOfBuoyancy");
+                        _Entity_DragForce = TryGetMethod<Func<MyEntity, Vector3D>>(ModAPIMethods, "EntityGetDragForce");
+                        _Entity_PercentUnderwater = TryGetMethod<Func<MyEntity, float>>(ModAPIMethods, "EntityGetPercentUnderwater");
+    }
                     catch (Exception e)
                     {
                         MyAPIGateway.Utilities.ShowMessage("WaterMod", "Mod '" + ModName + "' encountered an error when registering the Water Mod API, see log for more info.");
@@ -292,6 +344,8 @@ namespace Jakaria.API
             {
                 return method as T;
             }
+
+            MyLog.Default.WriteLine($"WatermMod: API method '{methodName}' not found");
 
             return null;
         }

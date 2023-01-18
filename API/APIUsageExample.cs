@@ -8,6 +8,8 @@ using Sandbox.Game.Entities;
 using Sandbox.Game.GameSystems;
 using Sandbox.ModAPI;
 using VRage.Game.Components;
+using VRage.Game.Entity;
+using VRage.Game.ModAPI.Ingame;
 using VRageMath;
 
 namespace Jakaria
@@ -19,15 +21,20 @@ namespace Jakaria
         {
             if (WaterModAPI.Registered)
             {
-                MyAPIGateway.Utilities.ShowMessage("Mod", "Joe Mama Water Registered");
+                MyAPIGateway.Utilities.ShowMessage("Mod", "Water API is registered");
             }
         }
 
         public override void UpdateAfterSimulation()
         {
-            Vector3D position = MyAPIGateway.Session.Camera.Position;
+            MyEntity entity = (MyEntity)(MyAPIGateway.Session?.Player?.Controller?.ControlledEntity ?? null);
 
-            MyAPIGateway.Utilities.ShowNotification($"Camera Depth: {WaterModAPI.GetDepth(position)}", 16);
+            if(entity != null)
+            {
+                MyAPIGateway.Utilities.ShowNotification($"Depth: {WaterModAPI.Entity_FluidDepth(entity)}", 16);
+                MyAPIGateway.Utilities.ShowNotification($"%Underwater: {WaterModAPI.Entity_PercentUnderwater(entity) * 100}%", 16);
+                MyAPIGateway.Utilities.ShowNotification($"Pressure: {WaterModAPI.Entity_FluidPressure(entity)}kPa", 16);
+            }
         }
     }
 }

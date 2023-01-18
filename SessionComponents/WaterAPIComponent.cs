@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VRage;
 using VRage.Game;
+using VRage.Game.Entity;
 using VRage.ModAPI;
 using VRage.Serialization;
 using VRageMath;
@@ -72,10 +73,64 @@ namespace Jakaria.SessionComponents
                 ["GetPhysicsData"] = new Func<MyPlanet, MyTuple<float, float>>(GetPhysicsData),
                 ["GetTideData"] = new Func<MyPlanet, MyTuple<float, float>>(GetTideData),
                 ["GetTideDirection"] = new Func<MyPlanet, Vector3D>(GetTideDirection),
+
+                ["EntityGetFluidPressure"] = new Func<MyEntity, float>(Entity_FluidPressure),
+                ["EntityGetFluidDepth"] = new Func<MyEntity, double>(Entity_FluidDepth),
+                ["EntityGetFluidVelocity"] = new Func<MyEntity, Vector3>(Entity_FluidVelocity),
+                ["EntityGetBuoyancyForce"] = new Func<MyEntity, Vector3>(Entity_BuoyancyForce),
+                ["EntityGetCenterOfBuoyancy"] = new Func<MyEntity, Vector3D>(Entity_CenterOfBuoyancy),
+                ["EntityGetDragForce"] = new Func<MyEntity, Vector3D>(Entity_DragForce),
+                ["EntityGetPercentUnderwater"] = new Func<MyEntity, float>(Entity_PercentUnderwater),
             };
 
             DragClientAPI.Init();
             RemoteDragAPI.Register();
+        }
+
+        private float Entity_PercentUnderwater(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.PercentUnderwater ?? 0;
+        }
+
+        private Vector3D Entity_DragForce(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.DragForce ?? Vector3D.Zero;
+        }
+
+        private Vector3D Entity_CenterOfBuoyancy(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.CenterOfBuoyancy ?? Vector3D.Zero;
+        }
+
+        private Vector3 Entity_BuoyancyForce(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.BuoyancyForce ?? Vector3.Zero;
+        }
+
+        private Vector3 Entity_FluidVelocity(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.FluidVelocity ?? Vector3.Zero;
+        }
+
+        private double Entity_FluidDepth(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.FluidDepth ?? double.PositiveInfinity;
+        }
+
+        private float Entity_FluidPressure(MyEntity entity)
+        {
+            return GetPhysicsComponent(entity)?.FluidPressure ?? 0;
+        }
+
+        private WaterPhysicsComponentBase GetPhysicsComponent(MyEntity entity)
+        {
+            foreach (var component in entity.Components)
+            {
+                if (component is WaterPhysicsComponentBase)
+                    return (WaterPhysicsComponentBase)component;
+            }
+
+            return null;
         }
 
         public override void UnloadData()
