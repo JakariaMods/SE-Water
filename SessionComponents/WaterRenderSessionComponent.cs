@@ -84,7 +84,7 @@ namespace Jakaria.SessionComponents
             WaterRenderComponent renderComponent;
             if (water.Entity.Components.TryGet<WaterRenderComponent>(out renderComponent))
             {
-                renderComponent.RebuildLOD();
+                renderComponent.UpdateLOD();
             }
         }
 
@@ -135,7 +135,7 @@ namespace Jakaria.SessionComponents
             {
                 WaterRenderComponent renderComponent = water.Planet.Components.Get<WaterRenderComponent>();
 
-                renderComponent.RebuildLOD();
+                renderComponent.UpdateLOD();
             }
 
             OnExitedWater?.Invoke();
@@ -215,19 +215,19 @@ namespace Jakaria.SessionComponents
 
             if (!CameraUnderwater && ClosestWater != null)
             {
-                float lifeRatio = 0;
                 float size;
                 Vector3D axisA;
                 Vector3D axisB;
 
-                lock (_effectsComponent.SurfaceSplashes)
+                //TODO REENABLE
+                /*lock (_effectsComponent.SurfaceSplashes)
                 {
                     foreach (var splash in _effectsComponent.SurfaceSplashes)
                     {
                         if (splash == null)
                             continue;
 
-                        lifeRatio = (float)splash.Life / splash.MaxLife;
+                        float lifeRatio = (float)splash.Life / splash.MaxLife;
                         size = splash.Radius * lifeRatio;
                         axisA = GravityAxisA * size;
                         axisB = GravityAxisB * size;
@@ -237,7 +237,7 @@ namespace Jakaria.SessionComponents
                         splash.Billboard.Position3 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA - axisB);
                         splash.Billboard.Color = WhiteColor * (1f - lifeRatio) * ClosestWater.PlanetConfig.ColorIntensity;
                     }
-                }
+                }*/
             }
         }
 

@@ -139,6 +139,8 @@
 
         public static string GetRelativeRadius = "The radius relative to your camera is '{0}'";
 
+        public static string ToggleVolumetrics = "Toggled water volumetrics";
+
         public static string UIInputNumber = "Enter number value [{0}]";
 
         public static string UIRefreshData = "Refresh";

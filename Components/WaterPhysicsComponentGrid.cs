@@ -83,7 +83,7 @@ namespace Jakaria.Components
         {
             IGrid = Entity as IMyCubeGrid;
             Grid = Entity as MyCubeGrid;
-
+            
             base.OnAddedToContainer();
 
             if (MyAPIGateway.Session?.SessionSettings != null)
@@ -149,6 +149,8 @@ namespace Jakaria.Components
                 if (UseAirtightness)
                     NeedsRecalculateAirtightness = true;
             }
+
+            _recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
         }
 
         /// <summary>
@@ -417,191 +419,186 @@ namespace Jakaria.Components
                         {
                             MyAPIGateway.Parallel.ForEach(_blockVolumes, BlockVolume =>
                             {
-                                if (BlockVolume.Config.Volume > 0)
+                                Vector3D blockWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Block.Position);
+                                double blockDepth = ClosestWater.GetDepthGlobal(ref blockWorldPosition);
+                                bool blockUnderwater = blockDepth < 0;
+                                //MyAPIGateway.Utilities.ShowNotification($"{blockDepth}",16);
+                                if (blockUnderwater)
                                 {
-                                    Vector3D blockWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Block.Position);
-                                    double blockDepth = ClosestWater.GetDepthGlobal(ref blockWorldPosition) - Grid.GridSizeHalf;
-                                    bool blockUnderwater = blockDepth < Grid.GridSizeHalf;
-
-                                    if (blockUnderwater)
+                                    if (_renderComponent != null)
                                     {
-                                        if (_renderComponent != null)
+                                        if ((BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.IsFunctional))
                                         {
-                                            if ((BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.IsFunctional))
+                                            if (!BlockVolume.Config.PlayDamageEffect)
                                             {
-                                                if (!BlockVolume.Config.PlayDamageEffect)
-                                                {
-                                                    BlockVolume.Block.FatBlock.SetDamageEffect(false);
-                                                }
-
-                                                if (MyUtils.GetRandomInt(300) == 0)
-                                                    _effectsComponent.CreateBubble(ref blockWorldPosition, Grid.GridSize);
+                                                BlockVolume.Block.FatBlock.SetDamageEffect(false);
                                             }
 
-                                            if (ClosestWater.Settings.Material.DrawWakes && _wakes != null && Math.Abs(blockDepth) < Grid.GridSizeHalf)
-                                            {
-                                                Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(BlockVolume.Block.Position);
-                                                Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
-                                                Vector3 BlockHorizontalVelocity = BlockVelocity - BlockVerticalVelocity;
-                                                float BlockHorizontalSpeed = BlockHorizontalVelocity.LengthSquared();
-
-                                                if (BlockHorizontalSpeed > 100 && MyUtils.GetRandomInt(6 * _recalculateFrequency) == 0)
-                                                {
-                                                    float radius = Math.Max(Grid.GridSize, 1);
-                                                    MyQuadD quad = new MyQuadD()
-                                                    {
-                                                        Point0 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
-                                                        Point1 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
-                                                        Point2 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
-                                                        Point3 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
-                                                    };
-
-                                                    /*lock (_wakes)
-                                                        _wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0f), quad, BlockHorizontalVelocity, (_recalculateFrequency + 1) + (int)(Math.Sqrt(BlockHorizontalSpeed) * 3), true, true, WaterData.WakeColor, _renderComponent.AmbientColorIntensity));*/
-                                                }
-                                            }
-                                        }
-
-                                        if (_damageComponent != null && FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
-                                        {
-                                            _damageComponent.DoDamage(BlockVolume.Block, ClosestWater.Settings.CrushDamage * (_recalculateFrequency + 1));
-
-                                            if (_renderComponent != null && MyUtils.GetRandomInt(0, 200) == 0)
+                                            if (MyUtils.GetRandomInt(300) == 0)
                                                 _effectsComponent.CreateBubble(ref blockWorldPosition, Grid.GridSize);
                                         }
 
-                                        if (SimulatePhysics)
+                                        if (ClosestWater.Settings.Material.DrawWakes && _wakes != null && Math.Abs(blockDepth) < Grid.GridSizeHalf)
                                         {
-                                            lock (_extentLock)
-                                            {
-                                                _minExtent = Vector3.Min(_minExtent, BlockVolume.Block.Position);
-                                                _maxExtent = Vector3.Max(_maxExtent, BlockVolume.Block.Position);
-                                            }
-                                            
-                                            //MyAPIGateway.Utilities.ShowNotification($"{MathHelper.Clamp(-blockDepth / Grid.GridSize, 0, 1)}", 16);
-                                            //MyTransparentGeometry.AddPointBillboard(WaterData.BlankMaterial, Vector4.One, blockWorldPosition, 0.25f, 0, blendType: MyBillboard.BlendTypeEnum.AdditiveTop);
+                                            Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(BlockVolume.Block.Position);
+                                            Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
+                                            Vector3 BlockHorizontalVelocity = BlockVelocity - BlockVerticalVelocity;
+                                            float BlockHorizontalSpeed = BlockHorizontalVelocity.LengthSquared();
 
-                                            double pointDisplacement = BlockVolume.Volume * MathHelper.Clamp(-blockDepth / Grid.GridSize, 0, 1) * BlockVolume.Block.BuildLevelRatio;
-
-                                            if (BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.MarkedForClose)
+                                            if (BlockHorizontalSpeed > 100 && MyUtils.GetRandomInt(6 * _recalculateFrequency) == 0)
                                             {
-                                                if (BlockVolume.Block.FatBlock is IMyGasTank)
+                                                float radius = Math.Max(Grid.GridSize, 1);
+                                                MyQuadD quad = new MyQuadD()
                                                 {
-                                                    pointDisplacement *= (1f - (BlockVolume.Block.FatBlock as IMyGasTank).FilledRatio);
-                                                }
-                                            }
+                                                    Point0 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
+                                                    Point1 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
+                                                    Point2 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
+                                                    Point3 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
+                                                };
 
-                                            Interlocked.Increment(ref _blocksUnderwater);
-                                            lock (_buoyancyLock)
-                                            {
-                                                displacement += pointDisplacement;
-                                                CenterOfBuoyancy += ((Vector3D)(BlockVolume.Block.Min + BlockVolume.Block.Max) / 2.0) * pointDisplacement;
+                                                /*lock (_wakes)
+                                                    _wakes.Add(new AnimatedBillboard(WaterData.FoamMaterial, WaterData.FoamUVSize, new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0f), quad, BlockHorizontalVelocity, (_recalculateFrequency + 1) + (int)(Math.Sqrt(BlockHorizontalSpeed) * 3), true, true, WaterData.WakeColor, _renderComponent.AmbientColorIntensity));*/
                                             }
                                         }
                                     }
-                                    else
+
+                                    if (_damageComponent != null && FluidPressure >= BlockVolume.Config.MaximumPressure && CanCrushBlock(BlockVolume.Block))
                                     {
-                                        //Not in water
+                                        _damageComponent.DoDamage(BlockVolume.Block, ClosestWater.Settings.CrushDamage * (_recalculateFrequency + 1));
+
+                                        if (_renderComponent != null && MyUtils.GetRandomInt(0, 200) == 0)
+                                            _effectsComponent.CreateBubble(ref blockWorldPosition, Grid.GridSize);
                                     }
 
-                                    BlockVolume.CurrentlyUnderwater = blockUnderwater;
-
-                                    if (BlockVolume.PreviousUnderwater != blockUnderwater)
+                                    if (SimulatePhysics)
                                     {
-                                        BlockVolume.PreviousUnderwater = blockUnderwater;
-
-                                        if (SimulatePhysics)
+                                        lock (_extentLock)
                                         {
-                                            if (blockUnderwater) //Enters water Enter Water
+                                            _minExtent = Vector3.Min(_minExtent, BlockVolume.Block.Position);
+                                            _maxExtent = Vector3.Max(_maxExtent, BlockVolume.Block.Position);
+                                        }
+
+                                        //MyAPIGateway.Utilities.ShowNotification($"{MathHelper.Clamp(-blockDepth / Grid.GridSize, 0, 1)}", 16);
+                                        //MyTransparentGeometry.AddPointBillboard(WaterData.BlankMaterial, Vector4.One, blockWorldPosition, 0.25f, 0, blendType: MyBillboard.BlendTypeEnum.AdditiveTop);
+
+                                        double pointDisplacement = BlockVolume.Volume * MathHelper.Clamp(-blockDepth / Grid.GridSize, 0, 1) * BlockVolume.Block.BuildLevelRatio;
+
+                                        if (BlockVolume.Block.FatBlock != null && !BlockVolume.Block.FatBlock.MarkedForClose)
+                                        {
+                                            if (BlockVolume.Block.FatBlock is IMyGasTank)
                                             {
-                                                IMyFunctionalBlock functionalBlock = BlockVolume.Block.FatBlock as IMyFunctionalBlock;
-                                                if (functionalBlock != null)
+                                                pointDisplacement *= (1f - (BlockVolume.Block.FatBlock as IMyGasTank).FilledRatio);
+                                            }
+                                        }
+
+                                        Interlocked.Increment(ref _blocksUnderwater);
+                                        lock (_buoyancyLock)
+                                        {
+                                            displacement += pointDisplacement;
+                                            CenterOfBuoyancy += ((Vector3D)(BlockVolume.Block.Min + BlockVolume.Block.Max) / 2.0) * pointDisplacement;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    //Not in water
+                                }
+
+                                BlockVolume.CurrentlyUnderwater = blockUnderwater;
+
+                                if (BlockVolume.PreviousUnderwater != blockUnderwater)
+                                {
+                                    BlockVolume.PreviousUnderwater = blockUnderwater;
+
+                                    if (SimulatePhysics)
+                                    {
+                                        if (blockUnderwater) //Enters water Enter Water
+                                        {
+                                            IMyFunctionalBlock functionalBlock = BlockVolume.Block.FatBlock as IMyFunctionalBlock;
+                                            if (functionalBlock != null)
+                                            {
+                                                if (!BlockVolume.Config.FunctionalUnderWater || (FluidPressure > BlockVolume.Config.MaxFunctionalPressure))
                                                 {
-                                                    if (!BlockVolume.Config.FunctionalUnderWater || (FluidPressure > BlockVolume.Config.MaxFunctionalPressure))
+                                                    if (functionalBlock.Enabled)
                                                     {
-                                                        if (functionalBlock.Enabled)
-                                                        {
-                                                            BlockVolume.CorrectState = functionalBlock.Enabled;
-                                                            functionalBlock.Enabled = false;
-                                                        }
-                                                    }
-                                                    else if (BlockVolume.CorrectState != null)
-                                                    {
-                                                        functionalBlock.Enabled = BlockVolume.CorrectState.Value;
-                                                        BlockVolume.CorrectState = null;
+                                                        BlockVolume.CorrectState = functionalBlock.Enabled;
+                                                        functionalBlock.Enabled = false;
                                                     }
                                                 }
-
-                                                if (Grid.BlocksDestructionEnabled && Grid.GridGeneralDamageModifier != 0)
+                                                else if (BlockVolume.CorrectState != null)
                                                 {
-                                                    Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(blockWorldPosition);
-                                                    Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
-
-                                                    float BlockVerticalSpeed = BlockVerticalVelocity.Length();
-
-
-                                                    if (_renderComponent != null)
-                                                    {
-                                                        if (ClosestWater.Settings.Material.DrawSplashes && BlockVerticalSpeed > 5)
-                                                        {
-                                                            lock (_effectsComponent.SurfaceSplashes)
-                                                                _effectsComponent.SurfaceSplashes.Add(new Splash(blockWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
-                                                        }
-                                                    }
-
-                                                    if (_damageComponent != null && BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / _waterDensityMultiplier)
-                                                    {
-                                                        _damageComponent.DoDamage(BlockVolume.Block, 50 * BlockVerticalSpeed * _waterDensityMultiplier);
-                                                    }
+                                                    functionalBlock.Enabled = BlockVolume.CorrectState.Value;
+                                                    BlockVolume.CorrectState = null;
                                                 }
                                             }
-                                            else //Exits Water Exit Water
+
+                                            if (Grid.BlocksDestructionEnabled && Grid.GridGeneralDamageModifier != 0)
                                             {
-                                                IMyFunctionalBlock functionalBlock = BlockVolume.Block.FatBlock as IMyFunctionalBlock;
-                                                if (functionalBlock != null)
+                                                Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(blockWorldPosition);
+                                                Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
+
+                                                float BlockVerticalSpeed = BlockVerticalVelocity.Length();
+
+                                                if (_renderComponent != null)
                                                 {
-                                                    if (!BlockVolume.Config.FunctionalAboveWater)
+                                                    if (ClosestWater.Settings.Material.DrawSplashes && BlockVerticalSpeed > 5)
                                                     {
-                                                        if (functionalBlock.Enabled)
-                                                        {
-                                                            BlockVolume.CorrectState = functionalBlock.Enabled;
-                                                            functionalBlock.Enabled = false;
-                                                        }
-                                                    }
-                                                    else if (BlockVolume.CorrectState != null)
-                                                    {
-                                                        functionalBlock.Enabled = BlockVolume.CorrectState.Value;
-                                                        BlockVolume.CorrectState = null;
+                                                        lock (_effectsComponent.SurfaceSplashes)
+                                                            _effectsComponent.SurfaceSplashes.Add(new Splash(blockWorldPosition, IGrid.GridSize * (BlockVerticalSpeed / 5f)));
                                                     }
                                                 }
 
-                                                if (_renderComponent != null && ClosestWater.Settings.Material.DrawSplashes)
+                                                if (_damageComponent != null && BlockVerticalVelocity.IsValid() && BlockVerticalSpeed > WaterData.GridImpactDamageSpeed / _waterDensityMultiplier)
                                                 {
-                                                    Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(blockWorldPosition);
-                                                    Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
-
-                                                    if (BlockVerticalVelocity.LengthSquared() < 25)
-                                                        return;
-
-                                                    lock (_effectsComponent.SurfaceSplashes)
-                                                        _effectsComponent.SurfaceSplashes.Add(new Splash(blockWorldPosition, IGrid.GridSize * (_speed / 5f)));
-
-                                                    lock (_effectsComponent.SimulatedSplashes)
-                                                        _effectsComponent.SimulatedSplashes.Add(new SimulatedSplash(blockWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
-
-                                                    MatrixD matrix = MatrixD.CreateWorld(blockWorldPosition, -_renderComponent.CameraGravityDirection, _renderComponent.GravityAxisA);
-
-                                                    MyParticleEffect effect;
-                                                    if (MyParticlesManager.TryCreateParticleEffect("WaterSplashSmall", ref matrix, ref blockWorldPosition, 0, out effect))
+                                                    _damageComponent.DoDamage(BlockVolume.Block, 50 * BlockVerticalSpeed * _waterDensityMultiplier);
+                                                }
+                                            }
+                                        }
+                                        else //Exits Water Exit Water
+                                        {
+                                            IMyFunctionalBlock functionalBlock = BlockVolume.Block.FatBlock as IMyFunctionalBlock;
+                                            if (functionalBlock != null)
+                                            {
+                                                if (!BlockVolume.Config.FunctionalAboveWater)
+                                                {
+                                                    if (functionalBlock.Enabled)
                                                     {
-                                                        effect.UserColorIntensityMultiplier = ClosestWater.PlanetConfig.ColorIntensity;
+                                                        BlockVolume.CorrectState = functionalBlock.Enabled;
+                                                        functionalBlock.Enabled = false;
                                                     }
+                                                }
+                                                else if (BlockVolume.CorrectState != null)
+                                                {
+                                                    functionalBlock.Enabled = BlockVolume.CorrectState.Value;
+                                                    BlockVolume.CorrectState = null;
+                                                }
+                                            }
+
+                                            if (_renderComponent != null && ClosestWater.Settings.Material.DrawSplashes)
+                                            {
+                                                Vector3 BlockVelocity = Grid.Physics.GetVelocityAtPoint(blockWorldPosition);
+                                                Vector3 BlockVerticalVelocity = Vector3.ProjectOnVector(ref BlockVelocity, ref _gravityDirection);
+
+                                                if (BlockVerticalVelocity.LengthSquared() < 25)
+                                                    return;
+
+                                                lock (_effectsComponent.SurfaceSplashes)
+                                                    _effectsComponent.SurfaceSplashes.Add(new Splash(blockWorldPosition, IGrid.GridSize * (_speed / 5f)));
+
+                                                lock (_effectsComponent.SimulatedSplashes)
+                                                    _effectsComponent.SimulatedSplashes.Add(new SimulatedSplash(blockWorldPosition, BlockVelocity + (MyUtils.GetRandomVector3Normalized() * 3f), IGrid.GridSize * 1.5f, ClosestWater));
+
+                                                MatrixD matrix = MatrixD.CreateWorld(blockWorldPosition, -_renderComponent.CameraGravityDirection, _renderComponent.GravityAxisA);
+
+                                                MyParticleEffect effect;
+                                                if (MyParticlesManager.TryCreateParticleEffect("WaterSplashSmall", ref matrix, ref blockWorldPosition, 0, out effect))
+                                                {
+                                                    effect.UserColorIntensityMultiplier = ClosestWater.PlanetConfig.ColorIntensity;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            
                             });
                         }
 
@@ -633,18 +630,18 @@ namespace Jakaria.Components
                             if (displacement > 0)
                             {
                                 PercentUnderwater = ((float)_blocksUnderwater / _blockVolumes.Length);
-
                                 CenterOfBuoyancy = Grid.GridIntegerToWorld(CenterOfBuoyancy / displacement);
-
                                 BuoyancyForce = -_gravity * ClosestWater.Settings.Material.Density * (float)displacement * ClosestWater.Settings.Buoyancy;
                                 
                                 lock (_extentLock)
                                 {
                                     _minExtent *= Grid.GridSize;
                                     _maxExtent *= Grid.GridSize;
+                                    _maxExtent += Grid.GridSizeHalfVector;
+                                    _minExtent -= Grid.GridSizeHalfVector;
                                 }
 
-                                _dragOptimizer = 0.5f * ClosestWater.Settings.Material.Density * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+                                _dragOptimizer = ClosestWater.Settings.Material.Density * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
                             }
                             else
                             {
@@ -672,65 +669,50 @@ namespace Jakaria.Components
                         Vector3 localExtents = _maxExtent - _minExtent;
 
                         if (localExtents.X == 0)
-                            localExtents.X = 1;
+                            localExtents.X = Grid.GridSize;
                         if (localExtents.Y == 0)
-                            localExtents.Y = 1;
+                            localExtents.Y = Grid.GridSize;
                         if (localExtents.Z == 0)
-                            localExtents.Z = 1;
+                            localExtents.Z = Grid.GridSize;
 
                         Vector3 localSize = Vector3.Abs(localExtents);
 
                         //Drag
                         if (_speed > 0.001f)
                         {
-                            if (_apiComponent != null && _apiComponent.DragClientAPI.Heartbeat)
+                            Vector3 localVelocity = Vector3.TransformNormal(_velocity, Grid.PositionComp.WorldMatrixInvScaled);
+
+                            DragForce.X = _dragOptimizer * (localVelocity.X * localVelocity.X) * (localSize.Z * localSize.Y) * -Math.Sign(localVelocity.X);
+                            DragForce.Y = _dragOptimizer * (localVelocity.Y * localVelocity.Y) * (localSize.X * localSize.Z) * -Math.Sign(localVelocity.Y);
+                            DragForce.Z = _dragOptimizer * (localVelocity.Z * localVelocity.Z) * (localSize.X * localSize.Y) * -Math.Sign(localVelocity.Z);
+
+                            /*Vector3D Position = center + ((Vector3D)localExtents / 2.0) * Vector3D.Sign(localVelocity) * DragForce;
+                            Position /= DragForce.Sum;
+
+                            IGrid.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, DragForce, Position, null, null);*/
+
+                            IGrid.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, DragForce, null, null);
+                            
+                            if (_settingsComponent != null && _settingsComponent.Settings.ShowDebug)
                             {
-                                var api = _apiComponent.DragObjects.GetOrAdd(IGrid, DragClientAPI.DragObject.Factory);
+                                Vector3 center = (_minExtent + _maxExtent) * 0.5f;
+                                uint renderId = Grid.Render.GetRenderObjectID();
 
-                                if (api != null)
-                                {
-                                    api.ViscosityMultiplier = 1f + (float)(PercentUnderwater * ClosestWater.Settings.Material.Density);
-                                }
-                            }
-                            else
-                            {
-                                _maxExtent += Grid.GridSizeHalfVector;
-                                _minExtent -= Grid.GridSizeHalfVector;
+                                Vector3 positionX = new Vector3(center.X + (localExtents.X / 2) * Math.Sign(localVelocity.X), center.Y, center.Z);
+                                Vector3 positionY = new Vector3(center.X, center.Y + (localExtents.Y / 2) * Math.Sign(localVelocity.Y), center.Z);
+                                Vector3 positionZ = new Vector3(center.X, center.Y, center.Z + (localExtents.Z / 2) * Math.Sign(localVelocity.Z));
 
-                                Vector3 localVelocity = Vector3.TransformNormal(_velocity, Grid.PositionComp.WorldMatrixInvScaled);
+                                MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Red, positionX, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Green, positionY, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Blue, positionZ, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
 
-                                DragForce.X = _dragOptimizer * (localVelocity.X * localVelocity.X) * (localSize.Z * localSize.Y) * -Math.Sign(localVelocity.X);
-                                DragForce.Y = _dragOptimizer * (localVelocity.Y * localVelocity.Y) * (localSize.X * localSize.Z) * -Math.Sign(localVelocity.Y);
-                                DragForce.Z = _dragOptimizer * (localVelocity.Z * localVelocity.Z) * (localSize.X * localSize.Y) * -Math.Sign(localVelocity.Z);
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Red, positionX, renderId, Vector3.Right * Math.Sign(localVelocity.X), localVelocity.X, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Green, positionY, renderId, Vector3.Up * Math.Sign(localVelocity.Y), localVelocity.Y, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Blue, positionZ, renderId, Vector3.Forward * Math.Sign(localVelocity.Z), localVelocity.Z, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
 
-                                /*Vector3D Position = center + ((Vector3D)localExtents / 2.0) * Vector3D.Sign(localVelocity) * DragForce;
-                                Position /= DragForce.Sum;
-
-                                IGrid.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, DragForce, Position, null, null);*/
-
-                                IGrid.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, DragForce, null, null);
-
-                                if (_settingsComponent != null && _settingsComponent.Settings.ShowDebug)
-                                {
-                                    Vector3 center = (_minExtent + _maxExtent) * 0.5f;
-                                    uint renderId = Grid.Render.GetRenderObjectID();
-
-                                    Vector3 positionX = new Vector3(center.X + (localExtents.X / 2) * Math.Sign(localVelocity.X), center.Y, center.Z);
-                                    Vector3 positionY = new Vector3(center.X, center.Y + (localExtents.Y / 2) * Math.Sign(localVelocity.Y), center.Z);
-                                    Vector3 positionZ = new Vector3(center.X, center.Y, center.Z + (localExtents.Z / 2) * Math.Sign(localVelocity.Z));
-
-                                    MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Red, positionX, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Green, positionY, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalPointBillboard(WaterData.BlankMaterial, Color.Blue, positionZ, renderId, Grid.GridSize, 0, MyBillboard.BlendTypeEnum.AdditiveTop);
-
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Red, positionX, renderId, Vector3.Right * Math.Sign(localVelocity.X), localVelocity.X, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Green, positionY, renderId, Vector3.Up * Math.Sign(localVelocity.Y), localVelocity.Y, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.Blue, positionZ, renderId, Vector3.Forward * Math.Sign(localVelocity.Z), localVelocity.Z, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionX, renderId, Vector3.Right, (float)DragForce.X, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionY, renderId, Vector3.Up, (float)DragForce.Y, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                    MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionZ, renderId, Vector3.Forward, (float)DragForce.Z, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
-                                }
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionX, renderId, Vector3.Right, (float)DragForce.X, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionY, renderId, Vector3.Up, (float)DragForce.Y, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
+                                MyTransparentGeometry.AddLocalLineBillboard(WaterData.BlankMaterial, Color.White, positionZ, renderId, Vector3.Forward, (float)DragForce.Z, Grid.GridSizeQuarter, MyBillboard.BlendTypeEnum.AdditiveTop);
                             }
 
                             //TODO USE PHYSICS INSTEAD OF SETTING VELOCITY
@@ -742,31 +724,19 @@ namespace Jakaria.Components
                         if (_angularSpeed > 0.001f)
                         {
                             //https://web.archive.org/web/20160506233549/http://www.randygaul.net/wp-content/uploads/2014/02/RigidBodies_WaterSurface.pdf
-                            //Td = Ba*m*(V/Vb)*L^2*w
-                            //TorqueDrag = DragCoeff * mass * (VolumeWater / VolumeBody) * Length^2 * AngularVelocity
-                            /*Vector3 localAngularVelocity = Vector3.TransformNormal(IGrid.Physics.AngularVelocity, Grid.PositionComp.WorldMatrixInvScaled);
-                            
-                            //3.11?
+                            Vector3 localAngularVelocity = Vector3.TransformNormal(IGrid.Physics.AngularVelocity, Grid.PositionComp.WorldMatrixInvScaled) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
+
                             Vector3 angularDragForce = new Vector3
                             {
-                                X = _dragOptimizer * (localAngularVelocity.X * localAngularVelocity.X) * (localSize.X * Math.Max(localSize.Y, localSize.Z)) * -Math.Sign(localAngularVelocity.X),
-                                Y = _dragOptimizer * (localAngularVelocity.Y * localAngularVelocity.Y) * (localSize.Y * Math.Max(localSize.X, localSize.Z)) * -Math.Sign(localAngularVelocity.Y),
-                                Z = _dragOptimizer * (localAngularVelocity.Z * localAngularVelocity.Z) * (localSize.Z * Math.Max(localSize.X, localSize.Y)) * -Math.Sign(localAngularVelocity.Z),
+                                X = ClosestWater.Settings.Material.Density * (localAngularVelocity.X * localAngularVelocity.X) * (localSize.Y * localSize.Z) * -Math.Sign(localAngularVelocity.X),
+                                Y = ClosestWater.Settings.Material.Density * (localAngularVelocity.Y * localAngularVelocity.Y) * (localSize.X * localSize.Z) * -Math.Sign(localAngularVelocity.Y),
+                                Z = ClosestWater.Settings.Material.Density * (localAngularVelocity.Z * localAngularVelocity.Z) * (localSize.X * localSize.Y) * -Math.Sign(localAngularVelocity.Z),
                             };
 
-                            IGrid.Physics.AddForce(MyPhysicsForceType.ADD_BODY_FORCE_AND_BODY_TORQUE, null, null, angularDragForce);*/
-
-                            //3.9 revert
-                            Vector3 angularDragForce = ((MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 1000000000f) * Entity.Physics.Mass * PercentUnderwater * localSize.Length()) * IGrid.Physics.AngularVelocity;
+                            angularDragForce /= Grid.Physics.Mass;
                             
-                            if (angularDragForce.IsValid() && !Vector3.IsZero(angularDragForce, 1e-4f))
-                                IGrid.Physics.AngularVelocity -= Vector3.ClampToSphere(angularDragForce, _angularSpeed);
-
-                            //3.10 
-                            /*Vector3 angularDragForce = ((MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS / 10000000000f) * Entity.Physics.Mass * PercentUnderwater * localSize.LengthSquared()) * IGrid.Physics.AngularVelocity;
-                            IGrid.Physics.AngularVelocity -= angularDragForce;
-
-                            IGrid.Physics.AngularVelocity *= 1f - (ClosestWater.Settings.Material.Viscosity * PercentUnderwater * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS);*/
+                            IGrid.Physics.AngularVelocity += Vector3.TransformNormal(angularDragForce, Grid.PositionComp.WorldMatrixRef);
+                            IGrid.Physics.AngularVelocity *= 0.9925f;
                         }
                     }
                 }
@@ -944,7 +914,14 @@ namespace Jakaria.Components
                 if (config.IsPressurized)
                     Volume = config.Volume * (block.CubeGrid.GridSizeEnum == MyCubeSize.Large ? WaterData.AirtightnessCoefficientLarge : WaterData.AirtightnessCoefficientSmall);
                 else
+                {
                     Volume = config.Volume * (block.CubeGrid.GridSizeEnum == MyCubeSize.Large ? WaterData.BuoyancyCoefficientLarge : WaterData.BuoyancyCoefficientSmall);
+
+                    if (block.FatBlock == null)
+                    {
+                        Volume *= WaterData.BuoyancyCoefficientArmor;
+                    }
+                }
             }
         }
     }

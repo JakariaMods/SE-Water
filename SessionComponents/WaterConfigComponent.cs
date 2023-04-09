@@ -1,6 +1,7 @@
 ﻿using Jakaria.Configs;
 using Jakaria.Utils;
 using Sandbox.Definitions;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
@@ -248,7 +249,7 @@ namespace Jakaria.SessionComponents
 
                             if (!(blockDefinition is MyFunctionalBlockDefinition))
                                 Config.MaximumPressure = 4014.08f;
-
+                            
                             if (blockDefinition.IsAirTight == true)
                                 Config.Volume = blockDimensions.Volume; //IsAirtight implies that every side is a solid wall, meaning that 100% of water in the block is displaced
                             else if (!blockDefinition.HasPhysics)

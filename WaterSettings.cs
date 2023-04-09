@@ -97,6 +97,9 @@ namespace Jakaria
         [ProtoMember(76), XmlElement]
         public float CurrentScale;
 
+        [ProtoIgnore]//[ProtoMember(80), XmlElement]
+        public bool Volumetric;
+
         public WaterSettings()
         {
             if(Default != null)
@@ -121,6 +124,7 @@ namespace Jakaria
                 MaterialId = Default.MaterialId;
                 CurrentSpeed = Default.CurrentSpeed;
                 CurrentScale = Default.CurrentScale;
+                Volumetric =  Default.Volumetric;
             }
 
             Init();
@@ -148,6 +152,7 @@ namespace Jakaria
                 stringBuilder.AppendLine($"{nameof(Transparent)}: {Transparent}");
                 stringBuilder.AppendLine($"{nameof(Lit)}: {Lit}");
                 stringBuilder.AppendLine($"{nameof(FogColor)}: {FogColor}");
+                //stringBuilder.AppendLine($"{nameof(Volumetric)}: {Volumetric}");
             }
             
             stringBuilder.AppendLine($"{nameof(Buoyancy)}: {Buoyancy}");
@@ -185,6 +190,7 @@ namespace Jakaria
             MaterialId = "Water",
             CurrentSpeed = 0.5f,
             CurrentScale = 0.005f,
+            Volumetric = false,
         };
     }
 }

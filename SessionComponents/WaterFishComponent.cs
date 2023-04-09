@@ -335,7 +335,7 @@ namespace Jakaria.SessionComponents
                 targetPosition = water.Planet.GetClosestSurfacePointGlobal(ref targetPosition);// + (Vector3D.Normalize(targetPosition - water.Position) * MIN_ALTITUDE);
 
             if (!underWater)
-                targetPosition = water.GetClosestSurfacePointGlobal(ref targetPosition, -minDepth);
+                targetPosition = water.GetClosestSurfacePointGlobal(ref targetPosition, minDepth);
 
             return targetPosition;
         }

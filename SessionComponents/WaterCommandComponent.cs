@@ -314,6 +314,12 @@ namespace Jakaria.SessionComponents
                 RequireWater = true,
                 Console = true,
             };
+            /*_commands["wvolumetric"] = new Command(CommandVolumetric)
+            {
+                Description = "Toggles water volumetrics (fluid flow).",
+                PromoteLevel = MyPromoteLevel.SpaceMaster,
+                RequireWater = true,
+            };*/
 
             MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
         }
@@ -1149,6 +1155,13 @@ namespace Jakaria.SessionComponents
                 else
                     WaterUtils.SendMessage(string.Format(WaterTexts.SetCollectRateNoParse, args[1]), commandArgs.User);
             }
+        }
+
+        private void CommandVolumetric(string[] args, CommandArgs commandArgs)
+        {
+            commandArgs.Water.Settings.Volumetric = !commandArgs.Water.Settings.Volumetric;
+            _syncComponent.SyncClients(commandArgs.Water);
+            WaterUtils.SendMessage(WaterTexts.ToggleVolumetrics, commandArgs.User);
         }
     }
 

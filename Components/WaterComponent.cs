@@ -1,18 +1,25 @@
-﻿    using Jakaria.Configs;
+﻿using Jakaria.Configs;
+using Jakaria.SessionComponents;
 using Jakaria.Utils;
+using Jakaria.Volumetrics;
 using ProtoBuf;
 using Sandbox.Game.Entities;
+using Sandbox.Game.World.Generator;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.ModAPI;
 using VRage.Game.ObjectBuilders.ComponentSystem;
+using VRage.ModAPI;
 using VRage.Utils;
+using VRage.Voxels;
 using VRageMath;
 
 namespace Jakaria.Components
@@ -42,13 +49,9 @@ namespace Jakaria.Components
 
         public bool InScene;
 
-        //TODO VOLUMETRICS
-        /*public SphereTree Tree;
-        public SphereTree _bufferTree;
+        public IVolumetricSimulation Volumetrics;
 
-        public const float HEIGHT_EPSILON = 0.01f;
-        public const float FLOW_SPEED = 0.05f;
-        public const float HEIGHT_OFFSET = 10f;*/
+        public const float DEPTH_EPSILON = 0.001f;
 
         public override string ComponentTypeDebugString => nameof(WaterComponent);
 
@@ -58,7 +61,7 @@ namespace Jakaria.Components
 
             if (!WaterData.PlanetConfigs.TryGetValue(planet.Generator.Id, out PlanetConfig))
                 WaterData.PlanetConfigs[planet.Generator.Id] = PlanetConfig = new PlanetConfig(planet.Generator.Id);
-
+            
             if (settings == null)
             {
                 if (PlanetConfig != null && PlanetConfig.WaterSettings != null)
@@ -74,12 +77,8 @@ namespace Jakaria.Components
             {
                 Settings = settings;
             }
-
+            
             Radius = Planet.MinimumRadius * Settings.Radius;
-
-            //TODO VOLUMETRICS
-            /*Tree = new SphereTree(this);
-            _bufferTree = new SphereTree(this);*/
         }
 
         public WaterComponentObjectBuilder Serialize()
@@ -103,17 +102,12 @@ namespace Jakaria.Components
             InScene = true;
         }
 
-        private int FindBestDepth(double radius, int depth = 0)
-        {
-            if (radius > (Radius / Math.Pow(2, QuadTree.MAX_DEPTH)))
-                return FindBestDepth(radius / 2, depth + 1);
-
-            return QuadTree.MAX_DEPTH - depth;
-        }
-
         public override void OnBeforeRemovedFromContainer()
         {
             base.OnBeforeRemovedFromContainer();
+
+            Volumetrics?.Dispose();
+            Volumetrics = null;
         }
 
         public void Simulate()
@@ -126,138 +120,30 @@ namespace Jakaria.Components
             TideDirection.X = Math.Cos(TideTimer);
             TideDirection.Z = Math.Sin(TideTimer);
 
-            //TODO VOLUMETRICS
-            /*var camNormal = Vector3D.Normalize(MyAPIGateway.Session.Camera.Position - WorldMatrix.Translation);
-
-            List<QuadTree> neigh = new List<QuadTree>();
-            Tree.GetNeighbors(Tree.GetFaceGlobal(camNormal), neigh);
-
-            Stopwatch watch = Stopwatch.StartNew();
-
-            List<QuadTree> neighbors = new List<QuadTree>(4);
-
-            Tree.CopyTo(_bufferTree);
-
-            foreach (var face in Tree.GetFaces())
+            if (Settings.Volumetric)
             {
-                SimulateDeepestNode(face, neighbors);
-            }
-
-            if (MyAPIGateway.Input.IsAnyCtrlKeyPressed())
-            {
-                SphereTree temp = _bufferTree;
-                _bufferTree = Tree;
-                Tree = temp;
-            }
-
-            watch.Stop();
-            MyAPIGateway.Utilities.ShowNotification($"Simulation Time: {watch.Elapsed.TotalMilliseconds}ms", 16);*/
-        }
-
-        //TODO VOLUMETRICS
-        /*private void SimulateDeepestNode(QuadTree tree, List<QuadTree> neighbors)
-        {
-            if(tree.Depth > 3 && tree.Depth < 5 && Vector3D.DistanceSquared(GetClosestSurfacePointGlobal(MyAPIGateway.Session.Camera.Position), Vector3D.Transform(Vector3D.Normalize(tree.Position) * (tree.Value.SurfaceDistanceFromCenter + tree.Value.FluidHeight), ref WorldMatrix)) > 1000 * 1000)
-            {
-                return;
-            }
-
-            if (tree.Children == null)
-            {
-                QuadTree bufferFace = _bufferTree.GetFace(tree.Direction).GetNode(tree.Id);
-
-                List<QuadTree> tempNeighbors = new List<QuadTree>();
-                Tree.GetNeighbors(tree, tempNeighbors);
-                neighbors.EnsureCapacity(tempNeighbors.Count);
-
-                foreach (var neighbor in tempNeighbors)
+                if (Volumetrics == null)
                 {
-                    if (((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (neighbor.Value.FluidHeight + neighbor.Value.SurfaceDistanceFromCenter)) > HEIGHT_EPSILON)
-                    {
-                        neighbors.Add(neighbor);
-                    }
+                    Volumetrics = new FloodFillSimulation(this);
                 }
 
-                if (neighbors.Count > 0)
-                {
-                    double maxFlowPerCell = tree.Value.FluidHeight / neighbors.Count;
-                    double actualRemoved = 0;
-
-                    foreach (var neighbor in neighbors)
-                    {
-                        QuadTree treeNeighbor = neighbor;
-                        QuadTree bufferNeighbor = _bufferTree.GetFace(neighbor.Direction).GetNode(neighbor.Id);
-
-                        double removedFromCell = Math.Min(((tree.Value.FluidHeight + tree.Value.SurfaceDistanceFromCenter) - (treeNeighbor.Value.FluidHeight + treeNeighbor.Value.SurfaceDistanceFromCenter)) * FLOW_SPEED, maxFlowPerCell);
-                        //removedFromCell *= Math.Min(tree.GetDiameter(), treeNeighbor.GetDiameter());
-
-                        bufferNeighbor.Value.FluidHeight += removedFromCell;
-                        actualRemoved += removedFromCell;
-                    }
-
-                    bufferFace.Value.FluidHeight -= actualRemoved;
-                    neighbors.Clear();
-                }
-
-                //draw
-                if(tree.Value.FluidHeight >= 0)
-                {
-                    Vector3D center = tree.Position;
-
-                    double size = tree.GetDiameter();
-                    Vector3D right = Base6Directions.GetIntVector(Base6DirectionsUtils.GetRight(tree.Direction)) * size;
-                    Vector3D up = Base6Directions.GetIntVector(Base6DirectionsUtils.GetUp(tree.Direction)) * size;
-
-                    MyQuadD quad = new MyQuadD
-                    {
-                        Point0 = center - right - up,
-                        Point1 = center - right + up,
-                        Point2 = center + right + up,
-                        Point3 = center + right - up,
-                    };
-
-                    double radius = tree.Value.SurfaceDistanceFromCenter + tree.Value.FluidHeight;
-
-                    quad.Point0 = Vector3D.Transform(Vector3D.Normalize(quad.Point0) * radius, ref WorldMatrix);
-                    quad.Point1 = Vector3D.Transform(Vector3D.Normalize(quad.Point1) * radius, ref WorldMatrix);
-                    quad.Point2 = Vector3D.Transform(Vector3D.Normalize(quad.Point2) * radius, ref WorldMatrix);
-                    quad.Point3 = Vector3D.Transform(Vector3D.Normalize(quad.Point3) * radius, ref WorldMatrix);
-
-                    Vector4 color = WaterData.BlueColor;
-
-                    if(tree.Value.FluidHeight < 1)
-                    {
-                        color = WaterData.GreenColor;
-                    }
-
-                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref quad, color, ref Vector3D.Zero);
-
-                    MyQuadD side = quad;
-                    side.Point1 = WorldMatrix.Translation;
-                    side.Point2 = WorldMatrix.Translation;
-                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
-
-                    side = quad;
-                    side.Point2 = WorldMatrix.Translation;
-                    side.Point3 = WorldMatrix.Translation;
-                    MyTransparentGeometry.AddQuad(WaterData.DebugMaterial, ref side, color, ref Vector3D.Zero);
-                }
+                Volumetrics.Simulate();
             }
             else
             {
-                foreach (var child in tree.Children)
+                if (Volumetrics != null)
                 {
-                    SimulateDeepestNode(child, neighbors);
+                    Volumetrics = null;
                 }
             }
-        }*/
+        }
 
         /// <summary>
         /// Calculates the fluid depth at a position, negative values are below the surface
         /// </summary>
         public double GetDepthGlobal(ref Vector3D worldPosition)
         {
-            Vector3D localPosition = Vector3D.Transform(worldPosition, WorldMatrixInv);
+            Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
             return GetDepthLocal(ref localPosition);
         }
 
@@ -266,10 +152,23 @@ namespace Jakaria.Components
         /// </summary>
         public double GetDepthLocal(ref Vector3D localPosition)
         {
+            double fluidDepth;
             Vector3D up = Vector3D.Normalize(localPosition);
-            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up);
+            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, out fluidDepth);
 
-            return localPosition.Length() - surface.Length();
+            double depth = localPosition.Length() - surface.Length();
+
+            if(fluidDepth > DEPTH_EPSILON)
+            {
+                if (depth < -fluidDepth)
+                    return double.PositiveInfinity;
+                else
+                    return depth;
+            }
+            else
+            {
+                return double.PositiveInfinity;
+            }
         }
 
         /// <summary>
@@ -277,7 +176,7 @@ namespace Jakaria.Components
         /// </summary>
         public double GetDepthSquaredGlobal(ref Vector3D worldPosition)
         {
-            Vector3D localPosition = Vector3D.Transform(worldPosition, WorldMatrixInv);
+            Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
             return GetDepthSquaredLocal(ref localPosition);
         }
 
@@ -286,10 +185,24 @@ namespace Jakaria.Components
         /// </summary>
         public double GetDepthSquaredLocal(ref Vector3D localPosition)
         {
+            double fluidDepth;
             Vector3D up = Vector3D.Normalize(localPosition);
-            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up);
+            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, out fluidDepth);
 
-            return (localPosition.LengthSquared() - surface.LengthSquared());
+            double depth = localPosition.LengthSquared() - surface.LengthSquared();
+
+            if (fluidDepth > DEPTH_EPSILON)
+            {
+                
+                /*if (depth < -fluidDepth)
+                    return double.PositiveInfinity;
+                else*/
+                    return depth;
+            }
+            else
+            {
+                return double.PositiveInfinity;
+            }
         }
 
         /// <summary>
@@ -320,7 +233,7 @@ namespace Jakaria.Components
         /// </summary>
         public Vector3D GetClosestSurfacePointGlobal(ref Vector3D worldPosition, double altitudeOffset = 0)
         {
-            Vector3D localPosition = Vector3D.Transform(worldPosition, WorldMatrixInv);
+            Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
 
             return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, altitudeOffset), ref WorldMatrix);
         }
@@ -330,7 +243,7 @@ namespace Jakaria.Components
         /// </summary>
         public Vector3D GetClosestSurfacePointGlobal(Vector3D worldPosition, double altitudeOffset = 0)
         {
-            Vector3D localPosition = Vector3D.Transform(worldPosition, WorldMatrixInv);
+            Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
 
             return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, altitudeOffset), ref WorldMatrix);
         }
@@ -341,7 +254,9 @@ namespace Jakaria.Components
         public Vector3D GetClosestSurfacePointLocal(ref Vector3D localPosition, double altitudeOffset = 0)
         {
             Vector3D localNormal = Vector3D.Normalize(localPosition);
-            return GetClosestSurfacePointFromNormalLocal(ref localNormal, altitudeOffset);
+
+            double _;
+            return GetClosestSurfacePointFromNormalLocal(ref localNormal, out _, altitudeOffset);
         }
 
         /// <summary>
@@ -350,13 +265,27 @@ namespace Jakaria.Components
         /// <param name="localNormal"></param>
         /// <param name="altitudeOffset"></param>
         /// <returns></returns>
-        public Vector3D GetClosestSurfacePointFromNormalLocal(ref Vector3D localNormal, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointFromNormalLocal(ref Vector3D localNormal, out double fluidDepth, double altitudeOffset = 0)
         {
-            Vector3D localPosition = localNormal * Radius;
-            double waveHeight = 0;
+            double waveHeight;
+
+            if(Volumetrics == null)
+            {
+                waveHeight = Radius;
+                fluidDepth = Radius;
+            }
+            else
+            {
+                Volumetrics.GetFluid(localNormal, out fluidDepth, out waveHeight);
+
+                if (fluidDepth <= DEPTH_EPSILON)
+                    fluidDepth = 0;
+
+                waveHeight += fluidDepth;
+            }
 
             if (Settings.WaveHeight != 0)
-                waveHeight += FastNoiseLite.GetNoise((localPosition + WaveTimer) * Settings.WaveScale) * Settings.WaveHeight;
+                waveHeight += FastNoiseLite.GetNoise(((localNormal * Radius) + WaveTimer) * Settings.WaveScale) * Settings.WaveHeight;
 
             if (Settings.TideHeight != 0)
                 waveHeight += Vector3D.Dot(localNormal, TideDirection) * Settings.TideHeight;
@@ -364,13 +293,13 @@ namespace Jakaria.Components
             if(altitudeOffset != 0)
                 waveHeight += altitudeOffset;
 
-            return localPosition + (waveHeight * localNormal);
+            return waveHeight * localNormal;
         }
 
         public Vector3 GetFluidVelocityGlobal(Vector3D worldNormal)
         {
-            Vector3D localNormal = Vector3D.TransformNormal(worldNormal, WorldMatrixInv);
-            return Vector3D.TransformNormal(GetCurrentVelocityLocal(localNormal) + GetWaveVelocityLocal(localNormal), WorldMatrix);
+            Vector3D localNormal = Vector3D.TransformNormal(worldNormal, ref WorldMatrixInv);
+            return Vector3.TransformNormal(GetCurrentVelocityLocal(localNormal) + GetWaveVelocityLocal(localNormal), WorldMatrix);
         }
 
         public Vector3 GetWaveVelocityLocal(Vector3D localNormal)
@@ -381,7 +310,7 @@ namespace Jakaria.Components
             Vector3D localPosition = (localNormal * Radius);
             float h1 = (float)FastNoiseLite.GetNoise((localPosition + WaveTimer) * Settings.WaveScale) * Settings.WaveHeight;
             float h2 = (float)FastNoiseLite.GetNoise((localPosition + (WaveTimer - Settings.WaveSpeed)) * Settings.WaveScale) * Settings.WaveHeight;
-
+            //TODO, include volumetrics velocity by caching last frame's fluid height and current. Compare the difference to determine if it is flowing up or down
             return (Vector3)localNormal * ((h2 - h1) / (Settings.WaveSpeed / Settings.WaveScale));
         }
 
@@ -400,7 +329,7 @@ namespace Jakaria.Components
             if (Settings.CurrentSpeed == 0)
                 return Vector3.Zero;
 
-            return GetCurrentDirectionLocal(localNormal) * Settings.CurrentSpeed;
+            return (Vector3)GetCurrentDirectionLocal(localNormal) * Settings.CurrentSpeed;
         }
 
         public int IntersectsGlobal(Vector3D from, Vector3D to)
@@ -446,8 +375,8 @@ namespace Jakaria.Components
 
         public int IntersectsGlobal(ref LineD line)
         {
-            Vector3D localFrom = Vector3D.Transform(line.From, WorldMatrixInv);
-            Vector3D localTo = Vector3D.Transform(line.To, WorldMatrixInv);
+            Vector3D localFrom = Vector3D.Transform(line.From, ref WorldMatrixInv);
+            Vector3D localTo = Vector3D.Transform(line.To, ref WorldMatrixInv);
 
             if (IsUnderwaterLocal(ref localFrom))
             {
@@ -467,13 +396,13 @@ namespace Jakaria.Components
 
         public Vector3D GetUpDirectionGlobal(ref Vector3D worldPosition)
         {
-            Vector3D localPosition = Vector3D.Transform(worldPosition, WorldMatrixInv);
+            Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
             return GetUpDirectionLocal(ref localPosition);
         }
 
         public Vector3D GetUpDirectionLocal(ref Vector3D localPosition)
         {
-            return Vector3D.TransformNormal(Vector3D.Normalize(localPosition), WorldMatrix);
+            return Vector3D.TransformNormal(Vector3D.Normalize(localPosition), ref WorldMatrix);
         }
 
         public double GetPressureGlobal(ref Vector3D worldPosition)

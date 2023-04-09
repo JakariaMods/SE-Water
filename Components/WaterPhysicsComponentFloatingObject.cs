@@ -11,6 +11,7 @@ using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
 using Jakaria.SessionComponents;
+using Sandbox.Game.Entities.Blocks;
 
 namespace Jakaria.Components
 {
@@ -79,6 +80,12 @@ namespace Jakaria.Components
                     {
                         if (FloatingObject.Item.Content.SubtypeId == ClosestWater.Settings.Material.CollectedItem.SubtypeId)
                         {
+                            if(ClosestWater.Volumetrics != null)
+                            {
+                                //TODO
+                                ClosestWater.Volumetrics.AdjustFluid(Vector3D.Normalize(Entity.PositionComp.GetPosition() - ClosestWater.WorldMatrix.Translation), 5);
+                            }
+
                             Entity.Close();
                             return;
                         }
