@@ -151,7 +151,7 @@ namespace Jakaria.SessionComponents
 
         private void TryAddPhysicsComponentToEntity(MyEntity entity)
         {
-            if ((entity.Render != null && entity.Render.Transparency != 0) || entity.Components == null)
+            if (entity == null || (entity.Render != null && entity.Render.Transparency != 0) || entity.Components == null)
                 return;
             
             if (entity is IMyCubeGrid && !entity.Components.Has<WaterPhysicsComponentGrid>())

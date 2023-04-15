@@ -58,7 +58,6 @@
     <Compile Include="API\RemoteDragSettings.cs" />
     <Compile Include="API\WaterModAPI.cs" />
     <Compile Include="Components\EventWaterDepthComponent.cs" />
-    <Compile Include="Components\WaterPhysicsComponentGrid2.cs" />
     <Compile Include="Components\WaterComponent.cs" />
     <Compile Include="Components\WaterRenderComponent.cs" />
     <Compile Include="Components\ConsoleRenderComponent.cs" />

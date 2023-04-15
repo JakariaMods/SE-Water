@@ -13,7 +13,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.15";
+        public const string Version = "3.16";
         public const bool EarlyAccess = false;
 
         static WaterData()

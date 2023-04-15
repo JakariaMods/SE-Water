@@ -56,8 +56,7 @@ namespace Jakaria.Components
                         IMyInventory inventory = _collector.GetInventory();
                         if (inventory != null)
                         {
-                            //TODO
-                            /*if (_waterComponent.ClosestWater.Volumetrics == null)
+                            if (_waterComponent.ClosestWater.Volumetrics == null)
                             {
                                 if (_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
                                     inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
@@ -69,7 +68,7 @@ namespace Jakaria.Components
                                 float removed = _waterComponent.ClosestWater.Volumetrics.AdjustFluid(Vector3D.Normalize(worldPosition - _waterComponent.ClosestWater.WorldMatrix.Translation), -5);
 
                                 inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
-                            }*/
+                            }
                         }
                     }
                 }

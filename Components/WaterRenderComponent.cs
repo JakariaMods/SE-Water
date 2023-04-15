@@ -117,27 +117,16 @@ namespace Jakaria.Components
                 CameraAltitude = Vector3D.Distance(Water.Planet.GetClosestSurfacePointLocal(ref local), LocalCameraPosition);
             }
             
-            if (true || Vector3D.DistanceSquared(LocalCameraPosition, _lastLODBuildPositionLocal) >= 15)
+            if (Vector3D.DistanceSquared(LocalCameraPosition, _lastLODBuildPositionLocal) >= 15)
             {
-                Stopwatch watch = Stopwatch.StartNew();
                 UpdateLOD();
-                watch.Stop();
-                //MyAPIGateway.Utilities.ShowNotification($"Update Draw LOD: {watch.Elapsed.TotalMilliseconds}ms", 16);
-
                 _lastLODBuildPositionLocal = LocalCameraPosition;
             }
 
-            Stopwatch drawWatch = Stopwatch.StartNew();
-            /*MyAPIGateway.Parallel.ForEach(_renderFaces, (face) =>
+            MyAPIGateway.Parallel.ForEach(_renderFaces, (face) =>
             {
                 face.Draw();
-            });*/
-            foreach (var face in _renderFaces)
-            {
-                face.Draw();
-            }
-            drawWatch.Stop();
-            //MyAPIGateway.Utilities.ShowNotification($"Draw : {drawWatch.Elapsed.TotalMilliseconds}ms", 16);
+            });
         }
 
         public class RenderFace
