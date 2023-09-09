@@ -163,6 +163,8 @@ namespace Jakaria
             {
                 componentPair.Value.UnloadData();
             }
+
+            Instance = null;
         }
 
         public override void UpdateAfterSimulation() => UpdateAfterSimulationAction?.Invoke();

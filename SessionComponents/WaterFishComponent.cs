@@ -60,7 +60,7 @@ namespace Jakaria.SessionComponents
             _renderComponent.OnWaterChanged -= OnWaterChanged;
         }
 
-        private void OnWaterUpdated(WaterComponent water)
+        private void OnWaterUpdated(WaterComponent water, WaterSettings oldSettings)
         {
             if (_renderComponent.ClosestWater == water)
             {

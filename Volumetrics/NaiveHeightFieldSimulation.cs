@@ -18,7 +18,7 @@ namespace Jakaria.Volumetrics
     /// <summary>
     /// Simulation that uses flood-fill volumetrics to simulate the surface
     /// </summary>
-    public class FloodFillSimulation : IVolumetricSimulation
+    public class NaiveHeightFieldSimulation : IVolumetricSimulation
     {
         public WaterComponent Water;
         public WaterTree Tree;
@@ -35,7 +35,7 @@ namespace Jakaria.Volumetrics
         private Vector3D _centerPosition;
         private Vector3D _previousCenterPosition;
 
-        public FloodFillSimulation(WaterComponent water)
+        public NaiveHeightFieldSimulation(WaterComponent water)
         {
             Water = water;
             water.Planet.RootVoxel.RangeChanged += RootVoxel_RangeChanged;
@@ -74,7 +74,7 @@ namespace Jakaria.Volumetrics
             List<WaterTreeNode> neighbors = new List<WaterTreeNode>(4);
 
             Stopwatch lodWatch = Stopwatch.StartNew();
-
+            
             //LOD
             _centerPosition = Vector3D.Transform(MyAPIGateway.Session.Player.GetPosition(), ref Water.WorldMatrixInv);
             //_centerPosition = GetClosestSurfacePointLocal(ref _centerPosition);
@@ -117,48 +117,68 @@ namespace Jakaria.Volumetrics
             //Simulation
             Stopwatch simWatch = Stopwatch.StartNew();
 
-            for (int i = _simulatedNodes.Count - 1; i >= 0; i--)
+            if (MyAPIGateway.Input.IsMiddleMousePressed() || true)
             {
-                SimulateNode(_simulatedNodes[i]);
+                foreach (var cell in _simulatedNodes)
+                {
+                    double maxHeight = cell.SurfaceDistanceFromCenter + cell.FluidHeight;
+
+                    foreach (var neighbor in cell.Neighbors)
+                    {
+                        double diff = ((neighbor.SurfaceDistanceFromCenter + neighbor.FluidHeight) - maxHeight) * 0.1f / cell.Neighbors.Count;
+                        if ((diff < 0 && cell.FluidHeight > 0) || (diff > 0 && neighbor.FluidHeight > 0))
+                        {
+                            neighbor.NewVelocity -= diff;
+                            cell.NewVelocity += diff;
+
+                            /*double s = cell.FluidHeight + cell.NewVelocity;
+                            if (s < 0)
+                            {
+                                cell.NewVelocity -= s;
+                                neighbor.NewVelocity += s;
+                            }*/
+                        }
+                    }
+
+                    cell.NewVelocity *= 0.85f;
+                }
+
+                //Buffer update
+                MyAPIGateway.Parallel.For(0, _simulatedNodes.Count, (i) =>
+                {
+                    WaterTreeNode face = _simulatedNodes[i];
+
+                    face.FluidHeight = face.NewFluidHeight = Math.Max(face.FluidHeight + face.NewVelocity, 0);
+                    face.Velocity = face.NewVelocity;
+                }, 5000);
             }
-
-            //Buffer update
-            MyAPIGateway.Parallel.For(0, _simulatedNodes.Count, (i) =>
-            {
-                WaterTreeNode face = _simulatedNodes[i];
-                face.FluidHeight = face.NewFluidHeight;
-            }, 5000);
-            /*for (int i = _simulatedNodes.Count - 1; i >= 0; i--)
-            {
-                QuadTree face = _simulatedNodes[i];
-                face.FluidHeight = face.NewFluidHeight;
-            }*/
-
+                
             simWatch.Stop();
             //MyAPIGateway.Utilities.ShowNotification($"Simulation Time: {simWatch.Elapsed.TotalMilliseconds.ToString("0.000")}ms", 16);
 
             Vector3D cameraNormal = Vector3D.Normalize(Vector3D.Transform(MyAPIGateway.Session.Camera.Position, Water.WorldMatrixInv));
+            Vector3D playerNormal = Vector3D.Normalize(Vector3D.Transform(MyAPIGateway.Session.Player.GetPosition(), Water.WorldMatrixInv));
             WaterTreeNode cameraNode = Tree.GetNodeLocal(cameraNormal);
-
+            WaterTreeNode playerNode = Tree.GetNodeLocal(playerNormal);
             if (MyAPIGateway.Input.IsMiddleMousePressed())
             {
                 if (MyAPIGateway.Input.IsAnyShiftKeyPressed())
                 {
-                    cameraNode.NewFluidHeight += 10000;
+                    playerNode.FluidHeight += 5;
                 }
                 else if (MyAPIGateway.Input.IsAnyCtrlKeyPressed())
                 {
-                    cameraNode.NewFluidHeight = Math.Max(cameraNode.NewFluidHeight - 10000, 0);
+                    playerNode.FluidHeight -= 5;
                 }
             }
 
-            /*if (Session.Instance.Get<WaterSettingsComponent>().Settings.ShowDebug)
+            if (Session.Instance.Get<WaterSettingsComponent>().Settings.ShowDebug)
             {
                 foreach (var face in _simulatedNodes)
                 {
                     DebugDraw(face);
                 }
-            }*/
+            }
         }
 
         private void RootVoxel_RangeChanged(MyVoxelBase storage, Vector3I minVoxelChanged, Vector3I maxVoxelChanged, MyStorageDataTypeFlags changedData)

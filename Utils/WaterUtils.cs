@@ -22,7 +22,7 @@ namespace Jakaria.Utils
         private static List<MyEntity> _entities = new List<MyEntity>();
 
         /// <summary>
-        /// Returns a vector perpendicular to a vector, takes an angle
+        /// Returns a vector perpendicular to a vector, takes an angle in radians
         /// </summary>
         public static Vector3D GetPerpendicularVector(Vector3D vector, double angle)
         {

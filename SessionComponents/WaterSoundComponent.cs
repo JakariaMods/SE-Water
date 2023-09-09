@@ -54,15 +54,6 @@ namespace Jakaria.SessionComponents
                 return;
             }
 
-            if(_settingsComponent.Settings.ShowDebug)
-            {
-                MyAPIGateway.Utilities.ShowNotification("underwater " + _environmentUnderwaterSoundEmitter.IsPlaying, 16);
-                MyAPIGateway.Utilities.ShowNotification("ocean " + _environmentOceanSoundEmitter.IsPlaying, 16);
-                MyAPIGateway.Utilities.ShowNotification("beach " + _environmentBeachSoundEmitter.IsPlaying, 16);
-                MyAPIGateway.Utilities.ShowNotification("sound " + _ambientSoundEmitter.IsPlaying, 16);
-                MyAPIGateway.Utilities.ShowNotification("boat " + _ambientBoatSoundEmitter.IsPlaying, 16);
-            }
-
             if (_renderComponent.ClosestPlanet.HasAtmosphere)
             {
                 if (_renderComponent.CameraAirtight)
@@ -122,18 +113,6 @@ namespace Jakaria.SessionComponents
 
                     if (!_environmentBeachSoundEmitter.IsPlaying)
                         _environmentBeachSoundEmitter.PlaySound(WaterData.EnvironmentBeachSound, force2D: true);
-
-                    if (_renderComponent.ClosestWater.Settings.EnableSeagulls)
-                        foreach (var seagull in _effectsComponent.Seagulls)
-                        {
-                            if (seagull == null)
-                                continue;
-
-                            if (MyUtils.GetRandomInt(0, 300) < 1)
-                            {
-                                seagull.Caw();
-                            }
-                        }
 
                     if (_environmentUnderwaterSoundEmitter.IsPlaying)
                         _environmentUnderwaterSoundEmitter.StopSound(true, false);

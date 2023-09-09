@@ -133,6 +133,7 @@ namespace Jakaria.Components
             {
                 if (Volumetrics != null)
                 {
+                    Volumetrics.Dispose();
                     Volumetrics = null;
                 }
             }
@@ -279,8 +280,8 @@ namespace Jakaria.Components
                 Volumetrics.GetFluid(localNormal, out fluidDepth, out waveHeight);
 
                 if (fluidDepth <= DEPTH_EPSILON)
-                    fluidDepth = 0;
-
+                    fluidDepth = double.PositiveInfinity;
+                
                 waveHeight += fluidDepth;
             }
 

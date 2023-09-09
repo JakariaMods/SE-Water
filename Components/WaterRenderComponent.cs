@@ -56,10 +56,7 @@ namespace Jakaria.Components
 
             Water = Entity.Components.Get<WaterComponent>();
 
-            for (int i = 0; i < _renderFaces.Length; i++)
-            {
-                _renderFaces[i] = new RenderFace(this, Base6Directions.Directions[i]);
-            }
+            RebuildLOD();
         }
 
         public static void GetLeafs(RenderFace.RenderChunk chunk, List<RenderFace.RenderChunk> leafs)
@@ -92,13 +89,25 @@ namespace Jakaria.Components
         }
 
         /// <summary>
-        /// Updates the level of detail for the entire water surface
+        /// Updates the level of detail for the water surface
         /// </summary>
         public void UpdateLOD()
         {
             foreach (var face in _renderFaces)
             {
                 face.UpdateLOD();
+            }
+        }
+
+        /// <summary>
+        /// Completely rebuilds render surface from scratch
+        /// </summary>
+        public void RebuildLOD()
+        {
+            _lastLODBuildPositionLocal = Vector3D.MaxValue;
+            for (int i = 0; i < _renderFaces.Length; i++)
+            {
+                _renderFaces[i] = new RenderFace(this, Base6Directions.Directions[i]);
             }
         }
 
@@ -111,7 +120,7 @@ namespace Jakaria.Components
             CameraAltitude = Water.GetDepthLocal(ref LocalCameraPosition);
             DistanceToHorizon = CameraAltitude < 0 ? 250 : Math.Max(Math.Sqrt((Math.Pow(Math.Max(CameraAltitude, 25) + Water.Radius, 2)) - (Water.Radius * Water.Radius)), 500);
 
-            if (CameraAltitude == double.PositiveInfinity)
+            if (double.IsPositiveInfinity(CameraAltitude) || double.IsNegativeInfinity(CameraAltitude))
             {
                 Vector3 local = (Vector3)LocalCameraPosition;
                 CameraAltitude = Vector3D.Distance(Water.Planet.GetClosestSurfacePointLocal(ref local), LocalCameraPosition);

@@ -42,6 +42,16 @@ namespace Jakaria.Utils
 
         public static implicit operator MyStringId(SerializableStringId value) => value.Value;
 
+        public static bool operator ==(SerializableStringId a, SerializableStringId b)
+        {
+            return a.Value == b.Value;
+        }
+
+        public static bool operator !=(SerializableStringId a, SerializableStringId b)
+        {
+            return a.Value != b.Value;
+        }
+
         public override string ToString()
         {
             return String;

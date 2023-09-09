@@ -23,7 +23,6 @@ namespace Jakaria.SessionComponents
     public class WaterEffectsComponent : SessionComponentBase
     {
         public List<Splash> SurfaceSplashes = new List<Splash>(128);
-        public Seagull[] Seagulls = new Seagull[8];
         public List<AnimatedPointBillboard> Bubbles = new List<AnimatedPointBillboard>();
         public AnimatedPointBillboard[] AmbientBubbles = new AnimatedPointBillboard[128];
         public List<SimulatedSplash> SimulatedSplashes = new List<SimulatedSplash>();
@@ -59,15 +58,6 @@ namespace Jakaria.SessionComponents
 
                 SurfaceSplashes.Clear();
                 SimulatedSplashes.Clear();
-            }
-
-            if (water == null || !water.Settings.EnableSeagulls)
-            {
-                foreach (var seagull in Seagulls)
-                {
-                    if (seagull != null && seagull.InScene)
-                        MyTransparentGeometry.RemovePersistentBillboard(seagull.Billboard);
-                }
             }
         }
 
@@ -105,18 +95,18 @@ namespace Jakaria.SessionComponents
                             if (SimulatedSplashes != null && SimulatedSplashes.Count > 0)
                                 for (int i = SimulatedSplashes.Count - 1; i >= 0; i--)
                                 {
-                                    SimulatedSplash Splash = SimulatedSplashes[i];
-                                    if (Splash == null || Splash.MarkedForClose)
+                                    SimulatedSplash splash = SimulatedSplashes[i];
+                                    if (splash == null || splash.MarkedForClose)
                                     {
-                                        if (Splash != null && Splash.InScene)
-                                            MyTransparentGeometry.RemovePersistentBillboard(Splash.Billboard);
+                                        if (splash != null && splash.InScene)
+                                            MyTransparentGeometry.RemovePersistentBillboard(splash.Billboard);
 
                                         SimulatedSplashes.RemoveAtFast(i);
                                         continue;
                                     }
                                     else
                                     {
-                                        Splash.Simulate();
+                                        splash.Simulate();
                                     }
                                 }
                         }
@@ -186,7 +176,7 @@ namespace Jakaria.SessionComponents
                             }
                         }
 
-                        lock (Seagulls)
+                        /*lock (Seagulls)
                         {
                             if (_renderComponent.ClosestWater.Settings.EnableSeagulls)
                                 for (int i = 0; i < Seagulls.Length; i++)
@@ -214,7 +204,7 @@ namespace Jakaria.SessionComponents
                                     }
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
             }

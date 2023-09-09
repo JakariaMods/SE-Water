@@ -77,16 +77,26 @@ namespace Jakaria.Volumetrics
         /// The distance from the voxel surface to the water surface
         /// </summary>
         public double FluidHeight;
-        
+
+        /// <summary>
+        /// Buffered version of <see cref="FluidHeight"/>
+        /// </summary>
+        public double NewFluidHeight;
+
         /// <summary>
         /// If true, the node is in the SimulatedNodes collection
         /// </summary>
         public bool Simulated;
 
         /// <summary>
-        /// Buffered version of <see cref="FluidHeight"/>
+        /// The amount the height will change in the frame
         /// </summary>
-        public double NewFluidHeight;
+        public double Velocity;
+
+        /// <summary>
+        /// Buffered version of <see cref="Velocity"/>
+        /// </summary>
+        public double NewVelocity;
 
         /// <summary>
         /// The parent of this node, null when root
@@ -111,8 +121,7 @@ namespace Jakaria.Volumetrics
 
             Vector3 surface = Vector3.Normalize(Position) * Sphere.Water.Planet.AverageRadius;
             SurfaceDistanceFromCenter = Math.Max(Sphere.Water.Planet.GetClosestSurfacePointLocal(ref surface).Length() + SURFACE_OFFSET, Sphere.Water.Planet.MinimumRadius);
-            NewFluidHeight = Math.Max(Sphere.Water.Radius - SurfaceDistanceFromCenter, 0);
-            FluidHeight = NewFluidHeight;
+            FluidHeight = NewFluidHeight = Math.Max(Sphere.Water.Radius - SurfaceDistanceFromCenter, 0);
 
             if (Depth < MIN_DEPTH)
                 MinSplit(true);
@@ -137,7 +146,7 @@ namespace Jakaria.Volumetrics
 
             if (setupDefaultValue)
             {
-                NewFluidHeight = Math.Max(Sphere.Water.Radius - SurfaceDistanceFromCenter, 0);
+                FluidHeight = NewFluidHeight = Math.Max(Sphere.Water.Radius - SurfaceDistanceFromCenter, 0);
             }
 
             FluidHeight = NewFluidHeight;

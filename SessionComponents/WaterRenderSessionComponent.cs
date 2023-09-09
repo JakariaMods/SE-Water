@@ -79,12 +79,12 @@ namespace Jakaria.SessionComponents
             OnExitedWater += OnCameraExitedWater;
         }
 
-        private void OnWaterUpdated(WaterComponent water)
+        private void OnWaterUpdated(WaterComponent water, WaterSettings oldSettings)
         {
             WaterRenderComponent renderComponent;
             if (water.Entity.Components.TryGet<WaterRenderComponent>(out renderComponent))
             {
-                renderComponent.UpdateLOD();
+                renderComponent.RebuildLOD();
             }
         }
 
@@ -204,9 +204,11 @@ namespace Jakaria.SessionComponents
             else
             {
                 CameraDepth = ClosestWater.GetDepthGlobal(ref CameraPosition);
-                CameraUnderwater = CameraDepth <= 0;
+                CameraUnderwater = CameraDepth <= WaterComponent.DEPTH_EPSILON;
                 CameraClosestWaterPosition = ClosestWater.GetClosestSurfacePointGlobal(ref CameraPosition);
             }
+
+            //MyAPIGateway.Utilities.ShowNotification($"{CameraDepth} {double.IsInfinity(CameraDepth)}", 16);
 
             WhiteColor = new Vector4(_nightValue * (1f - (float)Math.Min(-Math.Min(CameraDepth + 200, 0) / 400, 1)));
             WhiteColor.W = 1;
@@ -352,20 +354,6 @@ namespace Jakaria.SessionComponents
 
         private void OnCameraEnteredWater()
         {
-            lock (_effectsComponent.Seagulls)
-            {
-                foreach (var bird in _effectsComponent.Seagulls)
-                {
-                    if (bird == null || bird.Billboard == null)
-                        continue;
-
-                    if (bird.InScene)
-                    {
-                        MyTransparentGeometry.RemovePersistentBillboard(bird.Billboard);
-                        bird.InScene = false;
-                    }
-                }
-            }
             lock (_effectsComponent.AmbientBubbles)
             {
                 foreach (var bubble in _effectsComponent.AmbientBubbles)
@@ -409,21 +397,6 @@ namespace Jakaria.SessionComponents
                     {
                         MyTransparentGeometry.AddBillboard(splash.Billboard, true);
                         splash.InScene = true;
-                    }
-                }
-            }
-
-            lock (_effectsComponent.Seagulls)
-            {
-                foreach (var bird in _effectsComponent.Seagulls)
-                {
-                    if (bird == null || bird.Billboard == null)
-                        continue;
-
-                    if (!bird.InScene)
-                    {
-                        MyTransparentGeometry.AddBillboard(bird.Billboard, true);
-                        bird.InScene = true;
                     }
                 }
             }

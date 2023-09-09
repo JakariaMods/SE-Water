@@ -319,6 +319,7 @@ namespace Jakaria.SessionComponents
                 Description = "Toggles water volumetrics (fluid flow).",
                 PromoteLevel = MyPromoteLevel.SpaceMaster,
                 RequireWater = true,
+                RequireDebug = true
             };*/
 
             MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
@@ -329,7 +330,7 @@ namespace Jakaria.SessionComponents
             MyAPIGateway.Utilities.MessageEntered -= Utilities_MessageEntered;
         }
 
-        private bool ValidateCommand(string messageText, out string[] args)
+        private static bool ValidateCommand(string messageText, out string[] args)
         {
             args = null;
 
@@ -394,6 +395,11 @@ namespace Jakaria.SessionComponents
             Command command;
             if (_commands.TryGetValue(args[0], out command))
             {
+                WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+
+                if (command.RequireDebug && (settingsComponent == null || !settingsComponent.Settings.ShowDebug))
+                    return;
+
                 sendToOthers = false;
 
                 if (command.Client)
@@ -477,11 +483,16 @@ namespace Jakaria.SessionComponents
 
         private void CommandCommandList(string[] args, CommandArgs commandArgs)
         {
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+
             string commands = "";
 
             foreach (var command in _commands)
             {
                 if (Session.CONSOLE_MODE && !command.Value.Console)
+                    continue;
+
+                if (command.Value.RequireDebug && (settingsComponent == null || !settingsComponent.Settings.ShowDebug))
                     continue;
 
                 commands += command.Key + ", ";
@@ -643,7 +654,7 @@ namespace Jakaria.SessionComponents
             WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
 
             settingsComponent.Settings.ShowFog = !settingsComponent.Settings.ShowFog;
-
+            settingsComponent.SaveData();
             WaterUtils.SendMessage(WaterTexts.ToggleFog, commandArgs.User);
         }
 
@@ -1251,6 +1262,11 @@ namespace Jakaria.SessionComponents
         /// </summary>
         public bool Client;
 
+        /// <summary>
+        /// The command will only be enabled when debug mode is enabled
+        /// </summary>
+        public bool RequireDebug;
+
         public Command(Action<string[], CommandArgs> action)
         {
             Action = action;
@@ -1263,6 +1279,7 @@ namespace Jakaria.SessionComponents
             RequireWater = false;
             Console = false;
             Client = false;
+            RequireDebug = false;
         }
     }
 }

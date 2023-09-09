@@ -62,12 +62,12 @@ namespace Jakaria
 
             if (_renderComponent.ClosestWater != null)
             {
-                if (_renderComponent.ClosestWater.IsUnderwaterGlobal(ref Position))
+                /*if (_renderComponent.ClosestWater.IsUnderwaterGlobal(ref Position))
                 {
                     MarkedForClose = true;
 
                     Session.Instance.Get<WaterEffectsComponent>().CreateSplash(Position, Radius * 2, true);
-                }
+                }*/
             }
             else
             {

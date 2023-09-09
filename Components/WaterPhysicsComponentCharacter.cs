@@ -12,6 +12,7 @@ using Jakaria.Configs;
 using Jakaria.SessionComponents;
 using Sandbox.Engine.Physics;
 using VRageRender;
+using System.Collections.Generic;
 
 namespace Jakaria.Components
 {
@@ -137,9 +138,35 @@ namespace Jakaria.Components
 
                     if (_nearestGrid?.Physics != null)
                     {
-                        if (_nearestGrid.RayCastBlocks(_characterHeadPosition, _characterHeadPosition + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10)) != null)
+                        Vector3D start = _characterHeadPosition;
+                        Vector3D end = start + (Vector3.Normalize(_nearestGrid.Physics.LinearVelocity) * 10);
+                        
+
+                        if (_nearestGrid.RayCastBlocks(start, end) != null)
                         {
-                            GridVelocity = (_nearestGrid?.Physics?.LinearVelocity ?? Vector3.Zero);
+                            GridVelocity = _nearestGrid.Physics.LinearVelocity;
+                        }
+                        else
+                        {
+                            List<IHitInfo> hits = new List<IHitInfo>();
+
+                            MyAPIGateway.Physics.CastRay(start, end, hits, 30); //CollisionLayer.CollisionWithoutCharacter
+
+                            if(hits.Count > 0)
+                            {
+                                foreach (var hit in hits)
+                                {
+                                    if(hit.HitEntity.Physics != null && hit.HitEntity is IMyCubeGrid)
+                                    {
+                                        GridVelocity = hit.HitEntity.Physics.LinearVelocity;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                GridVelocity = Vector3.Zero;
+                            }
                         }
                     }
                     

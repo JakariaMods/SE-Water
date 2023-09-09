@@ -23,7 +23,7 @@ namespace Jakaria.Components
         /// <summary>
         /// Simulates the phyics if true
         /// </summary>
-        public bool SimulatePhysics;
+        public bool SimulatePhysics = true;
 
         /// <summary>
         /// Hydrostatcic Pressure of the fluid the entity is at. The Unit is kPa (KiloPascals)
@@ -49,6 +49,11 @@ namespace Jakaria.Components
         /// Center of buoyancy position of the entity in World Space
         /// </summary>
         public Vector3D CenterOfBuoyancy;
+
+        /// <summary>
+        /// Center of buoyancy position of the entity in Local Space
+        /// </summary>
+        public Vector3 CenterOfBuoyancyLocal;
 
         /// <summary>
         /// Unit is N (Newtons) Force vector for drag
@@ -98,8 +103,6 @@ namespace Jakaria.Components
             Entity.OnPhysicsChanged += Entity_OnPhysicsChanged;
 
             _position = Entity.PositionComp.WorldVolume.Center;
-
-            UpdateGravity();
         }
 
         public override void OnBeforeRemovedFromContainer()
@@ -120,16 +123,7 @@ namespace Jakaria.Components
                     //(101325 / 1000) Converts atm to kPa. 1atm = 101.325kPa
                     FluidPressure += ClosestWater.Planet.GetOxygenForPosition(_position) * (101325 / 1000);
                 }
-
-                UpdateGravity();
             }
-        }
-
-        private void UpdateGravity()
-        {
-            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
-            _gravityDirection = _gravity;
-            _gravityStrength = _gravityDirection.Normalize();
         }
 
         public virtual void UpdateAfter1()
@@ -142,23 +136,29 @@ namespace Jakaria.Components
             UpdateClosestWater();
 
             if (ClosestWater == null)
-                return;
-
-            FluidDepth = ClosestWater.GetDepthGlobal(ref _position);
-            FluidVelocity = ClosestWater.GetFluidVelocityGlobal(-_gravityDirection);
-
-            if (SimulatePhysics)
             {
-                _velocity = Entity.Physics.LinearVelocity - FluidVelocity;
-
-                _velocityDirection = _velocity;
-                _speed = _velocityDirection.Normalize();
-
-                _verticalVelocity = Vector3.ProjectOnVector(ref _velocity, ref _gravityDirection);
-                _verticalSpeed = _verticalVelocity.Length();
-
-                _angularSpeed = Entity.Physics.AngularVelocity.Length();
+                FluidVelocity = Vector3.Zero;
+                FluidDepth = 0;
             }
+            else
+            {
+                FluidDepth = ClosestWater.GetDepthGlobal(ref _position);
+                FluidVelocity = ClosestWater.GetFluidVelocityGlobal(-_gravityDirection);
+            }
+
+            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
+            _gravityDirection = _gravity;
+            _gravityStrength = _gravityDirection.Normalize();
+
+            _velocity = Entity.Physics.LinearVelocity - FluidVelocity;
+
+            _velocityDirection = _velocity;
+            _speed = _velocityDirection.Normalize();
+
+            _verticalVelocity = Vector3.ProjectOnVector(ref _velocity, ref _gravityDirection);
+            _verticalSpeed = _verticalVelocity.Length();
+
+            _angularSpeed = Entity.Physics.AngularVelocity.Length();
         }
 
         /// <summary>
@@ -174,19 +174,20 @@ namespace Jakaria.Components
         /// </summary>
         private void Entity_OnPhysicsChanged(IMyEntity obj)
         {
-            if (obj.Physics == null)
+            /*if (obj.Physics == null)
             {
                 SimulatePhysics = false;
             }
             else
             {
-                if (SimulatePhysics == obj.Physics.IsStatic)
+                bool isDynamic = !obj.Physics.IsStatic;
+                if (SimulatePhysics != isDynamic)
                 {
-                    SimulatePhysics = !obj.Physics.IsStatic;
+                    SimulatePhysics = isDynamic;
 
                     OnSimulatePhysicsChanged(SimulatePhysics);
                 }
-            }
+            }*/
         }
 
         /// <summary>

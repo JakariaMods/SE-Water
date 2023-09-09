@@ -12,6 +12,7 @@ using Sandbox.ModAPI;
 using Sandbox.ModAPI.Interfaces;
 using Sandbox.ModAPI.Interfaces.Terminal;
 using SpaceEngineers.Game.ModAPI;
+using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
@@ -61,13 +62,13 @@ namespace Jakaria.Components
                                 if (_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
                                     inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                                 else
-                                    inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                                    inventory.AddItems((MyFixedPoint)(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                             }
                             else
                             {
                                 float removed = _waterComponent.ClosestWater.Volumetrics.AdjustFluid(Vector3D.Normalize(worldPosition - _waterComponent.ClosestWater.WorldMatrix.Translation), -5);
 
-                                inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                                inventory.AddItems((MyFixedPoint)(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                             }
                         }
                     }

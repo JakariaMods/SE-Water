@@ -64,7 +64,7 @@ namespace Jakaria.Components
 
             if (SimulatePhysics)
             {
-                if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || _gravityStrength == 0 && Entity.Physics.Mass == 0)
+                if (ClosestWater == null || !Entity.InScene || Entity.Physics == null || Entity.MarkedForClose || _gravityStrength == 0)
                     return;
 
                 if (!_airtight && FluidDepth < 0)
@@ -79,7 +79,7 @@ namespace Jakaria.Components
                         _dragOptimizer = 0.5f * ClosestWater.Settings.Material.Density * (float)(_maxRadius * _maxRadius) * MyEngineConstants.PHYSICS_STEP_SIZE_IN_SECONDS;
                     }
 
-                    if (_speed > 0.1f)
+                    if (_speed > 0.1f && Entity.Physics.Mass != 0)
                     {
                         Vector3 VelocityDamper = _gravityDirection * (Vector3.Dot(Vector3.Normalize(Entity.Physics.LinearVelocity), _gravityDirection) * _speed * ClosestWater.Settings.Material.Viscosity);
 
@@ -95,7 +95,7 @@ namespace Jakaria.Components
                     }
 
                     //Angular Drag
-                    if (_angularSpeed > 0.03f)
+                    if (_angularSpeed > 0.03f && Entity.Physics.Mass != 0)
                     {
                         Vector3 AngularDragForce = ((PercentUnderwater * _dragOptimizer * _angularSpeed) * Entity.Physics.AngularVelocity) / Entity.Physics.Mass;
 

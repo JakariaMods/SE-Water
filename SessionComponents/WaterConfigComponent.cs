@@ -33,6 +33,11 @@ namespace Jakaria.SessionComponents
             
             TextReader reader = null;
 
+            if (ModContext != null && !ModContext.ModPath.StartsWith(Path.GetFullPath(ModContext.ModPath)))
+            {
+                WaterUtils.WriteLog($"Invalid path setup found! Water definitions will not be able to load. There is a trailing \\ at the end of your -path launch parameter in the DS setup.");
+            }
+
             int configsLoaded = 0;
             foreach (var mod in MyAPIGateway.Session.Mods)
             {

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
+using static Jakaria.SessionComponents.BackwardsCompatibilityComponent;
 
 namespace Jakaria.SessionComponents
 {
@@ -24,7 +25,7 @@ namespace Jakaria.SessionComponents
         private WaterModComponent _modComponent;
         private WaterCommandComponent _commandComponent;
 
-        public event Action<WaterComponent> OnWaterUpdated;
+        public event Action<WaterComponent, WaterSettings> OnWaterUpdated;
 
         private int _timer;
 
@@ -136,10 +137,11 @@ namespace Jakaria.SessionComponents
                             {
                                 Assert.NotNull(waterComponent.Settings);
 
+                                WaterSettings oldSettings = waterComponent.Settings;
                                 waterComponent.Settings = settings;
                                 waterComponent.WaveTimer = timer;
 
-                                OnWaterUpdated?.Invoke(waterComponent);
+                                OnWaterUpdated?.Invoke(waterComponent, oldSettings);
                             }
                             else
                             {

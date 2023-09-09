@@ -109,7 +109,7 @@ namespace Jakaria.Components
                         }
                     }
 
-                    if (_speed > 0.1f)
+                    if (_speed > 0.1f && Entity.Physics.Mass != 0)
                     {
                         Vector3 VelocityDamper = _gravityDirection * (Vector3.Dot(Vector3.Normalize(Entity.Physics.LinearVelocity), _gravityDirection) * _speed * ClosestWater.Settings.Material.Viscosity);
 
@@ -125,7 +125,7 @@ namespace Jakaria.Components
                     }
 
                     //Angular Drag
-                    if (_angularSpeed > 0.03f)
+                    if (_angularSpeed > 0.03f && Entity.Physics.Mass != 0)
                     {
                         Vector3 AngularDragForce = ((PercentUnderwater * _dragOptimizer * _angularSpeed) * Entity.Physics.AngularVelocity) / Entity.Physics.Mass;
 

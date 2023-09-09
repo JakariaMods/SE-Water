@@ -177,7 +177,7 @@ namespace Jakaria
             WaveScale = 3f,
             EnableFish = true,
             EnableSeagulls = true,
-            Texture = SerializableStringId.Create(MyStringId.GetOrCompute("JWater")),
+            Texture = SerializableStringId.Create(MyStringId.GetOrCompute("JWaterOld")),
             Transparent = true,
             Lit = true,
             FogColor = new Vector3(0.05f, 0.18f, 0.25f),
