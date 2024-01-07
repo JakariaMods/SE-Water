@@ -449,7 +449,7 @@ namespace Jakaria.Components
                             {
                                 Vector3D noisePosition = (quad.Point0 + _renderComponent.Water.WaveTimer) * _renderComponent.Water.Settings.WaveScale;
 
-                                float intensity = (float)Math.Max(FastNoiseLite.GetNoise(noisePosition.X, noisePosition.Y, noisePosition.Z) / 0.25f, 0);
+                                float intensity = (float)Math.Max(FastNoiseLite.GetNoise(noisePosition.X, noisePosition.Y, noisePosition.Z) / 0.25, 0);
 
                                 if (_radius < 256 * _renderComponent._settingsComponent.Settings.Quality)
                                 {

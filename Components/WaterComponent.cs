@@ -4,6 +4,7 @@ using Jakaria.Utils;
 using Jakaria.Volumetrics;
 using ProtoBuf;
 using Sandbox.Game.Entities;
+using Sandbox.Game.GameSystems;
 using Sandbox.Game.World.Generator;
 using Sandbox.ModAPI;
 using System;
@@ -53,6 +54,8 @@ namespace Jakaria.Components
 
         public const float DEPTH_EPSILON = 0.001f;
 
+        private WaterOxygenProvider _oxygenProvider;
+
         public override string ComponentTypeDebugString => nameof(WaterComponent);
 
         public WaterComponent(MyPlanet planet, WaterSettings settings = null)
@@ -79,6 +82,8 @@ namespace Jakaria.Components
             }
             
             Radius = Planet.MinimumRadius * Settings.Radius;
+
+            _oxygenProvider = new WaterOxygenProvider(this);
         }
 
         public WaterComponentObjectBuilder Serialize()
@@ -100,6 +105,9 @@ namespace Jakaria.Components
             WorldMatrixInv = Entity.WorldMatrixInvScaled;
 
             InScene = true;
+
+            //MyAPIGateway.GravityProviderSystem
+            MyAPIGateway.Session.OxygenProviderSystem.AddOxygenGenerator(_oxygenProvider);
         }
 
         public override void OnBeforeRemovedFromContainer()
@@ -108,6 +116,8 @@ namespace Jakaria.Components
 
             Volumetrics?.Dispose();
             Volumetrics = null;
+            
+            MyAPIGateway.Session.OxygenProviderSystem.RemoveOxygenGenerator(_oxygenProvider);
         }
 
         public void Simulate()
@@ -124,7 +134,7 @@ namespace Jakaria.Components
             {
                 if (Volumetrics == null)
                 {
-                    Volumetrics = new FloodFillSimulation(this);
+                    Volumetrics = new VolumetricSimulation(this);
                 }
 
                 Volumetrics.Simulate();

@@ -126,10 +126,11 @@
     <Compile Include="Utils\FastNoiseLite.cs" />
     <Compile Include="API\HudAPIv2.cs" />
     <Compile Include="Utils\LODPair.cs" />
-    <Compile Include="Volumetrics\HeightFieldSimulation.cs" />
     <Compile Include="Volumetrics\NaiveHeightFieldSimulation.cs" />
     <Compile Include="Volumetrics\FloodFillSimulation.cs" />
     <Compile Include="Volumetrics\IVolumetricSimulation.cs" />
+    <Compile Include="Volumetrics\VolumetricSimulation.cs" />
+    <Compile Include="WaterOxygenProvider.cs" />
     <Compile Include="WaterTexts.cs" />
     <Compile Include="Effects\Splash.cs" />
     <Compile Include="TSSScripts\TSSPressure.cs" />

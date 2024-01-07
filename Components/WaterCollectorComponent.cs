@@ -49,7 +49,7 @@ namespace Jakaria.Components
                 if (_waterComponent.Grid.IsPreview || !_collector.HasInventory || _waterComponent.ClosestWater == null || !_collector.IsWorking)
                     return;
 
-                if (_waterComponent.ClosestWater.Settings.Material.CollectedItem != null)
+                if (_waterComponent.ClosestWater.Settings.Material.CollectedItem != null && _waterComponent.ClosestWater.Settings.CollectionRate != 0)
                 {
                     Vector3D worldPosition = _collector.PositionComp.GetPosition();
                     if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition))
@@ -57,18 +57,20 @@ namespace Jakaria.Components
                         IMyInventory inventory = _collector.GetInventory();
                         if (inventory != null)
                         {
+                            float amount = _waterComponent.ClosestWater.Settings.Material.CollectedAmount * _waterComponent.ClosestWater.Settings.CollectionRate;
+                            
                             if (_waterComponent.ClosestWater.Volumetrics == null)
                             {
                                 if (_collector.CubeGrid.GridSizeEnum == MyCubeSize.Large)
-                                    inventory.AddItems(_waterComponent.ClosestWater.Settings.Material.CollectedAmount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                                    inventory.AddItems((MyFixedPoint)amount, _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                                 else
-                                    inventory.AddItems((MyFixedPoint)(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                                    inventory.AddItems((MyFixedPoint)(amount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                             }
                             else
                             {
                                 float removed = _waterComponent.ClosestWater.Volumetrics.AdjustFluid(Vector3D.Normalize(worldPosition - _waterComponent.ClosestWater.WorldMatrix.Translation), -5);
 
-                                inventory.AddItems((MyFixedPoint)(_waterComponent.ClosestWater.Settings.Material.CollectedAmount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
+                                inventory.AddItems((MyFixedPoint)(amount / 5f), _waterComponent.ClosestWater.Settings.Material.CollectedItem);
                             }
                         }
                     }

@@ -13,7 +13,7 @@ namespace Jakaria.Volumetrics
     public interface IVolumetricSimulation : IDisposable
     {
         /// <summary>
-        /// Adds/Removes volume of fluid at a point of the surface (via normal) in m^3. Returns the actual amount added/removed
+        /// Adds/Removes volume of fluid at a point of the surface (via normal) in m^3. Returns the actual volume added/removed
         /// Use sign to determine if it is added or removed
         /// </summary>
         float AdjustFluid(Vector3 normal, float targetAmount);

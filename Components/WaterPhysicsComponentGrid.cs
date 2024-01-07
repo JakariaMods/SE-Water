@@ -391,7 +391,8 @@ namespace Jakaria.Components
         {
             base.UpdateAfter60();
 
-            Grid.ForceDisablePrediction = ClosestWater != null && PercentUnderwater > 0;
+            if(Session.Instance.IsClient)
+                Grid.ForceDisablePrediction = ClosestWater != null && PercentUnderwater > 0;
 
             //Recalculate Pressure, Density
             if (ClosestWater != null && Entity.Physics != null)
