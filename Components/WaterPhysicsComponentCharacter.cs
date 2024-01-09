@@ -48,6 +48,11 @@ namespace Jakaria.Components
         /// </summary>
         public override void OnBeforeRemovedFromContainer()
         {
+            if(ClosestWater != null)
+            {
+                ClosestWater.OxygenProvider.Characters.Remove(Character);
+            }
+
             base.OnBeforeRemovedFromContainer();
         }
 
@@ -60,7 +65,7 @@ namespace Jakaria.Components
 
             _maxRadius = Character.PositionComp.LocalVolume.Radius;
             _nearestGrid = WaterUtils.GetApproximateGrid(_position);
-
+            MyAPIGateway.Utilities.ShowNotification(MyAPIGateway.Session.OxygenProviderSystem.GetOxygenInPoint(Character.PositionComp.GetPosition()).ToString(), 1000);
             if (PlayerConfig != null && ClosestWater != null)
             {
                 _headUnderwater = ClosestWater.IsUnderwaterGlobal(ref _characterHeadPosition);
@@ -113,7 +118,23 @@ namespace Jakaria.Components
         /// </summary>
         public override void UpdateAfter1()
         {
+            WaterComponent tempWater = ClosestWater;
+
             base.UpdateAfter1();
+
+            if(tempWater != ClosestWater)
+            {
+                if(tempWater == null)
+                {
+                    //The closestwater is no longer null
+                    ClosestWater.OxygenProvider.Characters.Add(Character);
+                }
+                else
+                {
+                    //The closestwater is now null
+                    ClosestWater.OxygenProvider.Characters.Remove(Character);
+                }
+            }
 
             if (Entity.Physics == null || ClosestWater == null || ClosestWater.Settings.Material == null)
                 return;

@@ -371,11 +371,11 @@ namespace Jakaria.Components
                 List<IMyOxygenRoom> Rooms = new List<IMyOxygenRoom>();
                 if (IGrid.GasSystem.GetRooms(Rooms))
                 {
-                    foreach (var Room in Rooms)
+                    foreach (var room in Rooms)
                     {
-                        if (Room.IsAirtight && Room.BlockCount > 0)
+                        if (room.IsAirtight && room.BlockCount > 0)
                         {
-                            _airtightBlocks.AddRange(Room.Blocks);
+                            _airtightBlocks.AddRange(room.Blocks);
                         }
                     }
                 }

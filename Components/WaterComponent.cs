@@ -54,7 +54,7 @@ namespace Jakaria.Components
 
         public const float DEPTH_EPSILON = 0.001f;
 
-        private WaterOxygenProvider _oxygenProvider;
+        public WaterOxygenProvider OxygenProvider;
 
         public override string ComponentTypeDebugString => nameof(WaterComponent);
 
@@ -83,7 +83,7 @@ namespace Jakaria.Components
             
             Radius = Planet.MinimumRadius * Settings.Radius;
 
-            _oxygenProvider = new WaterOxygenProvider(this);
+            OxygenProvider = new WaterOxygenProvider(this);
         }
 
         public WaterComponentObjectBuilder Serialize()
@@ -107,7 +107,7 @@ namespace Jakaria.Components
             InScene = true;
 
             //MyAPIGateway.GravityProviderSystem
-            MyAPIGateway.Session.OxygenProviderSystem.AddOxygenGenerator(_oxygenProvider);
+            MyAPIGateway.Session.OxygenProviderSystem.AddOxygenGenerator(OxygenProvider);
         }
 
         public override void OnBeforeRemovedFromContainer()
@@ -117,7 +117,7 @@ namespace Jakaria.Components
             Volumetrics?.Dispose();
             Volumetrics = null;
             
-            MyAPIGateway.Session.OxygenProviderSystem.RemoveOxygenGenerator(_oxygenProvider);
+            MyAPIGateway.Session.OxygenProviderSystem.RemoveOxygenGenerator(OxygenProvider);
         }
 
         public void Simulate()
