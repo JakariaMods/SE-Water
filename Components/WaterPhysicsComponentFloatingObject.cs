@@ -145,7 +145,7 @@ namespace Jakaria.Components
                         {
                             _underwater = underwater;
 
-                            Vector3D surfacePosition = ClosestWater.GetClosestSurfacePointGlobal(ref _position);
+                            Vector3D surfacePosition = ClosestWater.GetClosestSurfacePointGlobal(ref _position, ref WaveModifier.Default);
                             _effectsComponent.CreateSplash(surfacePosition, Math.Min(_speed, 2f), true);
 
                             MatrixD matrix = MatrixD.CreateWorld(_position, -_renderComponent.CameraGravityDirection, _renderComponent.GravityAxisA);

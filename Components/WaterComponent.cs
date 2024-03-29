@@ -152,20 +152,20 @@ namespace Jakaria.Components
         /// <summary>
         /// Calculates the fluid depth at a position, negative values are below the surface
         /// </summary>
-        public double GetDepthGlobal(ref Vector3D worldPosition)
+        public double GetDepthGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier)
         {
             Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
-            return GetDepthLocal(ref localPosition);
+            return GetDepthLocal(ref localPosition, ref waveModifier);
         }
 
         /// <summary>
         /// Calculates the fluid depth at a position in local space, negative values are below the surface
         /// </summary>
-        public double GetDepthLocal(ref Vector3D localPosition)
+        public double GetDepthLocal(ref Vector3D localPosition, ref WaveModifier waveModifier)
         {
             double fluidDepth;
             Vector3D up = Vector3D.Normalize(localPosition);
-            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, out fluidDepth);
+            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, ref waveModifier, out fluidDepth);
 
             double depth = localPosition.Length() - surface.Length();
 
@@ -185,20 +185,20 @@ namespace Jakaria.Components
         /// <summary>
         /// Calculates the fluid depth at a position without square roots, negative values are below the surface
         /// </summary>
-        public double GetDepthSquaredGlobal(ref Vector3D worldPosition)
+        public double GetDepthSquaredGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier)
         {
             Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
-            return GetDepthSquaredLocal(ref localPosition);
+            return GetDepthSquaredLocal(ref localPosition, ref waveModifier);
         }
 
         /// <summary>
         /// Calculates the fluid depth at a position in local space without square roots, negative values are below the surface
         /// </summary>
-        public double GetDepthSquaredLocal(ref Vector3D localPosition)
+        public double GetDepthSquaredLocal(ref Vector3D localPosition, ref WaveModifier waveModifier)
         {
             double fluidDepth;
             Vector3D up = Vector3D.Normalize(localPosition);
-            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, out fluidDepth);
+            Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, ref waveModifier, out fluidDepth);
 
             double depth = localPosition.LengthSquared() - surface.LengthSquared();
 
@@ -219,55 +219,49 @@ namespace Jakaria.Components
         /// <summary>
         /// Checks if a position is below the surface
         /// </summary>
-        public bool IsUnderwaterGlobal(ref Vector3D worldPosition, double altitudeOffset = 0)
+        public bool IsUnderwaterGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier)
         {
-            if (altitudeOffset > 0)
-                return GetDepthSquaredGlobal(ref worldPosition) < -(altitudeOffset * altitudeOffset);
-
-            return GetDepthSquaredGlobal(ref worldPosition) < (altitudeOffset * altitudeOffset);
+            return GetDepthSquaredGlobal(ref worldPosition, ref waveModifier) < 0;
         }
 
         /// <summary>
         /// Checks if a position in local space is below the surface
         /// </summary>
         /// <returns></returns>
-        public bool IsUnderwaterLocal(ref Vector3D localPosition, double altitudeOffset = 0)
+        public bool IsUnderwaterLocal(ref Vector3D localPosition, ref WaveModifier waveModifier)
         {
-            if(altitudeOffset > 0)
-                return GetDepthSquaredLocal(ref localPosition) < (altitudeOffset * altitudeOffset);
-
-            return GetDepthSquaredLocal(ref localPosition) < -(altitudeOffset * altitudeOffset);
+            return GetDepthSquaredLocal(ref localPosition, ref waveModifier) < 0;
         }
 
         /// <summary>
         /// Gets the surface position closest to the given position
         /// </summary>
-        public Vector3D GetClosestSurfacePointGlobal(ref Vector3D worldPosition, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier, double altitudeOffset = 0)
         {
             Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
 
-            return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, altitudeOffset), ref WorldMatrix);
+            return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, ref waveModifier, altitudeOffset), ref WorldMatrix);
         }
 
         /// <summary>
         /// Gets the surface position closest to the given position
         /// </summary>
-        public Vector3D GetClosestSurfacePointGlobal(Vector3D worldPosition, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointGlobal(Vector3D worldPosition, ref WaveModifier waveModifier, double altitudeOffset = 0)
         {
             Vector3D localPosition = Vector3D.Transform(worldPosition, ref WorldMatrixInv);
 
-            return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, altitudeOffset), ref WorldMatrix);
+            return Vector3D.Transform(GetClosestSurfacePointLocal(ref localPosition, ref waveModifier, altitudeOffset), ref WorldMatrix);
         }
 
         /// <summary>
         /// Gets the surface position closest to the given position in local space
         /// </summary>
-        public Vector3D GetClosestSurfacePointLocal(ref Vector3D localPosition, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointLocal(ref Vector3D localPosition, ref WaveModifier waveModifier, double altitudeOffset = 0)
         {
             Vector3D localNormal = Vector3D.Normalize(localPosition);
 
             double _;
-            return GetClosestSurfacePointFromNormalLocal(ref localNormal, out _, altitudeOffset);
+            return GetClosestSurfacePointFromNormalLocal(ref localNormal, ref waveModifier, out _, altitudeOffset);
         }
 
         /// <summary>
@@ -276,7 +270,7 @@ namespace Jakaria.Components
         /// <param name="localNormal"></param>
         /// <param name="altitudeOffset"></param>
         /// <returns></returns>
-        public Vector3D GetClosestSurfacePointFromNormalLocal(ref Vector3D localNormal, out double fluidDepth, double altitudeOffset = 0)
+        public Vector3D GetClosestSurfacePointFromNormalLocal(ref Vector3D localNormal, ref WaveModifier waveModifier, out double fluidDepth, double altitudeOffset = 0)
         {
             double waveHeight;
 
@@ -296,12 +290,16 @@ namespace Jakaria.Components
             }
 
             if (Settings.WaveHeight != 0)
-                waveHeight += FastNoiseLite.GetNoise(((localNormal * Radius) + WaveTimer) * Settings.WaveScale) * Settings.WaveHeight;
+            {
+                double wave = FastNoiseLite.GetNoise(((localNormal * Radius) + (WaveTimer)) * (Settings.WaveScale)) * (Settings.WaveHeight * waveModifier.HeightMultiplier);
+
+                waveHeight += wave;
+            }
 
             if (Settings.TideHeight != 0)
                 waveHeight += Vector3D.Dot(localNormal, TideDirection) * Settings.TideHeight;
 
-            if(altitudeOffset != 0)
+            if (altitudeOffset != 0)
                 waveHeight += altitudeOffset;
 
             return waveHeight * localNormal;
@@ -343,62 +341,62 @@ namespace Jakaria.Components
             return (Vector3)GetCurrentDirectionLocal(localNormal) * Settings.CurrentSpeed;
         }
 
-        public int IntersectsGlobal(Vector3D from, Vector3D to)
+        public int IntersectsGlobal(Vector3D from, Vector3D to, ref WaveModifier waveModifier)
         {
-            if (IsUnderwaterGlobal(ref from))
+            if (IsUnderwaterGlobal(ref from, ref waveModifier))
             {
-                if (IsUnderwaterGlobal(ref to))
+                if (IsUnderwaterGlobal(ref to, ref waveModifier))
                     return 3; //Underwater
                 else
                     return 1; //ExitsWater
             }
             else
             {
-                if (IsUnderwaterGlobal(ref to))
+                if (IsUnderwaterGlobal(ref to, ref waveModifier))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
             }
         }
 
-        public int IntersectsGlobal(ref BoundingSphereD Sphere)
+        public int IntersectsGlobal(ref BoundingSphereD Sphere, ref WaveModifier waveModifier)
         {
             Vector3D up = GetUpDirectionGlobal(ref Sphere.Center) * Sphere.Radius;
 
             Vector3D centerUp = Sphere.Center + up;
             Vector3D centerDown = Sphere.Center - up;
 
-            if (IsUnderwaterGlobal(ref centerUp))
+            if (IsUnderwaterGlobal(ref centerUp, ref waveModifier))
             {
-                if (IsUnderwaterGlobal(ref centerDown))
+                if (IsUnderwaterGlobal(ref centerDown, ref waveModifier))
                     return 3; //Underwater
                 else
                     return 1;//ExitsWater
             }
             else
             {
-                if (IsUnderwaterGlobal(ref centerDown))
+                if (IsUnderwaterGlobal(ref centerDown, ref waveModifier))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
             }
         }
 
-        public int IntersectsGlobal(ref LineD line)
+        public int IntersectsGlobal(ref LineD line, ref WaveModifier waveModifier)
         {
             Vector3D localFrom = Vector3D.Transform(line.From, ref WorldMatrixInv);
             Vector3D localTo = Vector3D.Transform(line.To, ref WorldMatrixInv);
 
-            if (IsUnderwaterLocal(ref localFrom))
+            if (IsUnderwaterLocal(ref localFrom, ref waveModifier))
             {
-                if (IsUnderwaterLocal(ref localTo))
+                if (IsUnderwaterLocal(ref localTo, ref waveModifier))
                     return 3; //Underwater
                 else
                     return 1; //ExitsWater
             }
             else
             {
-                if (IsUnderwaterLocal(ref localTo))
+                if (IsUnderwaterLocal(ref localTo, ref waveModifier))
                     return 2; //EntersWater
                 else
                     return 0; //Overwater
@@ -416,9 +414,9 @@ namespace Jakaria.Components
             return Vector3D.TransformNormal(Vector3D.Normalize(localPosition), ref WorldMatrix);
         }
 
-        public double GetPressureGlobal(ref Vector3D worldPosition)
+        public double GetPressureGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier)
         {
-            return Math.Max((-GetDepthGlobal(ref worldPosition) * Planet.Generator.SurfaceGravity * Settings.Material.Density) / 1000, 0);
+            return Math.Max((-GetDepthGlobal(ref worldPosition, ref waveModifier) * Planet.Generator.SurfaceGravity * Settings.Material.Density) / 1000, 0);
         }
     }
 

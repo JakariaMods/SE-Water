@@ -314,6 +314,23 @@ namespace Jakaria.Utils
             return WaterData.Version + (WaterData.EarlyAccess ? "EA" : "");
         }
 
+        public static WaveModifier GetWaveModifier(Vector3D position)
+        {
+            MyObjectBuilder_WeatherEffect weather;
+            WeatherConfig config;
+            if (MyAPIGateway.Session.WeatherEffects.GetWeather(position, out weather) && WaterData.WeatherConfigs.TryGetValue(weather.Weather, out config))
+            {
+                float intensity = MyAPIGateway.Session.WeatherEffects.GetWeatherIntensity(position);
+                return new WaveModifier()
+                {
+                    ScaleMultiplier = MathHelper.Lerp(1, config.WaveScaleMultiplier, intensity),
+                    HeightMultiplier = MathHelper.Lerp(1, config.WaveHeightMultiplier, intensity)
+                };
+            }
+
+            return WaveModifier.Default;
+        }
+
         /*/// <summary>
         /// Calculates maximum height of waves for the given context. https://planetcalc.com/4442/ Atmosphere density is merely an approximiation
         /// </summary>

@@ -82,6 +82,7 @@
     <Compile Include="Components\WaterRenderComponent.cs" />
     <Compile Include="Components\ConsoleRenderComponent.cs" />
     <Compile Include="Configs\FishConfig.cs" />
+    <Compile Include="Configs\WeatherConfig.cs" />
     <Compile Include="Effects\Wake.cs" />
     <Compile Include="SessionComponents\BackwardsCompatibilityComponent.cs" />
     <Compile Include="SessionComponents\WaterAPIComponent.cs" />
@@ -146,6 +147,7 @@
     <Compile Include="WaterSettings.cs" />
     <Compile Include="Utils\WaterUtils.cs" />
     <Compile Include="SessionComponents\WaterUIComponent.cs" />
+    <Compile Include="WaveModifier.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="HavokWrapper">

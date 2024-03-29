@@ -233,7 +233,7 @@ namespace Jakaria.Components
                     _recalculateFrequency = WaterUtils.CalculateUpdateFrequency(Grid);
 
                     Vector3D blockPosition = Grid.GridIntegerToWorld(block.Position);
-                    data.CurrentlyUnderwater = ClosestWater?.IsUnderwaterGlobal(ref blockPosition) ?? false;
+                    data.CurrentlyUnderwater = ClosestWater?.IsUnderwaterGlobal(ref blockPosition, ref WaveModifier) ?? false;
 
                     if (block.FatBlock != null)
                     {
@@ -463,7 +463,7 @@ namespace Jakaria.Components
                             MyAPIGateway.Parallel.ForEach(_blockVolumes, BlockVolume =>
                             {
                                 Vector3D blockWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Block.Position);
-                                double blockDepth = ClosestWater.GetDepthGlobal(ref blockWorldPosition);
+                                double blockDepth = ClosestWater.GetDepthGlobal(ref blockWorldPosition, ref WaveModifier);
                                 bool blockUnderwater = blockDepth < 0;
                                 //MyAPIGateway.Utilities.ShowNotification($"{blockDepth}",16);
                                 if (blockUnderwater)
@@ -498,10 +498,10 @@ namespace Jakaria.Components
                                                 float radius = Grid.GridSize * (_recalculateFrequency + 1);
                                                 MyQuadD quad = new MyQuadD()
                                                 {
-                                                    Point0 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
-                                                    Point1 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
-                                                    Point2 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius)),
-                                                    Point3 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius)),
+                                                    Point0 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius), ref WaveModifier),
+                                                    Point1 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius), ref WaveModifier),
+                                                    Point2 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA + _renderComponent.GravityAxisB) * radius), ref WaveModifier),
+                                                    Point3 = ClosestWater.GetClosestSurfacePointGlobal(blockWorldPosition + ((-_renderComponent.GravityAxisA - _renderComponent.GravityAxisB) * radius), ref WaveModifier),
                                                 };
 
                                                 lock (_wakes)
@@ -703,7 +703,7 @@ namespace Jakaria.Components
                                 MyAPIGateway.Parallel.ForEach(_airtightBlocks, AirtightBlock =>
                                 {
                                     Vector3D PointWorldPosition = Grid.GridIntegerToWorld(AirtightBlock);
-                                    double PointDepth = ClosestWater.GetDepthSquaredGlobal(ref PointWorldPosition);
+                                    double PointDepth = ClosestWater.GetDepthSquaredGlobal(ref PointWorldPosition, ref WaveModifier);
 
                                     if (PointDepth < sqrGridSizeHalf)
                                     {

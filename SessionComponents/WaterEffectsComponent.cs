@@ -248,7 +248,7 @@ namespace Jakaria.SessionComponents
                 float explosionRadius = (float)explosionInfo.ExplosionSphere.Radius;
                 Vector3D explosionPosition = explosionInfo.ExplosionSphere.Center;
 
-                float explosionDepth = (float)_renderComponent.ClosestWater.GetDepthGlobal(ref explosionPosition);
+                float explosionDepth = (float)_renderComponent.ClosestWater.GetDepthGlobal(ref explosionPosition, ref WaveModifier.Default);
 
                 if (explosionDepth - explosionRadius <= 0)
                 {
@@ -287,7 +287,7 @@ namespace Jakaria.SessionComponents
                     }
                     else
                     {
-                        Vector3D surfacePosition = _renderComponent.ClosestWater.GetClosestSurfacePointGlobal(ref explosionPosition);
+                        Vector3D surfacePosition = _renderComponent.ClosestWater.GetClosestSurfacePointGlobal(ref explosionPosition, ref WaveModifier.Default);
                         Assert.False(surfacePosition == explosionPosition);
                         explosionInfo.ExplosionType = MyExplosionTypeEnum.CUSTOM;
                         MatrixD matrix = MatrixD.CreateWorld(surfacePosition, _renderComponent.GravityAxisA, _renderComponent.CameraGravityDirection);

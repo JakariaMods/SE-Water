@@ -42,7 +42,7 @@ namespace Jakaria.SessionComponents
         public override void UpdateAfterSimulation()
         {
             _timer++;
-            
+
             if (_timer % MyEngineConstants.UPDATE_STEPS_PER_SECOND == 0)
             {
                 UpdateActionSparse?.Invoke();

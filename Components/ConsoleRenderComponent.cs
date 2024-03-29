@@ -101,15 +101,15 @@ namespace Jakaria.Components
                     Quaternion orientation;
                     Vector3D surfacePosition;
 
-                    if (water.IsUnderwaterGlobal(ref playerPosition))
+                    if (water.IsUnderwaterGlobal(ref playerPosition, ref WaveModifier.Default))
                     {
                         orientation = Quaternion.CreateFromForwardUp(Vector3.CalculatePerpendicularVector(up), -up);
-                        surfacePosition = water.GetClosestSurfacePointGlobal(ref playerPosition, RENDER_ALTITUDE_OFFSET);
+                        surfacePosition = water.GetClosestSurfacePointGlobal(ref playerPosition, ref WaveModifier.Default, RENDER_ALTITUDE_OFFSET);
                     }
                     else
                     {
                         orientation = Quaternion.CreateFromForwardUp(Vector3.CalculatePerpendicularVector(up), up);
-                        surfacePosition = water.GetClosestSurfacePointGlobal(ref playerPosition, -RENDER_ALTITUDE_OFFSET);
+                        surfacePosition = water.GetClosestSurfacePointGlobal(ref playerPosition, ref WaveModifier.Default, -RENDER_ALTITUDE_OFFSET);
                     }
 
                     MatrixD matrix = MatrixD.CreateFromTransformScale(orientation, surfacePosition, Vector3D.One);

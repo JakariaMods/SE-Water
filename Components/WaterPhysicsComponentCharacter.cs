@@ -65,10 +65,10 @@ namespace Jakaria.Components
 
             _maxRadius = Character.PositionComp.LocalVolume.Radius;
             _nearestGrid = WaterUtils.GetApproximateGrid(_position);
-            MyAPIGateway.Utilities.ShowNotification(MyAPIGateway.Session.OxygenProviderSystem.GetOxygenInPoint(Character.PositionComp.GetPosition()).ToString(), 1000);
+            
             if (PlayerConfig != null && ClosestWater != null)
             {
-                _headUnderwater = ClosestWater.IsUnderwaterGlobal(ref _characterHeadPosition);
+                _headUnderwater = ClosestWater.IsUnderwaterGlobal(ref _characterHeadPosition, ref WaveModifier);
 
                 MyCharacterOxygenComponent oxygenComponent;
                 if (_nearestGrid != null)
@@ -132,7 +132,7 @@ namespace Jakaria.Components
                 else
                 {
                     //The closestwater is now null
-                    ClosestWater.OxygenProvider.Characters.Remove(Character);
+                    tempWater.OxygenProvider.Characters.Remove(Character);
                 }
             }
 
@@ -224,7 +224,7 @@ namespace Jakaria.Components
                     {
                         _underwater = underwater;
 
-                        Vector3D surfacePosition = ClosestWater.GetClosestSurfacePointGlobal(ref _position);
+                        Vector3D surfacePosition = ClosestWater.GetClosestSurfacePointGlobal(ref _position, ref WaveModifier);
                         _effectsComponent.CreateSplash(surfacePosition, Math.Min(_speed, 2f), true);
 
                         MatrixD matrix = MatrixD.CreateWorld(surfacePosition, -_renderComponent.CameraGravityDirection, _renderComponent.GravityAxisA);

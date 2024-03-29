@@ -14,6 +14,7 @@ using VRage;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.ModAPI;
+using VRage.Noise.Patterns;
 using VRage.Serialization;
 using VRageMath;
 
@@ -182,12 +183,7 @@ namespace Jakaria.SessionComponents
 
         public float GetBuoyancyMultiplier(Vector3D position, MyCubeSize gridSize, MyPlanet planet = null)
         {
-            WaterComponent water = (planet == null) ? _modComponent.GetClosestWater(position) : planet.Components.Get<WaterComponent>();
-
-            if (gridSize == MyCubeSize.Large)
-                return (float)(1 + (-water.GetDepthGlobal(ref position) / 5000f)) / 50f * water.Settings.Buoyancy;
-            else
-                return (float)(1 + (-water.GetDepthGlobal(ref position) / 5000f)) / 20f * water.Settings.Buoyancy;
+            return 1;
         }
 
         public Vector3D GetUpDirection(Vector3D position, MyPlanet planet = null)
@@ -200,10 +196,12 @@ namespace Jakaria.SessionComponents
 
         public int SphereIntersects(BoundingSphereD sphere, MyPlanet planet = null)
         {
+            WaveModifier modifier = WaterUtils.GetWaveModifier(sphere.Center);
+
             if (planet == null)
-                return _modComponent.GetClosestWater(sphere.Center)?.IntersectsGlobal(ref sphere) ?? 0;
+                return _modComponent.GetClosestWater(sphere.Center)?.IntersectsGlobal(ref sphere, ref modifier) ?? 0;
             else
-                return planet.Components.Get<WaterComponent>().IntersectsGlobal(ref sphere);
+                return planet.Components.Get<WaterComponent>().IntersectsGlobal(ref sphere, ref modifier);
         }
 
         public void SphereIntersects(ICollection<BoundingSphereD> spheres, ICollection<int> intersections, MyPlanet planet = null)
@@ -212,8 +210,10 @@ namespace Jakaria.SessionComponents
             {
                 foreach (var sphere in spheres)
                 {
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(sphere.Center);
+
                     BoundingSphereD sphereRef = sphere;
-                    intersections.Add(_modComponent.GetClosestWater(sphere.Center)?.IntersectsGlobal(ref sphereRef) ?? 0);
+                    intersections.Add(_modComponent.GetClosestWater(sphere.Center)?.IntersectsGlobal(ref sphereRef, ref modifier) ?? 0);
                 }
             }
             else
@@ -221,18 +221,22 @@ namespace Jakaria.SessionComponents
                 WaterComponent water = planet.Components.Get<WaterComponent>();
                 foreach (var sphere in spheres)
                 {
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(sphere.Center);
+
                     BoundingSphereD sphereRef = sphere;
-                    intersections.Add(water.IntersectsGlobal(ref sphereRef));
+                    intersections.Add(water.IntersectsGlobal(ref sphereRef, ref modifier));
                 }
             }
         }
 
         public int LineIntersectsWater(LineD line, MyPlanet planet = null)
         {
+            WaveModifier modifier = WaterUtils.GetWaveModifier(line.From);
+
             if (planet == null)
-                return _modComponent.GetClosestWater(line.From)?.IntersectsGlobal(ref line) ?? 0;
+                return _modComponent.GetClosestWater(line.From)?.IntersectsGlobal(ref line, ref modifier) ?? 0;
             else
-                return planet.Components.Get<WaterComponent>().IntersectsGlobal(ref line);
+                return planet.Components.Get<WaterComponent>().IntersectsGlobal(ref line, ref modifier);
         }
 
         public void LineIntersectsWaterList(List<LineD> lines, ICollection<int> intersections, MyPlanet planet = null)
@@ -241,8 +245,10 @@ namespace Jakaria.SessionComponents
             {
                 foreach (var line in lines)
                 {
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(line.From);
+
                     LineD lineRef = line;
-                    intersections.Add(_modComponent.GetClosestWater(line.From)?.IntersectsGlobal(ref lineRef) ?? 0);
+                    intersections.Add(_modComponent.GetClosestWater(line.From)?.IntersectsGlobal(ref lineRef, ref modifier) ?? 0);
                 }
             }
             else
@@ -250,8 +256,10 @@ namespace Jakaria.SessionComponents
                 WaterComponent water = planet.Components.Get<WaterComponent>();
                 foreach (var line in lines)
                 {
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(line.From);
+
                     LineD lineRef = line;
-                    intersections.Add(water?.IntersectsGlobal(ref lineRef) ?? 0);
+                    intersections.Add(water?.IntersectsGlobal(ref lineRef, ref modifier) ?? 0);
                 }
             }
         }
@@ -296,18 +304,22 @@ namespace Jakaria.SessionComponents
 
         public float? GetDepth(Vector3D position, MyPlanet planet = null)
         {
+            WaveModifier modifier = WaterUtils.GetWaveModifier(position);
+
             if (planet == null)
-                return (float?)_modComponent.GetClosestWater(position)?.GetDepthGlobal(ref position);
+                return (float?)_modComponent.GetClosestWater(position)?.GetDepthGlobal(ref position, ref modifier);
             else
-                return (float?)planet.Components.Get<WaterComponent>().GetDepthGlobal(ref position);
+                return (float?)planet.Components.Get<WaterComponent>().GetDepthGlobal(ref position, ref modifier);
         }
 
         public Vector3D GetClosestSurfacePoint(Vector3D position, MyPlanet planet = null)
         {
+            WaveModifier modifier = WaterUtils.GetWaveModifier(position);
+
             if (planet == null)
-                return _modComponent.GetClosestWater(position)?.GetClosestSurfacePointGlobal(position) ?? position;
+                return _modComponent.GetClosestWater(position)?.GetClosestSurfacePointGlobal(position, ref modifier) ?? position;
             else
-                return planet.Components.Get<WaterComponent>().GetClosestSurfacePointGlobal(position);
+                return planet.Components.Get<WaterComponent>().GetClosestSurfacePointGlobal(position, ref modifier);
         }
 
         public void GetClosestSurfacePoints(List<Vector3D> positions, ICollection<Vector3D> points, MyPlanet planet = null)
@@ -316,7 +328,9 @@ namespace Jakaria.SessionComponents
             {
                 foreach (var position in positions)
                 {
-                    points.Add(_modComponent.GetClosestWater(position)?.GetClosestSurfacePointGlobal(position) ?? position);
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(position);
+
+                    points.Add(_modComponent.GetClosestWater(position)?.GetClosestSurfacePointGlobal(position, ref modifier) ?? position);
                 }
             }
             else
@@ -325,7 +339,9 @@ namespace Jakaria.SessionComponents
 
                 foreach (var position in positions)
                 {
-                    points.Add(water.GetClosestSurfacePointGlobal(position));
+                    WaveModifier modifier = WaterUtils.GetWaveModifier(position);
+
+                    points.Add(water.GetClosestSurfacePointGlobal(position, ref modifier));
                 }
             }
         }
@@ -356,10 +372,12 @@ namespace Jakaria.SessionComponents
 
         public bool IsUnderwater(Vector3D position, MyPlanet planet = null)
         {
+            WaveModifier modifier = WaterUtils.GetWaveModifier(position);
+
             if (planet == null)
-                return _modComponent.GetClosestWater(position)?.IsUnderwaterGlobal(ref position) ?? false;
+                return _modComponent.GetClosestWater(position)?.IsUnderwaterGlobal(ref position, ref modifier) ?? false;
             else
-                return planet.Components.Get<WaterComponent>()?.IsUnderwaterGlobal(ref position) ?? false;
+                return planet.Components.Get<WaterComponent>()?.IsUnderwaterGlobal(ref position, ref modifier) ?? false;
         }
 
         public bool HasWater(MyPlanet planet)

@@ -42,6 +42,7 @@ namespace Jakaria.Effects
             Vector3 axisA = WaterUtils.GetPerpendicularVector(renderComponent.CameraGravityDirection, MyUtils.GetRandomDouble(-Math.PI, Math.PI));
             Vector3 axisB = axisA.Cross(renderComponent.CameraGravityDirection);
 
+            WaveModifier modifier = WaterUtils.GetWaveModifier(worldPosition);
             _billboard = new MyBillboard()
             {
                 Color = _initialColor,
@@ -49,10 +50,10 @@ namespace Jakaria.Effects
                 Material = WaterData.FoamMaterial,
                 UVSize = WaterData.FoamUVSize,
                 UVOffset = new Vector2(MyUtils.GetRandomInt(0, 4) / 4f, 0f),
-                Position0 = water.GetClosestSurfacePointGlobal(worldPosition + ((axisA - axisB) * radius)),
-                Position1 = water.GetClosestSurfacePointGlobal(worldPosition + ((axisA + axisB) * radius)),
-                Position2 = water.GetClosestSurfacePointGlobal(worldPosition + ((-axisA + axisB) * radius)),
-                Position3 = water.GetClosestSurfacePointGlobal(worldPosition + ((-axisA - axisB) * radius)),
+                Position0 = water.GetClosestSurfacePointGlobal(worldPosition + ((axisA - axisB) * radius), ref modifier),
+                Position1 = water.GetClosestSurfacePointGlobal(worldPosition + ((axisA + axisB) * radius), ref modifier),
+                Position2 = water.GetClosestSurfacePointGlobal(worldPosition + ((-axisA + axisB) * radius), ref modifier),
+                Position3 = water.GetClosestSurfacePointGlobal(worldPosition + ((-axisA - axisB) * radius), ref modifier),
                 Reflectivity = 0,
                 ColorIntensity = _renderComponent.AmbientColorIntensity
             };

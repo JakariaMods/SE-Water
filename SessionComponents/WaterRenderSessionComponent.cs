@@ -170,6 +170,7 @@ namespace Jakaria.SessionComponents
             ClosestPlanet = MyGamePruningStructure.GetClosestPlanet(CameraPosition);
             
             WaterComponent water = _modComponent.GetClosestWater(CameraPosition);
+            WaveModifier modifier = WaterUtils.GetWaveModifier(CameraPosition);
 
             if (water != ClosestWater)
             {
@@ -203,9 +204,9 @@ namespace Jakaria.SessionComponents
             }
             else
             {
-                CameraDepth = ClosestWater.GetDepthGlobal(ref CameraPosition);
+                CameraDepth = ClosestWater.GetDepthGlobal(ref CameraPosition, ref modifier);
                 CameraUnderwater = CameraDepth <= WaterComponent.DEPTH_EPSILON;
-                CameraClosestWaterPosition = ClosestWater.GetClosestSurfacePointGlobal(ref CameraPosition);
+                CameraClosestWaterPosition = ClosestWater.GetClosestSurfacePointGlobal(ref CameraPosition, ref modifier);
             }
 
             //MyAPIGateway.Utilities.ShowNotification($"{CameraDepth} {double.IsInfinity(CameraDepth)}", 16);
@@ -256,6 +257,8 @@ namespace Jakaria.SessionComponents
                     GravityAxisB = GravityAxisA.Cross(CameraGravityDirection);
                 }
 
+                WaveModifier modifier = WaterUtils.GetWaveModifier(CameraPosition);
+
                 _drawAction?.Invoke();
 
                 if (ClosestWater != null)
@@ -269,7 +272,7 @@ namespace Jakaria.SessionComponents
 
                     if (_sunOccluder != null)
                     {
-                        _sunOccluder.Render.Visible = CameraUnderwater || (ClosestWater.IntersectsGlobal(CameraPosition, CameraPosition + (SunDirection * 100)) != 0);
+                        _sunOccluder.Render.Visible = CameraUnderwater || (ClosestWater.IntersectsGlobal(CameraPosition, CameraPosition + (SunDirection * 100), ref modifier) != 0);
 
                         if (_sunOccluder.Render.Visible)
                             _sunOccluder.WorldMatrix = MatrixD.CreateWorld(CameraPosition + (SunDirection * 1000), -Vector3.CalculatePerpendicularVector(SunDirection), -SunDirection);
@@ -280,7 +283,7 @@ namespace Jakaria.SessionComponents
                         if (CameraUnderwater)
                             _particleOccluder.WorldMatrix = MatrixD.CreateWorld(CameraPosition + (CameraDirection * 250), -Vector3D.CalculatePerpendicularVector(CameraDirection), -CameraDirection);
                         else
-                            _particleOccluder.WorldMatrix = MatrixD.CreateWorld(ClosestWater.GetClosestSurfacePointGlobal(CameraPosition) + (CameraGravityDirection * 20), GravityAxisA, -CameraGravityDirection);
+                            _particleOccluder.WorldMatrix = MatrixD.CreateWorld(ClosestWater.GetClosestSurfacePointGlobal(CameraPosition, ref modifier) + (CameraGravityDirection * 20), GravityAxisA, -CameraGravityDirection);
                     }
 
                     bool previousUnderwater = CameraUnderwater;

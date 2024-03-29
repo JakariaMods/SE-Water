@@ -5,6 +5,8 @@ using VRage.Game.Components;
 using VRage.ModAPI;
 using VRageMath;
 using Jakaria.SessionComponents;
+using Jakaria.Configs;
+using VRage.Game;
 
 namespace Jakaria.Components
 {
@@ -86,6 +88,8 @@ namespace Jakaria.Components
 
         protected bool IsValid => Entity.Physics != null && !Entity.Transparent && !Entity.MarkedForClose;
 
+        public WaveModifier WaveModifier = WaveModifier.Default;
+
         public WaterPhysicsComponentBase()
         {
             _modComponent = Session.Instance.Get<WaterModComponent>();
@@ -126,6 +130,11 @@ namespace Jakaria.Components
             }
         }
 
+        private void UpdateWaveModifier()
+        {
+            WaveModifier = WaterUtils.GetWaveModifier(_position);
+        }
+
         public virtual void UpdateAfter1()
         {
             if (!IsValid)
@@ -134,6 +143,7 @@ namespace Jakaria.Components
             _position = Entity.PositionComp.WorldVolume.Center;
 
             UpdateClosestWater();
+            UpdateWaveModifier();
 
             if (ClosestWater == null)
             {
@@ -142,7 +152,7 @@ namespace Jakaria.Components
             }
             else
             {
-                FluidDepth = ClosestWater.GetDepthGlobal(ref _position);
+                FluidDepth = ClosestWater.GetDepthGlobal(ref _position, ref WaveModifier);
                 FluidVelocity = ClosestWater.GetFluidVelocityGlobal(-_gravityDirection);
             }
 

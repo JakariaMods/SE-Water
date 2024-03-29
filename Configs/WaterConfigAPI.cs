@@ -31,5 +31,8 @@ namespace Jakaria.Configs
 
         [ProtoMember(30)]
         public FishConfig[] FishConfigs;
+
+        [ProtoMember(35)]
+        public WeatherConfig[] WeatherConfigs;
     }
 }

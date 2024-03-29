@@ -52,7 +52,7 @@ namespace Jakaria.Components
                 if (_waterComponent.ClosestWater.Settings.Material.CollectedItem != null && _waterComponent.ClosestWater.Settings.CollectionRate != 0)
                 {
                     Vector3D worldPosition = _collector.PositionComp.GetPosition();
-                    if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition))
+                    if (_waterComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition, ref _waterComponent.WaveModifier))
                     {
                         IMyInventory inventory = _collector.GetInventory();
                         if (inventory != null)

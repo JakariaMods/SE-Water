@@ -35,7 +35,8 @@ namespace Jakaria.Components
         private RenderFace[] _renderFaces = new RenderFace[6];
 
         private Vector3D _lastLODBuildPositionLocal;
-        
+        private WaveModifier _modifier = WaveModifier.Default;
+
         public WaterComponent Water;
 
         private WaterRenderSessionComponent _renderSessionComponent;
@@ -116,8 +117,9 @@ namespace Jakaria.Components
             if (!Water.InScene)
                 return;
 
+            _modifier = WaterUtils.GetWaveModifier(_renderSessionComponent.CameraPosition);
             LocalCameraPosition = Vector3D.Transform(_renderSessionComponent.CameraPosition, ref Water.WorldMatrixInv);
-            CameraAltitude = Water.GetDepthLocal(ref LocalCameraPosition);
+            CameraAltitude = Water.GetDepthLocal(ref LocalCameraPosition, ref _modifier);
             DistanceToHorizon = CameraAltitude < 0 ? 250 : Math.Max(Math.Sqrt((Math.Pow(Math.Max(CameraAltitude, 25) + Water.Radius, 2)) - (Water.Radius * Water.Radius)), 500);
 
             if (double.IsPositiveInfinity(CameraAltitude) || double.IsNegativeInfinity(CameraAltitude))
@@ -296,10 +298,10 @@ namespace Jakaria.Components
 
                         MyQuadD quad = new MyQuadD()
                         {
-                            Point0 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal1, out depth1), _renderComponent.Water.WorldMatrix),
-                            Point1 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal3, out depth2), ref _renderComponent.Water.WorldMatrix),
-                            Point2 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal2, out depth3), ref _renderComponent.Water.WorldMatrix),
-                            Point3 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal4, out depth4), ref _renderComponent.Water.WorldMatrix)
+                            Point0 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal1, ref _renderComponent._modifier, out depth1), ref _renderComponent.Water.WorldMatrix),
+                            Point1 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal3, ref _renderComponent._modifier, out depth2), ref _renderComponent.Water.WorldMatrix),
+                            Point2 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal2, ref _renderComponent._modifier, out depth3), ref _renderComponent.Water.WorldMatrix),
+                            Point3 = Vector3D.Transform(_renderComponent.Water.GetClosestSurfacePointFromNormalLocal(ref normal4, ref _renderComponent._modifier, out depth4), ref _renderComponent.Water.WorldMatrix)
                         };
 
                         if (_altitude == null && _renderComponent.Water.Settings.Transparent)

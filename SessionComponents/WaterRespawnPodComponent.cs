@@ -53,11 +53,11 @@ namespace Jakaria.SessionComponents
                     {
                         Vector3D normal = MyUtils.GetRandomVector3Normalized();
                         Vector3D closestPlanetPosition = planet.GetClosestSurfacePointGlobal(water.Entity.GetPosition() + (normal * planet.AverageRadius));
-                        if (water.IsUnderwaterGlobal(ref closestPlanetPosition))
+                        if (water.IsUnderwaterGlobal(ref closestPlanetPosition, ref WaveModifier.Default))
                         {
                             if (config.SpawnOnWater)
                             {
-                                Vector3D closestWaterPoint = water.GetClosestSurfacePointGlobal(closestPlanetPosition, config.SpawnAltitude);
+                                Vector3D closestWaterPoint = water.GetClosestSurfacePointGlobal(closestPlanetPosition, ref WaveModifier.Default, config.SpawnAltitude);
                                 if (!planet.IsUnderGround(closestWaterPoint))
                                 {
                                     MyAPIGateway.Utilities.InvokeOnGameThread(() =>

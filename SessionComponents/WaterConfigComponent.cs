@@ -181,6 +181,15 @@ namespace Jakaria.SessionComponents
                     WaterData.FishConfigs[Fish.SubtypeId] = Fish;
                     WaterUtils.WriteLog("Loaded Fish Config '" + Fish.SubtypeId + "'");
                 }
+
+            if (WaterConfig.WeatherConfigs != null)
+                foreach (var WeatherConfig in WaterConfig.WeatherConfigs)
+                {
+                    WeatherConfig.Init(modContext);
+
+                    WaterData.WeatherConfigs[WeatherConfig.SubtypeId] = WeatherConfig;
+                    WaterUtils.WriteLog("Loaded Weather Config '" + WeatherConfig.SubtypeId + "'");
+                }
         }
 
         private void LoadBlockConfigs()

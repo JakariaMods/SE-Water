@@ -39,7 +39,9 @@ namespace Jakaria
 
         public bool IsPositionInRange(Vector3D worldPoint)
         {
-            if (!_water.IsUnderwaterGlobal(ref worldPoint))
+            WaveModifier modifier = WaterUtils.GetWaveModifier(worldPoint);
+            Vector3D position = worldPoint - (_water.GetUpDirectionGlobal(ref worldPoint) * 2);
+            if (!_water.IsUnderwaterGlobal(ref position, ref modifier))
                 return false;
 
             foreach (var character in Characters)
@@ -47,7 +49,8 @@ namespace Jakaria
                 //MyCharacterOxygenComponent tests oxygen at this position
                 if (character.PositionComp.GetPosition() == worldPoint)
                 {
-                    return true;
+                    Vector3D head = character.GetHeadMatrix(false).Translation;
+                    return _water.IsUnderwaterGlobal(ref head, ref modifier);
                 }
             }
 

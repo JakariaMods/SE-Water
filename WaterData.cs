@@ -13,7 +13,7 @@ namespace Jakaria
 {
     public static class WaterData
     {
-        public const string Version = "3.20";
+        public const string Version = "3.21";
         public const bool EarlyAccess = false;
 
         static WaterData()
@@ -109,6 +109,11 @@ namespace Jakaria
         /// Dictionary for respawn pod water settings
         /// </summary>
         public static Dictionary<MyDefinitionId, RespawnPodConfig> RespawnPodConfigs = new Dictionary<MyDefinitionId, RespawnPodConfig>();
+
+        /// <summary>
+        /// Dictionary for weather configs
+        /// </summary>
+        public static Dictionary<string, WeatherConfig> WeatherConfigs = new Dictionary<string, WeatherConfig>();
 
         /// <summary>
         /// Dictionary for fluid material settings

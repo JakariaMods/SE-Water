@@ -240,13 +240,13 @@ namespace Jakaria.SessionComponents
                                 {
                                     Vector3D worldPosition = (position * CHUNK_SIZE) + (WaterUtils.GetRandomVector3Abs() * CHUNK_SIZE);
 
-                                    double pressure = _renderComponent.ClosestWater.GetPressureGlobal(ref worldPosition);
+                                    double pressure = _renderComponent.ClosestWater.GetPressureGlobal(ref worldPosition, ref WaveModifier.Default);
 
                                     if (pressure > 0)
                                     {
                                         FishConfig fishConfig = GetRandomFish(pressure);
 
-                                        if (fishConfig != null && _renderComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition) && !_renderComponent.ClosestWater.Planet.IsUnderGround(worldPosition))
+                                        if (fishConfig != null && _renderComponent.ClosestWater.IsUnderwaterGlobal(ref worldPosition, ref WaveModifier.Default) && !_renderComponent.ClosestWater.Planet.IsUnderGround(worldPosition))
                                         {
                                             chunk.FishDatas.Add(SpawnFish(worldPosition, fishConfig, _renderComponent.ClosestWater));
                                         }
@@ -319,7 +319,7 @@ namespace Jakaria.SessionComponents
                 index++;
                 targetPosition = origin + (MyUtils.GetRandomVector3Normalized() * MyUtils.GetRandomFloat(0, radius));
 
-                underWater = water.IsUnderwaterGlobal(ref targetPosition, -minDepth);
+                underWater = water.IsUnderwaterGlobal(ref targetPosition, ref WaveModifier.Default);
                 underGround = WaterUtils.IsUnderGround(water.Planet, targetPosition, -MIN_ALTITUDE);
                 inGrid = false;
 
@@ -335,7 +335,7 @@ namespace Jakaria.SessionComponents
                 targetPosition = water.Planet.GetClosestSurfacePointGlobal(ref targetPosition);// + (Vector3D.Normalize(targetPosition - water.Position) * MIN_ALTITUDE);
 
             if (!underWater)
-                targetPosition = water.GetClosestSurfacePointGlobal(ref targetPosition, minDepth);
+                targetPosition = water.GetClosestSurfacePointGlobal(ref targetPosition, ref WaveModifier.Default, minDepth);
 
             return targetPosition;
         }
