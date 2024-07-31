@@ -722,7 +722,7 @@ namespace Jakaria.SessionComponents
                 float radius;
                 if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out radius))
                 {
-                    radius = MathHelper.Clamp(radius, 0.95f, 1.75f);
+                    radius = MathHelper.Clamp(radius, 0.1f, 1.75f);
 
                     commandArgs.Water.Settings.Radius = radius;
                     _syncComponent.SyncClients(commandArgs.Water);
