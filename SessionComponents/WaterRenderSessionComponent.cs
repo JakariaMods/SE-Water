@@ -209,8 +209,6 @@ namespace Jakaria.SessionComponents
                 CameraClosestWaterPosition = ClosestWater.GetClosestSurfacePointGlobal(ref CameraPosition, ref modifier);
             }
 
-            //MyAPIGateway.Utilities.ShowNotification($"{CameraDepth} {double.IsInfinity(CameraDepth)}", 16);
-
             WhiteColor = new Vector4(_nightValue * (1f - (float)Math.Min(-Math.Min(CameraDepth + 200, 0) / 400, 1)));
             WhiteColor.W = 1;
             

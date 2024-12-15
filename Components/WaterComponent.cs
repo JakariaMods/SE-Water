@@ -164,7 +164,7 @@ namespace Jakaria.Components
         public double GetDepthLocal(ref Vector3D localPosition, ref WaveModifier waveModifier)
         {
             double fluidDepth;
-            Vector3D up = Vector3D.Normalize(localPosition);
+            Vector3D up = NormalizeFixed(ref localPosition);
             Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, ref waveModifier, out fluidDepth);
 
             double depth = localPosition.Length() - surface.Length();
@@ -197,7 +197,7 @@ namespace Jakaria.Components
         public double GetDepthSquaredLocal(ref Vector3D localPosition, ref WaveModifier waveModifier)
         {
             double fluidDepth;
-            Vector3D up = Vector3D.Normalize(localPosition);
+            Vector3D up = NormalizeFixed(ref localPosition);
             Vector3D surface = GetClosestSurfacePointFromNormalLocal(ref up, ref waveModifier, out fluidDepth);
 
             double depth = localPosition.LengthSquared() - surface.LengthSquared();
@@ -258,7 +258,7 @@ namespace Jakaria.Components
         /// </summary>
         public Vector3D GetClosestSurfacePointLocal(ref Vector3D localPosition, ref WaveModifier waveModifier, double altitudeOffset = 0)
         {
-            Vector3D localNormal = Vector3D.Normalize(localPosition);
+            Vector3D localNormal = NormalizeFixed(ref localPosition);
 
             double _;
             return GetClosestSurfacePointFromNormalLocal(ref localNormal, ref waveModifier, out _, altitudeOffset);
@@ -267,9 +267,6 @@ namespace Jakaria.Components
         /// <summary>
         /// Gets the surface position with a normal in local space
         /// </summary>
-        /// <param name="localNormal"></param>
-        /// <param name="altitudeOffset"></param>
-        /// <returns></returns>
         public Vector3D GetClosestSurfacePointFromNormalLocal(ref Vector3D localNormal, ref WaveModifier waveModifier, out double fluidDepth, double altitudeOffset = 0)
         {
             double waveHeight;
@@ -417,6 +414,15 @@ namespace Jakaria.Components
         public double GetPressureGlobal(ref Vector3D worldPosition, ref WaveModifier waveModifier)
         {
             return Math.Max((-GetDepthGlobal(ref worldPosition, ref waveModifier) * Planet.Generator.SurfaceGravity * Settings.Material.Density) / 1000, 0);
+        }
+
+        private Vector3D NormalizeFixed(ref Vector3D localPosition)
+        {
+            var normal = Vector3D.Normalize(localPosition); //when position is the same as the water position, NaN is returned (divide by zero)s
+            if (!normal.IsValid())
+                return Vector3D.Up;
+
+            return normal;
         }
     }
 
