@@ -211,17 +211,17 @@ namespace Jakaria.SessionComponents
 
             WhiteColor = new Vector4(_nightValue * (1f - (float)Math.Min(-Math.Min(CameraDepth + 200, 0) / 400, 1)));
             WhiteColor.W = 1;
-            
+
             //Effects
 
-            if (!CameraUnderwater && ClosestWater != null)
+            /*if (!CameraUnderwater && ClosestWater != null)
             {
                 float size;
                 Vector3D axisA;
                 Vector3D axisB;
 
                 //TODO REENABLE
-                /*lock (_effectsComponent.SurfaceSplashes)
+                lock (_effectsComponent.SurfaceSplashes)
                 {
                     foreach (var splash in _effectsComponent.SurfaceSplashes)
                     {
@@ -238,8 +238,8 @@ namespace Jakaria.SessionComponents
                         splash.Billboard.Position3 = ClosestWater.GetClosestSurfacePointGlobal(splash.Position + axisA - axisB);
                         splash.Billboard.Color = WhiteColor * (1f - lifeRatio) * ClosestWater.PlanetConfig.ColorIntensity;
                     }
-                }*/
-            }
+                }
+            }*/
         }
 
         public override void Draw()

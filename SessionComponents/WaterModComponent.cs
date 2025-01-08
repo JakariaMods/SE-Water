@@ -59,7 +59,14 @@ namespace Jakaria.SessionComponents
 
         public WaterComponent GetClosestWater(Vector3D position)
         {
-            return MyGamePruningStructure.GetClosestPlanet(position)?.Components.Get<WaterComponent>() ?? null;
+            BoundingBoxD box = new BoundingBoxD(position, position);
+            foreach (var water in Waters)
+            {
+                if (water.Planet.IsBoxIntersectingBoundingBoxOfThisVoxelMap(ref box))
+                    return water;
+            }
+
+            return null;
         }
 
         public bool AddWater(MyPlanet planet, WaterSettings settings = null, WaterComponentObjectBuilder ob = null)
