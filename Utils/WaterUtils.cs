@@ -320,7 +320,7 @@ namespace Jakaria.Utils
             WeatherConfig config;
             if (MyAPIGateway.Session.WeatherEffects.GetWeather(position, out weather) && WaterData.WeatherConfigs.TryGetValue(weather.Weather, out config))
             {
-                float intensity = MyAPIGateway.Session.WeatherEffects.GetWeatherIntensity(position);
+                float intensity = MyAPIGateway.Session.WeatherEffects.GetWeatherIntensity(position, weather);
                 return new WaveModifier()
                 {
                     ScaleMultiplier = MathHelper.Lerp(1, config.WaveScaleMultiplier, intensity),

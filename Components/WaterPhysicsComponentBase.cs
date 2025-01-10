@@ -7,6 +7,9 @@ using VRageMath;
 using Jakaria.SessionComponents;
 using Jakaria.Configs;
 using VRage.Game;
+using Sandbox.Engine.Physics;
+using Sandbox.Game.Entities;
+using VRage.Game.Entity;
 
 namespace Jakaria.Components
 {
@@ -86,8 +89,8 @@ namespace Jakaria.Components
         protected WaterRenderSessionComponent _renderComponent;
         protected WaterEffectsComponent _effectsComponent;
 
-        protected bool IsValid => Entity.Physics != null && !Entity.Transparent && !Entity.MarkedForClose;
-
+        protected bool IsValid => !Entity.MarkedForClose && Entity.Physics != null && !Entity.Transparent;
+        
         public WaveModifier WaveModifier = WaveModifier.Default;
 
         public WaterPhysicsComponentBase()
@@ -120,6 +123,7 @@ namespace Jakaria.Components
         {
             if (IsValid && ClosestWater != null && Entity.Physics != null)
             {
+                UpdateWaveModifier();
                 FluidPressure = (ClosestWater.Settings.Material.Density * _gravityStrength * (float)Math.Max(-FluidDepth, 0)) / 1000;
 
                 if (ClosestWater.Planet?.HasAtmosphere == true)
@@ -143,20 +147,20 @@ namespace Jakaria.Components
             _position = Entity.PositionComp.WorldVolume.Center;
 
             UpdateClosestWater();
-            UpdateWaveModifier();
 
             if (ClosestWater == null)
             {
+                _gravity = Vector3.Zero;
                 FluidVelocity = Vector3.Zero;
                 FluidDepth = 0;
             }
             else
             {
+                _gravity = ClosestWater.Planet.Components.Get<MyGravityProviderComponent>().GetWorldGravity(_position);
                 FluidDepth = ClosestWater.GetDepthGlobal(ref _position, ref WaveModifier);
                 FluidVelocity = ClosestWater.GetFluidVelocityGlobal(-_gravityDirection);
             }
 
-            _gravity = MyAPIGateway.Physics.CalculateNaturalGravityAt(_position, out _gravityStrength);
             _gravityDirection = _gravity;
             _gravityStrength = _gravityDirection.Normalize();
 

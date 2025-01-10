@@ -59,10 +59,9 @@ namespace Jakaria.SessionComponents
 
         public WaterComponent GetClosestWater(Vector3D position)
         {
-            BoundingBoxD box = new BoundingBoxD(position, position);
             foreach (var water in Waters)
             {
-                if (water.Planet.IsBoxIntersectingBoundingBoxOfThisVoxelMap(ref box))
+                if (water.Planet.PositionComp.WorldAABB.Contains(position) == ContainmentType.Contains)
                     return water;
             }
 
