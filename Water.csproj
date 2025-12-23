@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{81B4798E-2756-4731-8A74-A91E81AF65BF}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>Jakaria</RootNamespace>
     <AssemblyName>Jakaria</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
@@ -67,6 +67,9 @@
     <LangVersion>6.0</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -164,9 +167,6 @@
     </Reference>
     <Reference Include="Sandbox.Game">
       <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\Sandbox.Game.dll</HintPath>
-    </Reference>
-    <Reference Include="SpaceEngineers">
-      <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.exe</HintPath>
     </Reference>
     <Reference Include="SpaceEngineers.Game">
       <HintPath>D:\SteamLibrary\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>

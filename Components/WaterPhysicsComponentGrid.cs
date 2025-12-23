@@ -51,6 +51,10 @@ namespace Jakaria.Components
         private Vector3 _minExtent;
 
         private bool _rebuildVolumesArray;
+        private double _displacement;
+
+        private const int ParallelBlockThreshold = 256;
+        private const int ParallelAirtightThreshold = 128;
 
         //Grid Stuff
         public IMyCubeGrid IGrid;
@@ -61,6 +65,7 @@ namespace Jakaria.Components
         private int _blocksUnderwater;
         private int _gasBlocks;
         private List<FunctionalBlockState> _newBlockStates = new List<FunctionalBlockState>();
+        private readonly List<IMyOxygenRoom> _oxygenRooms = new List<IMyOxygenRoom>();
 
         //Client Effects
         private MyBillboard[] _cobIndicators;
@@ -368,10 +373,10 @@ namespace Jakaria.Components
 
             if (IGrid.GasSystem != null && !IGrid.GasSystem.IsProcessingData)
             {
-                List<IMyOxygenRoom> Rooms = new List<IMyOxygenRoom>();
-                if (IGrid.GasSystem.GetRooms(Rooms))
+                _oxygenRooms.Clear();
+                if (IGrid.GasSystem.GetRooms(_oxygenRooms))
                 {
-                    foreach (var room in Rooms)
+                    foreach (var room in _oxygenRooms)
                     {
                         if (room.IsAirtight && room.BlockCount > 0)
                         {
@@ -441,9 +446,8 @@ namespace Jakaria.Components
 
                     if (NeedsRecalculateBuoyancy || _nextRecalculate <= 0)
                     {
-                        double displacement = 0;
-
                         _blocksUnderwater = 0;
+                        _displacement = 0;
                         _nextRecalculate = _recalculateFrequency;
                         NeedsRecalculateBuoyancy = false;
 
@@ -460,7 +464,7 @@ namespace Jakaria.Components
 
                         if (_blockVolumes != null)
                         {
-                            MyAPIGateway.Parallel.ForEach(_blockVolumes, BlockVolume =>
+                            Action<BlockVolumeData> processBlock = BlockVolume =>
                             {
                                 Vector3D blockWorldPosition = Grid.GridIntegerToWorld(BlockVolume.Block.Position);
                                 double blockDepth = ClosestWater.GetDepthGlobal(ref blockWorldPosition, ref WaveModifier);
@@ -542,7 +546,7 @@ namespace Jakaria.Components
                                         Interlocked.Increment(ref _blocksUnderwater);
                                         lock (_buoyancyLock)
                                         {
-                                            displacement += pointDisplacement;
+                                            _displacement += pointDisplacement;
                                             CenterOfBuoyancy += ((Vector3D)(BlockVolume.Block.Min + BlockVolume.Block.Max) / 2.0) * pointDisplacement;
                                         }
                                     }
@@ -681,7 +685,20 @@ namespace Jakaria.Components
                                         }
                                     }
                                 }
-                            });
+                            };
+
+                            bool useParallel = _blockVolumes.Length >= ParallelBlockThreshold;
+                            if (useParallel)
+                            {
+                                MyAPIGateway.Parallel.ForEach(_blockVolumes, processBlock);
+                            }
+                            else
+                            {
+                                for (int i = 0; i < _blockVolumes.Length; i++)
+                                {
+                                    processBlock(_blockVolumes[i]);
+                                }
+                            }
 
                             foreach (var blockState in _newBlockStates)
                             {
@@ -700,7 +717,7 @@ namespace Jakaria.Components
                                 float VolumeMultiplier = (Grid.GridSize * Grid.GridSize * Grid.GridSize) * ((Grid.GridSizeEnum == MyCubeSize.Large) ? WaterData.AirtightnessCoefficientLarge : WaterData.AirtightnessCoefficientSmall);
                                 float sqrGridSizeHalf = Grid.GridSizeHalf * Grid.GridSizeHalf;
 
-                                MyAPIGateway.Parallel.ForEach(_airtightBlocks, AirtightBlock =>
+                                Action<Vector3I> processAirtight = AirtightBlock =>
                                 {
                                     Vector3D PointWorldPosition = Grid.GridIntegerToWorld(AirtightBlock);
                                     double PointDepth = ClosestWater.GetDepthSquaredGlobal(ref PointWorldPosition, ref WaveModifier);
@@ -711,19 +728,32 @@ namespace Jakaria.Components
 
                                         lock (_buoyancyLock)
                                         {
-                                            displacement += PointDisplacement;
+                                            _displacement += PointDisplacement;
                                             CenterOfBuoyancy += (Vector3D)AirtightBlock * PointDisplacement;
                                         }
                                     }
-                                });
+                                };
+
+                                bool useParallelAirtight = _airtightBlocks.Count >= ParallelAirtightThreshold;
+                                if (useParallelAirtight)
+                                {
+                                    MyAPIGateway.Parallel.ForEach(_airtightBlocks, processAirtight);
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < _airtightBlocks.Count; i++)
+                                    {
+                                        processAirtight(_airtightBlocks[i]);
+                                    }
+                                }
                             }
 
-                            if (displacement > 0)
+                            if (_displacement > 0)
                             {
                                 PercentUnderwater = ((float)_blocksUnderwater / _blockVolumes.Length);
-                                CenterOfBuoyancyLocal = CenterOfBuoyancy / displacement;
-                                CenterOfBuoyancy = Grid.GridIntegerToWorld(CenterOfBuoyancy / displacement);
-                                BuoyancyForce = -_gravity * ClosestWater.Settings.Material.Density * (float)displacement * ClosestWater.Settings.Buoyancy;
+                                CenterOfBuoyancyLocal = CenterOfBuoyancy / _displacement;
+                                CenterOfBuoyancy = Grid.GridIntegerToWorld(CenterOfBuoyancy / _displacement);
+                                BuoyancyForce = -_gravity * ClosestWater.Settings.Material.Density * (float)_displacement * ClosestWater.Settings.Buoyancy;
 
                                 lock (_extentLock)
                                 {

@@ -80,7 +80,11 @@ namespace Jakaria.SessionComponents
             string version = WaterUtils.GetVersionString();
             string text = string.Format(WaterTexts.WaterModVersion, version);
 
-            WaterUtils.ShowMessage(text);
+            if (!_settingsComponent.Settings.Silent)
+            {
+                WaterUtils.ShowMessage(text);
+            }
+                
             WaterUtils.WriteLog(text);
 
             if (!string.IsNullOrEmpty(WaterData.StartMessage))
@@ -153,11 +157,10 @@ namespace Jakaria.SessionComponents
                     _volumeSlider = new HudAPIv2.MenuSliderInput(string.Format(WaterTexts.UIVolume, _settingsComponent.Settings.Volume), _clientMenuRoot, 1f, "Adjust slider to modify value", OnSetVolumeSlider);
                     _showCenterOfBuoyancy = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy), _clientMenuRoot, ToggleShowCenterOfBuoyancy);
                     _showDepth = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowDepth, _settingsComponent.Settings.ShowDepth), _clientMenuRoot, ToggleShowDepth);
-                    _showAltitude = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowAltitude, _settingsComponent.Settings.ShowAltitude), _clientMenuRoot, ToggleShowAltitude);
                     _showDebug = new HudAPIv2.MenuItem(string.Format(WaterTexts.UIShowDebug, _settingsComponent.Settings.ShowDebug), _clientMenuRoot, ToggleShowDebug);
                 }
 
-                _depthMeter.Visible = _settingsComponent.Settings.ShowDepth && (_renderComponent.CameraDepth < 0 || (_settingsComponent.Settings.ShowAltitude && ((MyAPIGateway.Session.Player?.Controller?.ControlledEntity is IMyCharacter) == false && _renderComponent.CameraDepth < 500)));
+                _depthMeter.Visible = _settingsComponent.Settings.ShowDepth && (_renderComponent.CameraDepth < 0 || ((MyAPIGateway.Session.Player?.Controller?.ControlledEntity is IMyCharacter) == false && _renderComponent.CameraDepth < _settingsComponent.Settings.MinAltitude));
 
                 if (_renderComponent.ClosestWater != null && _renderComponent.ClosestPlanet != null && MyAPIGateway.Session.Player?.Character != null)
                 {
@@ -209,7 +212,6 @@ namespace Jakaria.SessionComponents
             _showDebug.Text = string.Format(WaterTexts.UIShowDebug, _settingsComponent.Settings.ShowDebug);
             _showDepth.Text = string.Format(WaterTexts.UIShowDepth, _settingsComponent.Settings.ShowDepth);
             _showCenterOfBuoyancy.Text = string.Format(WaterTexts.UIShowCenterOfBuoyancy, _settingsComponent.Settings.ShowCenterOfBuoyancy);
-            _showAltitude.Text = string.Format(WaterTexts.UIShowAltitude, _settingsComponent.Settings.ShowAltitude);
         }
 
         private void RefreshAdminValues()
@@ -586,13 +588,6 @@ namespace Jakaria.SessionComponents
         private void ToggleShowDepth()
         {
             _settingsComponent.Settings.ShowDepth = !_settingsComponent.Settings.ShowDepth;
-            _settingsComponent.SaveData();
-            RefreshClientValues();
-        }
-
-        private void ToggleShowAltitude()
-        {
-            _settingsComponent.Settings.ShowAltitude = !_settingsComponent.Settings.ShowAltitude;
             _settingsComponent.SaveData();
             RefreshClientValues();
         }

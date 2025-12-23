@@ -25,6 +25,7 @@ namespace Jakaria.Components
         private Vector3D _characterHeadPosition;
         private bool _headUnderwater;
         private bool _underwater;
+        private readonly List<IHitInfo> _hitInfoCache = new List<IHitInfo>(8);
 
         public IMyCharacter Character;
         public CharacterConfig PlayerConfig;
@@ -169,15 +170,14 @@ namespace Jakaria.Components
                         }
                         else
                         {
-                            List<IHitInfo> hits = new List<IHitInfo>();
+                            _hitInfoCache.Clear();
+                            MyAPIGateway.Physics.CastRay(start, end, _hitInfoCache, 30); //CollisionLayer.CollisionWithoutCharacter
 
-                            MyAPIGateway.Physics.CastRay(start, end, hits, 30); //CollisionLayer.CollisionWithoutCharacter
-
-                            if(hits.Count > 0)
+                            if (_hitInfoCache.Count > 0)
                             {
-                                foreach (var hit in hits)
+                                foreach (var hit in _hitInfoCache)
                                 {
-                                    if(hit.HitEntity.Physics != null && hit.HitEntity is IMyCubeGrid)
+                                    if (hit.HitEntity.Physics != null && hit.HitEntity is IMyCubeGrid)
                                     {
                                         GridVelocity = hit.HitEntity.Physics.LinearVelocity;
                                         break;

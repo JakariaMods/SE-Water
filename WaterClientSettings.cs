@@ -28,8 +28,11 @@ namespace Jakaria
         [ProtoMember(30)]
         public float Volume;
 
-        [ProtoMember(35)]
-        public bool ShowAltitude;
+        [ProtoMember(40)]
+        public float MinAltitude;
+
+        [ProtoMember(45)]
+        public bool Silent;
 
         public static WaterClientSettings Default = new WaterClientSettings()
         {
@@ -39,7 +42,8 @@ namespace Jakaria
             ShowFog = true,
             ShowDebug = false,
             Volume = 1f,
-            ShowAltitude = true,
+            MinAltitude = 500,
+            Silent = false
         };
     }
 }

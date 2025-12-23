@@ -58,7 +58,8 @@
         public static string Depth = "Depth: {0}m";
         public static string Altitude = "Altitude: {0}m";
         public static string ToggleShowDepth = "Toggled rendering of depth.";
-        public static string ToggleShowAltitude = "Toggled rendering of altitude.";
+        public static string SetAltitude = "Set the altimeter's max height to '{0}'m.";
+        public static string GetAltitude = "The altimeter's max height is '{0}'m.";
 
         public static string ToggleBirds = "Toggled birds at your closest planet.";
         public static string ToggleFish = "Toggled fish at your closest planet.";
@@ -103,6 +104,8 @@
         public static string GetCrushDamage = "The water's crush damage is '{0}'.";
         public static string SetCrushDamage = "Set the water's crush damage to '{0}'.";
         public static string SetCrushDamageNoParse = "Couldn't parse crush damage '{0}'.";
+
+        public static string ToggleSilent = "Toggled the version message.";
 
         public static string TogglePlayerDrag = "Toggled player drag.";
 

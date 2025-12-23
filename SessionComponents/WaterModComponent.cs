@@ -25,6 +25,8 @@ namespace Jakaria.SessionComponents
     /// </summary>
     public class WaterModComponent : SessionComponentBase
     {
+        public static float UpdateFrequencyMultiplier = 1;
+
         public IEnumerable<WaterComponent> Waters => _waters.Values;
 
         private Dictionary<MyPlanet, WaterComponent> _waters = new Dictionary<MyPlanet, WaterComponent>();
@@ -119,6 +121,7 @@ namespace Jakaria.SessionComponents
             WaterModComponentObjectBuilder builder = new WaterModComponentObjectBuilder
             {
                 Waters = new List<WaterComponentObjectBuilder>(),
+                UpdateFrequencyMultiplier = UpdateFrequencyMultiplier
             };
 
             foreach (var water in Waters)
@@ -189,6 +192,8 @@ namespace Jakaria.SessionComponents
                                 AddWater(planet, water.Settings, water);
                             }
                         }
+
+                        UpdateFrequencyMultiplier = builder.UpdateFrequencyMultiplier;
                     }
                 }
             }
@@ -231,5 +236,7 @@ namespace Jakaria.SessionComponents
     {
         [XmlElement]
         public List<WaterComponentObjectBuilder> Waters;
+
+        public float UpdateFrequencyMultiplier = 1;
     }
 }

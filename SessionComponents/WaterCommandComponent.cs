@@ -89,9 +89,16 @@ namespace Jakaria.SessionComponents
                 Description = "Toggles depth indicator underwater. Requires Text Hud API.",
                 Client = true,
             };
+            _commands["wsilent"] = new Command(CommandSilent)
+            {
+                Description = "Toggles the version message shown at the start of the world.",
+                Client = true,
+            };
             _commands["waltitude"] = new Command(CommandAltitude)
             {
-                Description = "Toggles sea-level altitude indicator in cockpits. Requires Text Hud API.",
+                Description = "Gets or sets the maximum sea-level altitude. Set to 0 to disable. Requires Text Hud API.",
+                MinArgs = 1,
+                MaxArgs = 2,
                 Client = true,
             };
             _commands["wfog"] = new Command(CommandFog)
@@ -630,6 +637,16 @@ namespace Jakaria.SessionComponents
             }
         }
 
+        private void CommandSilent(string[] args, CommandArgs commandArgs)
+        {
+            WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
+
+            settingsComponent.Settings.Silent = !settingsComponent.Settings.Silent;
+            settingsComponent.SaveData();
+
+            WaterUtils.SendMessage(WaterTexts.ToggleSilent, commandArgs.User);
+        }
+
         private void CommandAltitude(string[] args, CommandArgs commandArgs)
         {
             WaterSettingsComponent settingsComponent = Session.Instance.TryGet<WaterSettingsComponent>();
@@ -637,14 +654,31 @@ namespace Jakaria.SessionComponents
 
             if (uiComponent != null && uiComponent.Heartbeat)
             {
-                settingsComponent.Settings.ShowAltitude = !settingsComponent.Settings.ShowAltitude;
-                WaterUtils.SendMessage(WaterTexts.ToggleShowAltitude, commandArgs.User);
+                if (args.Length > 1)
+                {
+                    float altitude;
+                    if (float.TryParse(args[1], out altitude))
+                    {
+                        altitude = Math.Max(altitude, 0);
+                        settingsComponent.Settings.MinAltitude = altitude;
+                        WaterUtils.SendMessage(string.Format(WaterTexts.SetAltitude, settingsComponent.Settings.MinAltitude), commandArgs.User);
+
+                        settingsComponent.SaveData();
+                    }
+                    else
+                    {
+                        WaterUtils.SendMessage(WaterTexts.GenericNoParse, commandArgs.User);
+                    }
+                }
+                else
+                {
+                    WaterUtils.SendMessage(string.Format(WaterTexts.GetAltitude, settingsComponent.Settings.MinAltitude), commandArgs.User);
+                }
 
                 settingsComponent.SaveData();
             }
             else
             {
-                settingsComponent.Settings.ShowAltitude = false;
                 WaterUtils.SendMessage(WaterTexts.NoTextAPI, commandArgs.User);
             }
         }

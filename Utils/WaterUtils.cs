@@ -20,6 +20,7 @@ namespace Jakaria.Utils
     public static class WaterUtils
     {
         private static List<MyEntity> _entities = new List<MyEntity>();
+        private static readonly List<MyEntity> _gridEntities = new List<MyEntity>();
 
         /// <summary>
         /// Returns a vector perpendicular to a vector, takes an angle in radians
@@ -163,18 +164,21 @@ namespace Jakaria.Utils
         public static MyCubeGrid GetApproximateGrid(Vector3D position, MyEntityQueryType queryType = MyEntityQueryType.Both)
         {
             BoundingSphereD sphere = new BoundingSphereD(position, 1);
-            List<MyEntity> entities = new List<MyEntity>();
-            MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, entities, queryType);
-
-            foreach (var entity in entities)
+            lock (_gridEntities)
             {
-                if (entity.IsPreview || entity.Physics == null)
-                    continue;
+                _gridEntities.Clear();
+                MyGamePruningStructure.GetAllTopMostEntitiesInSphere(ref sphere, _gridEntities, queryType);
 
-                if (entity is MyCubeGrid)
-                    return entity as MyCubeGrid;
+                foreach (var entity in _gridEntities)
+                {
+                    if (entity.IsPreview || entity.Physics == null)
+                        continue;
+
+                    if (entity is MyCubeGrid)
+                        return entity as MyCubeGrid;
+                }
             }
-            
+
             return null;
         }
 
@@ -281,14 +285,19 @@ namespace Jakaria.Utils
 
             if (grid.GridSizeEnum == MyCubeSize.Large)
             {
+                int baseFrequency;
                 if (blockCount < 50)
-                    return 2;
+                    baseFrequency = 2;
                 else if (blockCount < 150)
-                    return 3;
+                    baseFrequency = 3;
                 else if (blockCount < 500)
-                    return 4;
+                    baseFrequency = 4;
+                else
+                    baseFrequency = (blockCount / 3000) + 4;
 
-                return (blockCount / 3000) + 4;
+                baseFrequency = (int)Math.Ceiling(baseFrequency * WaterModComponent.UpdateFrequencyMultiplier);
+
+                return baseFrequency;
             }
             else
             {
