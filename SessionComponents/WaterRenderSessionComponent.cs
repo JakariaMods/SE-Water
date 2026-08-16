@@ -168,7 +168,7 @@ namespace Jakaria.SessionComponents
         public override void UpdateAfterSimulation()
         {
             ClosestPlanet = MyGamePruningStructure.GetClosestPlanet(CameraPosition);
-            
+
             WaterComponent water = _modComponent.GetClosestWater(CameraPosition);
             WaveModifier modifier = WaterUtils.GetWaveModifier(CameraPosition);
 
@@ -302,11 +302,11 @@ namespace Jakaria.SessionComponents
                 {
                     DistanceToHorizon = float.PositiveInfinity;
                 }
-                
+
                 if (CameraUnderwater)
                 {
                     if (_settingsComponent.Settings.ShowFog || !MyAPIGateway.Session.CreativeMode)
-                        _weatherComponent.FogDensityOverride = (float)(ClosestWater.Settings.Material.MinFogDensity + (ClosestWater.Settings.Material.FogDensityDepth * (1.0 + (-CameraDepth / ClosestWater.Settings.Material.FogDensityDepthScalar))));
+                        _weatherComponent.FogDensityOverride = (float)(ClosestWater.Settings.Material.MinFogDensity + (ClosestWater.Settings.Material.FogDensityDepth * (1.0 + (-CameraDepth / ClosestWater.Settings.Material.FogDensityDepthScalar)) * ClosestWater.Settings.FogMultiplier));
                     else
                         _weatherComponent.FogDensityOverride = 0.001f;
 

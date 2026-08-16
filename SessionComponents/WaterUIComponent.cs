@@ -60,6 +60,7 @@ namespace Jakaria.SessionComponents
         private HudAPIv2.MenuTextInput _waveSpeed;
         private HudAPIv2.MenuTextInput _currentSpeed;
         private HudAPIv2.MenuTextInput _currentScale;
+        private HudAPIv2.MenuTextInput _fogMultiplier;
 
         private HudAPIv2.MenuRootCategory _clientMenuRoot;
         private HudAPIv2.MenuSliderInput _qualitySlider;
@@ -84,7 +85,7 @@ namespace Jakaria.SessionComponents
             {
                 WaterUtils.ShowMessage(text);
             }
-                
+
             WaterUtils.WriteLog(text);
 
             if (!string.IsNullOrEmpty(WaterData.StartMessage))
@@ -235,6 +236,7 @@ namespace Jakaria.SessionComponents
             _crushDamageSlider.Text = string.Format(WaterTexts.UIWaterCrushDamage, _renderComponent.ClosestWater.Settings?.CrushDamage.ToString() ?? NO_DATA);
             _materialIdInput.Text = string.Format(WaterTexts.UIWaterMaterialId, _renderComponent.ClosestWater.Settings?.MaterialId.ToString() ?? NO_DATA);
             _playerDrag.Text = string.Format(WaterTexts.UIWaterPlayerDrag, _renderComponent.ClosestWater.Settings?.PlayerDrag.ToString() ?? NO_DATA);
+            _fogMultiplier.Text = string.Format(WaterTexts.UIWaterFogMultiplier, _renderComponent.ClosestWater.Settings?.FogMultiplier.ToString() ?? NO_DATA);
 
             _radiusSlider.Text = string.Format(WaterTexts.UIWaterRadius, (_renderComponent.ClosestWater.Settings?.Radius / _renderComponent.ClosestPlanet?.MinimumRadius).ToString() ?? NO_DATA);
 
@@ -555,6 +557,21 @@ namespace Jakaria.SessionComponents
             }
         }
 
+        private void OnSubmitFogMultiplier(string obj)
+        {
+            float value;
+            if (_renderComponent.ClosestWater != null && MyAPIGateway.Session.PromoteLevel >= MyPromoteLevel.Moderator && float.TryParse(obj, out value))
+            {
+                _renderComponent.ClosestWater.Settings.FogMultiplier = value;
+                _syncComponent.SendSignalToServer(new WaterUpdateAddPacket
+                {
+                    EntityId = _renderComponent.ClosestWater.Planet.EntityId,
+                    Settings = _renderComponent.ClosestWater.Settings
+                });
+                RefreshAdminValues();
+            }
+        }
+
         #endregion Server/Admin Settings
 
         #region Client Settings
@@ -568,7 +585,7 @@ namespace Jakaria.SessionComponents
         {
             _settingsComponent.Settings.Quality = (float)QualitySliderToValue(percentage);
             _settingsComponent.SaveData();
-            
+
             RefreshClientValues();
         }
 

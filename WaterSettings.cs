@@ -100,6 +100,9 @@ namespace Jakaria
         [ProtoIgnore]//[ProtoMember(80), XmlElement]
         public bool Volumetric;
 
+        [ProtoMember(77), XmlElement]
+        public float FogMultiplier;
+
         public WaterSettings()
         {
             if(Default != null)
@@ -125,6 +128,7 @@ namespace Jakaria
                 CurrentSpeed = Default.CurrentSpeed;
                 CurrentScale = Default.CurrentScale;
                 Volumetric =  Default.Volumetric;
+                FogMultiplier = Default.FogMultiplier;
             }
 
             Init();
@@ -153,8 +157,9 @@ namespace Jakaria
                 stringBuilder.AppendLine($"{nameof(Lit)}: {Lit}");
                 stringBuilder.AppendLine($"{nameof(FogColor)}: {FogColor}");
                 //stringBuilder.AppendLine($"{nameof(Volumetric)}: {Volumetric}");
+                stringBuilder.AppendLine($"{nameof(FogMultiplier)}: {FogMultiplier}");
             }
-            
+
             stringBuilder.AppendLine($"{nameof(Buoyancy)}: {Buoyancy}");
             stringBuilder.AppendLine($"{nameof(CollectionRate)}: {CollectionRate}");
             stringBuilder.AppendLine($"{nameof(TideHeight)}: {TideHeight}");
@@ -191,6 +196,7 @@ namespace Jakaria
             CurrentSpeed = 0.5f,
             CurrentScale = 0.005f,
             Volumetric = false,
+            FogMultiplier = 1.0f,
         };
     }
 }

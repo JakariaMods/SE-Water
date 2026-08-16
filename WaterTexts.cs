@@ -137,6 +137,10 @@
         public static string SetDensity = "Set the fluid's density to '{0}' kg/m³.";
         public static string SetDensityNoParse = "Couldn't parse fluid density '{0}'.";
 
+        public static string GetFogMultiplier = "The water's fog multiplier is '{0}m'.";
+        public static string SetFogMultiplier = "Set the water's fog multiplier to '{0}m'.";
+        public static string SetFogMultiplierNoParse = "Couldn't parse fog multiplier '{0}'.";
+
         public static string OpenGuide = "Opened the steam guide through Steam Overlay.";
         public static string OpenDiscord = "Opened discord through Steam Overlay.";
 
@@ -176,6 +180,7 @@
         public static string UIWaterWaveSpeed = "Wave Speed [{0}]";
         public static string UIWaterCurrentScale = "Current Scale [{0}]";
         public static string UIWaterCurrentSpeed = "Current Speed [{0}]";
+        public static string UIWaterFogMultiplier = "Fog Multiplier [{0}]";
 
         public static string UILanguage = "Language [{0}]";
         public static string UIQuality = "Quality [{0}]";
