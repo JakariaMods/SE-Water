@@ -1,4 +1,4 @@
-﻿using Sandbox.Game.Entities;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ namespace Jakaria.API
     {
         public static string ModName = "";
         public const ushort ModHandlerID = 50271;
-        public const int ModAPIVersion = 21;
+        public const int ModAPIVersion = 22;
         public static bool Registered { get; private set; } = false;
 
         private static Dictionary<string, Delegate> ModAPIMethods;
@@ -40,6 +40,9 @@ namespace Jakaria.API
         private static Func<Vector3D, MyPlanet, float?> _GetDepth;
         private static Action _ForceSync;
         private static Action<string> _RunCommand;
+        private static Func<MyPlanet, float, bool> _SetWaterRadius;
+        private static Func<MyPlanet, double, bool> _SetSeaLevel;
+        private static Func<MyPlanet, bool> _CreateWater;
         private static Func<Vector3D, MyPlanet, Vector3D> _GetUpDirection;
         private static Func<MyPlanet, bool> _HasWater;
         private static Func<Vector3D, MyCubeSize, MyPlanet, float> _GetBuoyancyMultiplier;
@@ -145,6 +148,21 @@ namespace Jakaria.API
         /// Simulates a command being run by the client, EX: /wcreate, client must have permissions to run the command
         /// </summary>
         public static void RunCommand(string MessageText) => _RunCommand?.Invoke(MessageText);
+
+        /// <summary>
+        /// Server only. Sets water radius as a multiplier of the planet's MinimumRadius
+        /// </summary>
+        public static bool SetWaterRadius(MyPlanet planet, float radius) => _SetWaterRadius?.Invoke(planet, radius) ?? false;
+
+        /// <summary>
+        /// Server only. Sets sea level in metres relative to the planet's surface
+        /// </summary>
+        public static bool SetSeaLevel(MyPlanet planet, double altitude) => _SetSeaLevel?.Invoke(planet, altitude) ?? false;
+
+        /// <summary>
+        /// Server only. Creates water on a planet. False if it already has water, or called on a client
+        /// </summary>
+        public static bool CreateWater(MyPlanet planet) => _CreateWater?.Invoke(planet) ?? false;
 
         /// <summary>
         /// Gets the up direction at the position
@@ -302,6 +320,10 @@ namespace Jakaria.API
                         _CreateBubble = TryGetMethod<Action<Vector3D, float>>(ModAPIMethods, "CreateBubble");
                         _ForceSync = TryGetMethod<Action>(ModAPIMethods, "ForceSync");
                         _RunCommand = TryGetMethod<Action<string>>(ModAPIMethods, "RunCommand");
+                        _SetWaterRadius = TryGetMethod<Func<MyPlanet, float, bool>>(ModAPIMethods, "SetWaterRadius");
+                        _SetSeaLevel = TryGetMethod<Func<MyPlanet, double, bool>>(ModAPIMethods, "SetSeaLevel");
+                        _CreateWater = TryGetMethod<Func<MyPlanet, bool>>(ModAPIMethods, "CreateWater");
+
                         _GetUpDirection = TryGetMethod<Func<Vector3D, MyPlanet, Vector3D>>(ModAPIMethods, "GetUpDirection");
                         _HasWater = TryGetMethod<Func<MyPlanet, bool>>(ModAPIMethods, "HasWater");
                         _GetBuoyancyMultiplier = TryGetMethod<Func<Vector3D, MyCubeSize, MyPlanet, float>>(ModAPIMethods, "GetBuoyancyMultiplier");

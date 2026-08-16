@@ -1,4 +1,4 @@
-﻿using Draygo.Drag.API;
+using Draygo.Drag.API;
 using Jakaria.API;
 using Jakaria.Components;
 using Jakaria.Utils;
@@ -82,6 +82,9 @@ namespace Jakaria.SessionComponents
                 ["EntityGetCenterOfBuoyancy"] = new Func<MyEntity, Vector3D>(Entity_CenterOfBuoyancy),
                 ["EntityGetDragForce"] = new Func<MyEntity, Vector3D>(Entity_DragForce),
                 ["EntityGetPercentUnderwater"] = new Func<MyEntity, float>(Entity_PercentUnderwater),
+                ["SetWaterRadius"] = new Func<MyPlanet, float, bool>(SetWaterRadius),
+                ["SetSeaLevel"] = new Func<MyPlanet, double, bool>(SetSeaLevel),
+                ["CreateWater"] = new Func<MyPlanet, bool>(CreateWater),
             };
 
             DragClientAPI.Init();
@@ -344,6 +347,42 @@ namespace Jakaria.SessionComponents
                     points.Add(water.GetClosestSurfacePointGlobal(position, ref modifier));
                 }
             }
+        }
+
+        public bool SetWaterRadius(MyPlanet planet, float radius)
+        {
+            if (planet == null || _syncComponent == null || !MyAPIGateway.Session.IsServer)
+                return false;
+
+            if (float.IsNaN(radius) || float.IsInfinity(radius))
+                return false;
+
+            WaterComponent water;
+            if (!planet.Components.TryGet<WaterComponent>(out water))
+                return false;
+
+            water.Settings.Radius = MathHelper.Clamp(radius, 0.1f, 1.75f);
+            _syncComponent.SyncClients(water);
+            return true;
+        }
+
+        public bool SetSeaLevel(MyPlanet planet, double altitude)
+        {
+            if (planet == null || planet.MinimumRadius <= 0)
+                return false;
+
+            return SetWaterRadius(planet, (float)((planet.MinimumRadius + altitude) / planet.MinimumRadius));
+        }
+
+        public bool CreateWater(MyPlanet planet)
+        {
+            if (planet == null || planet.Generator == null || !MyAPIGateway.Session.IsServer)
+                return false;
+        
+            if (planet.Components.Has<WaterComponent>())
+                return false;
+
+            return _modComponent.AddWater(planet, new WaterSettings());
         }
 
         public void ForceSync()
