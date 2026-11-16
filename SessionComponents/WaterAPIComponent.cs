@@ -7,15 +7,10 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using VRage;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.ModAPI;
-using VRage.Noise.Patterns;
-using VRage.Serialization;
 using VRageMath;
 
 namespace Jakaria.SessionComponents
