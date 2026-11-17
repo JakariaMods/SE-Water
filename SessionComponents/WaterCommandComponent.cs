@@ -345,7 +345,7 @@ namespace Jakaria.SessionComponents
                 return false;
 
             args = messageText.TrimStart(COMMAND_PREFIX).Split(new char[1] {' '}, StringSplitOptions.RemoveEmptyEntries);
-            
+
             if (args.Length == 0)
                 return false;
 
@@ -948,11 +948,11 @@ namespace Jakaria.SessionComponents
                 WaterUtils.SendMessage(WaterTexts.HasWater, commandArgs.User);
                 return;
             }
-            
+
             if (args.Length == 1)
             {
                 _modComponent.AddWater(commandArgs.Planet);
-                
+
                 WaterUtils.SendMessage(WaterTexts.CreateWater, commandArgs.User);
             }
 
@@ -1202,6 +1202,30 @@ namespace Jakaria.SessionComponents
             }
         }
 
+        private void CommandFogMultiplier(string[] args, CommandArgs commandArgs)
+        {
+            //Get Fog Multiplier
+            if (args.Length == 1)
+            {
+                WaterUtils.SendMessage(string.Format(WaterTexts.GetFogMultiplier, commandArgs.Water.Settings.FogMultiplier), commandArgs.User);
+            }
+
+            //Set Fog Multiplier
+            if (args.Length == 2)
+            {
+                float fogMultiplier;
+                if (float.TryParse(WaterUtils.ValidateCommandData(args[1]), out fogMultiplier))
+                {
+                    commandArgs.Water.Settings.FogMultiplier = Math.Abs(fogMultiplier);
+                    _syncComponent.SyncClients(commandArgs.Water);
+
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetFogMultiplier, commandArgs.Water.Settings.FogMultiplier), commandArgs.User);
+                }
+                else
+                    WaterUtils.SendMessage(string.Format(WaterTexts.SetForMultiplierNoParse, args[1]), commandArgs.User);
+            }
+        }
+
         private void CommandVolumetric(string[] args, CommandArgs commandArgs)
         {
             commandArgs.Water.Settings.Volumetric = !commandArgs.Water.Settings.Volumetric;
@@ -1260,7 +1284,7 @@ namespace Jakaria.SessionComponents
         /// The /help descriptor of the command
         /// </summary>
         public string Description;
-        
+
         /// <summary>
         /// The minimum promotion level for the command to be run
         /// </summary>
@@ -1287,7 +1311,7 @@ namespace Jakaria.SessionComponents
         public bool RequireWater;
 
         /// <summary>
-        /// Whether the command should be allowed to run on Console edition 
+        /// Whether the command should be allowed to run on Console edition
         /// </summary>
         public bool Console;
 
